@@ -22,18 +22,18 @@ Update all local & remote data (package managers, changes to bash config, etc):
 > dotsys update
 
 Upgrade your software:
-> dotsys upgrade google_chrome
+> dotsys upgrade vim
 
 Sync a local repo with remote (auto push or pull)
 > dotsys upgrade repo
 
-Remove a topic from your config:
-> dotsys uninstall emacs
+Remove a topic's changes from your system (topic files remain):
+> dotsys uninstall vim
 
-Remove a repo you tried and all changes it made to your system:
+Remove all changes from a repo you tried:
 > dotsys uninstall github_user/repo_name
 
-Remove dotsys and all changes ever made:
+Remove dotsys and all changes ever made to your system:
 > dotsys uninstall
 
 ### Why another dotfile management system ?
