@@ -39,6 +39,7 @@ Remove dotsys and all changes ever made:
 ### Why another dotfile management system ?
 
 - One configuration for multiple platforms (osx, windows, linux, freebsd, mysys, babun, and more).
+- Supports all posix compliant shells (NO DEPENDENCIES).
 - Separates packages and dotfiles form the management system.
 - Nothing happens without your consent or ride hands free! 
 - Separate tasks so users can select what they want.
@@ -51,7 +52,7 @@ Remove dotsys and all changes ever made:
 - Easy and familiar api.
 - MANY MORE FEATURES....
 
-more docs to come, stay tuned...
+more info to come, stay tuned...
 
 ### WARNING!
 
@@ -59,6 +60,24 @@ THIS IS A WORK IN PROGRESS AND IS NOT SUFFICIENTLY TESTED!
 The api could change and things could break at any time.
 
 If you are interested in helping out that would be awesome!
+
+
+## Installation 
+
+### all but windows
+
+1) Place the extracted repo ".dotsys" in the directory you want to install it (your dotfiles directory is a great choice)
+2) From your shell of choice run the install script:
+> path/to/.dotsys/install.sh
+
+Then just follow the prompts in your termnal.
+
+### Windows
+If you want to use babun use command prompt to execute:
+> path/to/.dotsys/install.bat
+
+Otherwise install your posix shell of choice and follow the (all but windows) instructions.
+
 
 
 
