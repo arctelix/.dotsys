@@ -1,0 +1,4 @@
+state/
+user/
+*.private
+.DS_Store

@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Manger your dotfiles and package managers
+# Easily try new configurations without fear
+
+# Command entry point, see lib/min.sh for the guts.
+
+# Author: arctelix
+# With thanks to the following sources:
+# https://github.com/holman/dotfiles
+# https://github.com/agross/dotfiles
+# https://github.com/webpro/dotfiles
+
+set +o posix
+
+chdir() {
+  cd "$@" >/dev/null
+}
+
+DOTSYS_FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
+DOTSYS_DOTSYS_FILE="$DOTSYS_FILE_DIRECTORY/${0##*/}"
+
+DOTSYS_PREFIX="${DOTSYS_DOTSYS_FILE%/*/*}"
+DOTSYS_REPOSITORY="$DOTSYS_PREFIX"
+
+if [[ -L "$DOTSYS_DOTSYS_FILE" ]]
+then
+  DOTSYS_SYMLINK="$(readlink "$DOTSYS_DOTSYS_FILE")"
+  DOTSYS_SYMLINK_DIRECTORY="$(dirname "$DOTSYS_SYMLINK")"
+  DOTSYS_FILE_DIRECTORY="$(chdir "$DOTSYS_FILE_DIRECTORY" &&
+                         chdir "$DOTSYS_SYMLINK_DIRECTORY" && pwd -P)"
+  DOTSYS_REPOSITORY="${DOTSYS_FILE_DIRECTORY%/*}"
+fi
+
+DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
+
+echo "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+echo "DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
+source "$DOTSYS_LIBRARY/main.sh"
+
+#dotsys $@
+
+
+
+
