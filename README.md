@@ -10,30 +10,30 @@ you are using this system and are familiar with package mangers like brew..
 NOTE: A repo is any github repository containing topic-centric dotfiles
 
 Setup a new machine from a remote repo:
-> dotsys install github_user/repo_name
+> dotsys install github_user_/repo_name
 
-Try a new .vimrc:
-> dotsys install vim from github_user/repo_name
+Try a somebody else's vim config:
+> dotsys install vim from other_user/repo_name
 
-Add a new topic to your local config:
+Add a new topic to your config:
 > dotsys install tmux
 
 Update all local & remote data (package managers, changes to bash config, etc):
 > dotsys update
 
-Upgrade your software:
+Upgrade your software packages:
 > dotsys upgrade vim
 
 Sync a local repo with remote (auto push or pull)
 > dotsys upgrade repo
 
-Remove a topic's changes from your system (topic files remain):
+Remove a topic's software package and system changes (topic files remain intact):
 > dotsys uninstall vim
 
 Remove all changes from a repo you tried:
-> dotsys uninstall github_user/repo_name
+> dotsys uninstall other_user/repo_name
 
-Remove dotsys and all changes ever made to your system:
+Remove all packages and changes installed with dotsys:
 > dotsys uninstall
 
 ### Why another dotfile management system ?
@@ -44,10 +44,11 @@ Remove dotsys and all changes ever made to your system:
 - Nothing happens without your consent or ride hands free! 
 - Separate tasks so users can select what they want.
 - Guided configuration (no docs or code to read).
-- Easy control over your config with yaml files.
-- Constant visual feedback on what's hapening.
-- Automates repository install and management.
-- Automate boiler plate stuff with stub files.
+- Easy control over whats installed with yaml files.
+- Easy review all topics in a repo via the yaml file.
+- Constant visual feedback on what's happening.
+- Automates repository installation and management.
+- Stub files connect dotfiles and their file extentions (.sh, .zsh, etc.)
 - Dependency management for dotfiels.
 - Easy and familiar api.
 - MANY MORE FEATURES....
