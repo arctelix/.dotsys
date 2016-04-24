@@ -48,8 +48,8 @@ create_config_yaml() {
 
     # FIRST CALL ONLY (non recursive)
     if ! [ "$_last_node" ];then
-
-        load_config_vars "$repo" "freeze"
+        # main takes care of loading config now
+        #load_config_vars "$repo" "freeze"
 
         _last_node="${NODES[${#NODES[@]}-1]}"
 

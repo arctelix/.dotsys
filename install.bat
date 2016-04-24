@@ -1,6 +1,9 @@
 @ECHO OFF
 
-# TODO: WARNING: TOTALLY UNTESTED
+# TODO: test windows install script
+echo "WARNING: TOTALLY UNTESTED"
+echo "remove return statement from file to try this script"
+return
 
 WHERE choco >nul 2>nul
 if %ERRORLEVEL%==1 (

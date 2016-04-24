@@ -12,7 +12,7 @@ upgrade () {
   brew cask upgrade
 }
 
-reload () {
+update () {
   brew cask update
 }
 

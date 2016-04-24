@@ -1,35 +1,5 @@
 #!/usr/bin/env bash
 
-# http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
-# must run 'git fetch' or 'git remote update' first
-update_repo (){
-    local repo="$1"
-    local local_repo="$(repo_dir "$repo")"
-    local OWD="$PWD"
-
-    cd "$local_repo"
-
-    local LOCAL=$(git rev-parse @)
-    local REMOTE=$(git rev-parse @{u})
-    local BASE=$(git merge-base @ @{u})
-
-    if [ $LOCAL = $REMOTE ]; then
-        echo "Up-to-date"
-    elif [ $LOCAL = $BASE ]; then
-        echo "Need to pull"
-    elif [ $REMOTE = $BASE ]; then
-        echo "Need to push"
-    else
-        echo "Diverged"
-    fi
-
-    cd "$OWD"
-}
-
-is_git (){
-    [ -d .git ] || git rev-parse --git-dir > /dev/null 2>&1
-}
-
 manage_repo (){
     local action="$1"
     local repo="$2"
@@ -42,22 +12,19 @@ manage_repo (){
 
     local user_name="$(cap_first ${repo%/*})"
     local repo_name="${repo#*/}"
+    local state_key="installed_repo"
+    is_installed "dotsys" "$state_key" "$repo"
+    local status=$?
+    local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
 
-    local status=
-    local P_STATE=
+    debug "-- manage_repo: a:$action repo:$repo"
 
-
-    if [ "$action" != "install" ] && ! [ -d "$local_repo" ]; then
-        error "$(printf "The specified repo %b$repo%b does not exist.
-        \rPlease make sure it is spelled correctly." $blue $red)"
-
-        msg "$(printf "HINT: You can run'dotsys install $repo' to create or download new repos.%s" "\n")"
-
-        action="install"
-    fi
-
-    # determine status
-    if ! [ -d "$local_repo" ]; then
+    # determine repo status
+    if [ "$action" = "install" ] && [ $status ]; then
+        status="abort"
+    elif [ "$action" = "uninstall" ] && ! [ $status ]; then
+        status="abort"
+    elif ! [ -d "$local_repo" ]; then
         # check for remote
         wget "${github_repo}.git" --no-check-certificate -o /dev/null
         # remote repo found
@@ -68,28 +35,48 @@ manage_repo (){
             status="new"
         fi
     else
-         status="existing"
+        status="existing"
     fi
 
+    # make sure repo is properly installed (unless installing)
+    if [ "$status" != "abort" ] && [ "$action" != "install" ]; then
+        # Check existing for git
+        if [ "$status" = "existing" ] && ! [ -d "${local_repo}/.git" ];then
+            msg "$(printf "Warning: An existing local directory named $repo was found, but \
+            it's not installed for use with dotsys.")"
+            action="install"
+
+        # Check for non existing repo
+        elif [ "$status" != "existing" ]; then
+            error "$(printf "The specified repo %b$repo%b does not exist.
+            \rPlease make sure it is spelled correctly and in your '.dotfiles' directory." $blue $red)"
+
+            msg "$(printf "HINT: You can run'dotsys install $repo' to create or download new repos.%s" "\n")"
+
+            action="install"
+        fi
+    fi
+
+    # confirm action or abort
+    if [ "$status" = "abort" ]; then
+        task "$(printf "Already installed repo: %b$repo%b" $green $blue)"
+        return
+    else
+        confirm_task "$action" "$status repo: $local_repo"
+        if ! [ $? -eq 0 ]; then
+            # check for no primary repo or exit
+            if ! [ "$(state_primary_repo)" ]; then
+                error "$(printf "In order for dotsys to work you will need to create a repository.
+                      \rRun 'dotsys install' to create or download an existing repo.")"
+                exit
+            fi
+            return
+        fi
+    fi
+
+    # START ACTIONS
 
     if [ "$action" = "install" ]; then
-
-        if [ "$status" = "existing" ];then
-            msg "$(printf "Warning: An existing local directory named $repo was found.
-            \rThe install command will convert it to a git repo, but will not modify it's contents.")"
-        fi
-
-        # begin install
-
-        confirm_task "install" "$status repo: $local_repo"
-
-        if ! [ $? -eq 0 ]; then
-            if ! [ "$status" != "existing" ]; then
-                error "$(printf "In order for dotsys to work you will need to create a repository.
-                      \rRun 'dotsys install' to create or download one automatically.")"
-            fi
-            exit
-        fi
 
         # change into local repo directory
         if [ "$status" != "existing" ];then
@@ -97,6 +84,7 @@ manage_repo (){
         fi
 
         cd "$local_repo"
+
         if ! [ $? -eq 0 ]; then error "Local repo could not be created"; exit; fi
 
         # make sure repo is git!
@@ -158,37 +146,39 @@ manage_repo (){
         cd "$OWD"
 
         success "$(printf "$(cap_first "$action")ed $status repo %b$local_repo%b" $green $rc)"
+        state_install "dotsys" "$state_key" "$repo"
 
         confirm_make_primary_repo "$repo"
 
         # create dotsys-export.yaml
-        confirm_task "freeze" "repo configuration" "to ${repo}/.freeze.yaml"
+        confirm_task "freeze" "default repo configuration" "to ${repo}/.dotsys-default.cfg"
         if [ "$?" -eq 0 ]; then
             create_config_yaml "$repo"
         fi
         msg "$spacer HINT: Freeze your repo any time with 'dotsys freeze user/repo_name'"
 
     elif [ "$status" = "update" ];then
-        update_repo "$repo"
-
-    elif [ "$action" = "uninstall" ]; then
-        # remove local repo
+        # this should pull if required but not push!
         echo "repo $action not implemented"
 
     elif [ "$action" = "upgrade" ]; then
         # this should push or pull as required
-        update_repo
-
-    elif [ "$action" = "reload" ]; then
-        # this should only pull if required
-        echo "repo $action not implemented"
+        update_repo "$repo"
 
     elif [ "$action" = "freeze" ]; then
         # list installed repos
         echo "repo $action not implemented"
+
+    elif [ "$action" = "uninstall" ]; then
+        if ! repo_in_use "$repo"; then
+            confirm_task "$action" "default repo configuration" "to ${repo}/.dotsys-default.cfg"
+            if ! [ "$?" -eq 0 ]; then return; fi
+            # remove from state only for now
+            state_uninstall "dotsys" "$state_key" "$repo"
+        else
+            debug "repo still in use, not uninstalled"
+        fi
     fi
-
-
 
     return 0
 }
@@ -219,6 +209,36 @@ setup_gitconfig () {
   fi
 }
 
+# http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
+# must run 'git fetch' or 'git remote update' first
+update_repo (){
+    local repo="$1"
+    local local_repo="$(repo_dir "$repo")"
+    local OWD="$PWD"
+
+    cd "$local_repo"
+
+    local LOCAL=$(git rev-parse @)
+    local REMOTE=$(git rev-parse @{u})
+    local BASE=$(git merge-base @ @{u})
+
+    if [ $LOCAL = $REMOTE ]; then
+        echo "Up-to-date"
+    elif [ $LOCAL = $BASE ]; then
+        echo "Need to pull"
+    elif [ $REMOTE = $BASE ]; then
+        echo "Need to push"
+    else
+        echo "Diverged"
+    fi
+
+    cd "$OWD"
+}
+
+is_git (){
+    [ -d .git ] || git rev-parse --git-dir > /dev/null 2>&1
+}
+
 copy_topics_to_repo () {
 
     local repo="$1"
@@ -228,7 +248,7 @@ copy_topics_to_repo () {
     local mode
 
 
-    local question="$(printf "Would you like to %bimport%b existing topics from %b%s%b \
+    local question="$(printf "Would you like to search for existing topics to %bimport%b from %b%s%b \
                     \n$spacer (You will be asked to confirm each topic before import)" \
                     $green $rc \
                     $green "$dir" $rc )"
@@ -247,19 +267,22 @@ copy_topics_to_repo () {
         esac
     done
 
-    local found=($(get_topic_list "$dir"))
-    if [ "$found" ]; then
-        # list found topics
+    local repos=($(get_topic_list "$dir"))
+
+    # list found topics
+    if [ "$repos" ]; then
+
         task "$(printf "Import topics found in %b$dir%b:" $green $rc)"
-        for i in "${!found[@]}"; do
-            local topic="${found[$i]}"
+        for i in "${!repos[@]}"; do
+            local topic="${repos[$i]}"
             local files="$(find "$dir/$topic" -maxdepth 1 -type f)"
-            # remove it topic matches user repo or if directory has no files
+            # remove if topic matches user repo or if directory has no files
             if ! [ "$files" ] || [ "$topic" = "${repo%/*}" ]; then unset found[$i]; continue; fi
             msg "$spacer - $topic"
         done
+
+    # noting to import
     else
-       # noting to import
        task "$(printf "Import topics not found in %b$dir%b:" $green $rc)"
        return
     fi
@@ -270,9 +293,9 @@ copy_topics_to_repo () {
     if [ $? -eq 0 ]; then mode=move; else mode=copy; fi
 
 
-    local P_STATE=
+    local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
     # Confirm each file to move/copy
-    for topic in ${found[@]}; do
+    for topic in ${repos[@]}; do
         confirm_task "$mode" "$topic \n$spacer from $dir \n$spacer to $repo_dir"
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
@@ -299,11 +322,11 @@ copy_topics_to_repo () {
 confirm_make_primary_repo (){
     local repo="$1"
     # if repo is same as state, bypass check
-    if [ "$(state_repo)" = "$repo" ]; then return ; fi
+    if [ "$(state_primary_repo)" = "$repo" ]; then return ; fi
 
     confirm_task "make" "this your primary repo "$(repo_dir "$repo")""
     if [ $? -eq 0 ]; then
-        state_repo "$repo"
+        state_primary_repo "$repo"
         set_user_vars "$repo"
         success "$(printf "New primary repo: %b$repo%b" $green $rc)"
     fi
@@ -314,9 +337,9 @@ get_active_repo () {
   # check for config repo
   local repo="$(get_config_val "_repo")"
 
-  # state repo
+  # primary repo
   if ! [ "$repo" ]; then
-      repo="$(state_repo)"
+      repo="$(state_primary_repo)"
       set_user_vars "$repo"
 
   # use default or new config
@@ -336,3 +359,15 @@ get_active_repo () {
   echo "$repo"
 }
 
+# Determine if the repo is present in any state file
+repo_in_use () {
+    local repo="$1"
+    local states="$(get_state_list)"
+    local s
+    for s in $states; do
+        #TODO: Need to make sure key is not user_repo or installed_repo to get accurate result
+        if in_state "$s" "" "$repo"; then
+        return 0; fi
+    done
+    return 1
+}

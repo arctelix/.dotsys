@@ -4,12 +4,13 @@ load_config_vars (){
     # Defaults to state_reop config file or specify repo or path to config file
 
     local from="$1"
-    local action="$2:-$action"
+    local action="${2:-$action}"
     local config_file=
 
+    debug "load_config_vars $action from: $from"
     # load default cfg (prefix with ___)
-    local yaml="$(parse_yaml "$(dotfiles_dir)/.dotsys/.dotsys.cfg" "___")"
-    #log "$yaml"
+    local yaml="$(parse_yaml "$(dotsys_dir)/.dotsys.cfg" "___")"
+    #debug "$yaml"
     eval "$yaml" #set default config vars
 
     local active_repo="$(get_active_repo)"
@@ -29,17 +30,11 @@ load_config_vars (){
        new_user_config
     fi
 
-#    if [ -d "$active_repo_dir" ]; then
-#        error "$(printf "Repo does not exist: '$active_repo_dir'.
-#       $spacer try: user, topic, default, full")"
-#       exit
-#    fi
-
-    # load the config file vars (prefix with __)
+    # load the user config file vars (prefix with __)
     if [ -f "$config_file" ]; then
         yaml="$(parse_yaml "$config_file" "__")"
-        #log "config vars loaded:"
-        #log "$yaml"
+        #debug "config vars loaded:"
+        #debug "$yaml"
         eval "$yaml" #set config vars
     # warn no config
     else
@@ -58,14 +53,13 @@ load_config_vars (){
 # read yaml file
 load_topic_config_vars () {
     local topic="$1"
-    local config="_config_${topic}"
+    local loaded="_${topic}_config_loaded"
     local file="$(topic_dir ${topic})/.dotsys.cfg"
-
     # exit if config is loaded or does not exist
-    if [ "${!config}" ] || ! [ -f "$file" ];then return; fi
+    if [ "${!loaded}" ] || ! [ -f "$file" ];then return; fi
     # Load topic config ( is eval the only way? )
     eval "$(parse_yaml $file "_${topic}_")"
-    eval "${config}=loaded"
+    eval "${loaded}=true"
 }
 
 
@@ -127,12 +121,14 @@ get_topic_config_val () {
 # NEVER USE ACTUAL VARS DIRECTLY; USE THIS METHOD!
 get_config_val () {
   # TYPE                         ACTUAL VAR      CALL AS
-  # topic config file (root)     _$cfg           get_config_val "$cfg"
-  # user config file  (root)     __$cfg          get_config_val "_$cfg"
+  # topic config file (root)     _$topic         get_config_val "$topic"
+  # user config file  (root)     __$topic        get_config_val "_$cfg"
   # user config file  (topic)    __$topic_$cfg   get_config_val "_$topic" "$cfg"
   # default config file (root)   ___$cfg         get_config_val "__$cfg"
   # default config file (topic)  ___$topic_$cfg  get_config_val "__$topic" "$cfg"
+
   if [ $# -eq 0 ]; then return;fi
+
   local cfg=""
   local part=
 
@@ -141,8 +137,8 @@ get_config_val () {
        cfg="$1"
        shift
   fi
-
   for part in $@; do
+     if ! [ "part" ]; then continue;fi
      cfg+="_$part"
   done
   cfg="$cfg[@]"
@@ -186,9 +182,9 @@ freeze() {
 }
 
 
-print_logo (){
+print_debugo (){
 
-if [ "$(get_state_value "show_logo")" = "1" ]; then return;fi
+if [ "$(get_state_value "show_debugo")" = "1" ]; then return;fi
 
 set_user_vars "$(get_active_repo)"
 if [ "$USER_NAME" ]; then
@@ -207,7 +203,7 @@ printf "%b
 \__,_\___/\__/__/\_, /__/
                  |__/
 
-%s%b\n\n" $light_red "$message" $rc
+%s%b\n\n" $dark_red "$message" $rc
 }
 
 
@@ -221,14 +217,14 @@ new_user_config () {
 
     copy_topics_to_repo "$PRIMARY_REPO"
 
-    user_toggle_logo
+    user_toggle_debugo
 
     msg "\nCongratulations, your repo is ready to go ${USER_NAME}!\n"
 }
 
-user_toggle_logo () {
-    get_user_input "Would you like to disable the dotsys logo" --false yes --true no
-    set_state_value "show_logo" $?
+user_toggle_debugo () {
+    get_user_input "Would you like to disable the dotsys debugo" --false yes --true no
+    set_state_value "show_debugo" $?
 }
 
 
@@ -332,11 +328,10 @@ validate_config_or_repo (){
         fi
 
         # make sure repo is installed updated
-        if [ "$action" != "uninstall" ]; then
-
+        #if [ "$action" != "uninstall" ]; then
             manage_repo "$action" "$from_src"
             status=$?
-        fi
+        #fi
 
         # get the repo config file
         config_file="$(get_repo_config_file "$from_src")"

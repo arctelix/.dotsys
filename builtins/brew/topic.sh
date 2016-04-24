@@ -16,7 +16,7 @@ upgrade () {
   brew upgrade
 }
 
-reload () {
+update () {
   brew update
 }
 

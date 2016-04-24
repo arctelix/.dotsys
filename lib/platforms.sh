@@ -34,7 +34,7 @@ get_platform () {
 
 platform_excluded () {
   local topic=$1
-  local exclude_file="$topic/.exclude-platforms"
+  local exclude_file="$(topic_dir "$topic")/.exclude-platforms"
 
   if [ -f "$exclude_file" ]; then
      if [ -n "$(grep "$PLATFORM" "$exclude_file")" ]; then return 0; fi

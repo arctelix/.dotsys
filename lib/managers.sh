@@ -2,8 +2,8 @@
 
 set_default_managers (){
 
-  DEFAULT_APP_MANAGER="$(get_topic_config_val "" "cmd_manager")"
-  DEFAULT_CMD_MANAGER="$(get_topic_config_val "" "app_manager" )"
+  DEFAULT_APP_MANAGER="$(get_topic_config_val "" "app_manager")"
+  DEFAULT_CMD_MANAGER="$(get_topic_config_val "" "cmd_manager" )"
 
   info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
   info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
@@ -17,8 +17,7 @@ run_manager_task () {
 
   while [[ $# > 0 ]]; do
     case $1 in
-      # limits
-      --force)          force="true";;
+      --force)          force="--force";;
       * )               topics+=("$1") ;;
     esac
     shift
@@ -26,17 +25,17 @@ run_manager_task () {
 
   required_vars "manager" "action" "topics"
 
-  log "-- run_manager_task: $manager $action $topics"
+  debug "-- run_manager_task: m:$manager a:$action t:$topics f:$force"
 
   # abort unmanned topics
   if ! [ "$manager" ]; then
-    log "aborting run_manager_task $topic not managed"
+    debug "aborting run_manager_task $topic not managed"
     return
   fi
 
-  # abort reload actions (nothing to do)
-  if [ "$action" = "reload" ]; then
-    log "aborting run_manager_task RELOAD not used"
+  # abort update actions (nothing to do)
+  if [ "$action" = "update" ]; then
+    debug "aborting run_manager_task UPDATE not used"
     return
   fi
 
@@ -45,19 +44,19 @@ run_manager_task () {
   for topic in ${topics[@]}; do
 
      # check if already installed on install action
-     if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$topic" "$manager"; then
-       success "$(printf "$(cap_first "$manager") already $action %b%s%b" $green $topic $rc )"
+     if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic"; then
+       success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
      continue; fi
 
      # convert topic to package name
      load_topic_config_vars "$topic"
-     local p_name="$(get_topic_config_val $topic $manager)"
-     if ! [ "$p_name" ]; then p_name="$topic"; fi
+     local pkg_name="$(get_topic_config_val $topic $manager)"
+     if ! [ "$pkg_name" ]; then pkg_name="$topic"; fi
 
-     log "converted $topic to $p_name for $manager"
+     debug "CONVERTED $topic to $pkg_name for $manager"
 
      # run the manager task
-     run_script_func "$manager" "manager.sh" "$action" "$p_name" -required
+     run_script_func "$manager" "manager.sh" "$action" "$pkg_name" "$force" -required
 
      # record success to state file
      if [ $? -eq 0 ]; then
@@ -78,18 +77,16 @@ install_dependencies () {
   local topic="$1"
   local deps="$(get_topic_config_val $topic "deps")"
 
-  log "-- install_dependencies called: $topic $deps"
-
   if ! [ "$deps" ]; then return 0; fi
 
-  info "$(printf "Installing %b%s%b's dependencies" $light_green $topic $rc )"
+  info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
 
   for dep in ${deps[@]}; do
     # Check if dep is installed
     if ! cmd_exists "$dep";then
-      manage_topic "install" "$dep"
+      dotsys "install" "$dep" from "$ACTIVE_REPO"
     else
-      success "Already installed $dep"
+      success "$(printf "Already installed dependency %s%b%s%b" "$DRY_RUN" $light_green "$dep" $rc)"
     fi
   done
 
@@ -121,7 +118,8 @@ manage_packages () {
 
     local packages=$(get_package_list "$manager")
     if [ "$packages" ]; then
-        run_manager_task "$manager" "$action" $packages
+        task "$(printf "${action}ing %s%b$manager's%b packages" "$DRY_RUN" $light_green $rc)"
+        run_manager_task "$manager" "$action" "$force" $packages
     fi
 }
 

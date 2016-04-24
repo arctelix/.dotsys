@@ -28,7 +28,7 @@ symlink_topic () {
     symlink_topic unlink vim confirm restore"
 
   # Reset the persist state
-  local SYMLINK_STATE=
+  local SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
 
   local home="$(user_home_dir)"
 
@@ -50,19 +50,19 @@ symlink_topic () {
 
   while [[ $# > 0 ]]; do
     case "$1" in
-      -d | delete )       SYMLINK_STATE="delete" ;;
-      -b | backup )       SYMLINK_STATE="backup" ;;
-      -rb | restore )     SYMLINK_STATE="restore" ;;
-      -s | skip  )        SYMLINK_STATE="skip" ;;
-      -c | --confirm )    SYMLINK_STATE="$2"; shift;;
+      -d | delete )       SYMLINK_CONFIRMED="delete" ;;
+      -b | backup )       SYMLINK_CONFIRMED="backup" ;;
+      -rb | restore )     SYMLINK_CONFIRMED="restore" ;;
+      -s | skip  )        SYMLINK_CONFIRMED="skip" ;;
+      -c | --confirm )    SYMLINK_CONFIRMED="$2"; shift;;
       * )  uncaught_case "$1" "topic";;
     esac
     shift
   done
 
-  # Reset SYMLINK_STATE if invalid
-  if ! [[ "$SYMLINK_STATE"  =~ ^(delete|backup|skip)$ ]]; then
-    SYMLINK_STATE=
+  # Reset SYMLINK_CONFIRMED if invalid
+  if ! [[ "$SYMLINK_CONFIRMED"  =~ ^(delete|backup|skip)$ ]]; then
+    SYMLINK_CONFIRMED=
   fi
 
   required_vars "action" "topic"
@@ -86,7 +86,7 @@ symlink_topic () {
   while IFS=$'\n' read -r src; do
     # No simlinks found
     if [[ -z "$src" ]]; then
-      success "$(printf "No symlinks required for %b%s%b" $light_green $topic $rc )"
+      success "$(printf "No symlinks required %sfor %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
       continue
     fi
 
@@ -133,10 +133,10 @@ unlink(){
 
   while [[ $# > 0 ]]; do
     case $1 in
-      -b | backup ) SYMLINK_STATE=restore ;; # same as restore
-      -rb | restore ) SYMLINK_STATE=restore ;;
-      -d | delete )  SYMLINK_STATE=delete ;;
-      -s | skip )    SYMLINK_STATE=skip ;;
+      -b | backup ) SYMLINK_CONFIRMED=restore ;; # same as restore
+      -rb | restore ) SYMLINK_CONFIRMED=restore ;;
+      -d | delete )  SYMLINK_CONFIRMED=delete ;;
+      -s | skip )    SYMLINK_CONFIRMED=skip ;;
       * ) uncaught_case "$1" "link" ;;
     esac
     shift
@@ -150,21 +150,22 @@ unlink(){
 
   # does not exits
   if [ ! -e "$link" ]; then
-    warn "$(printf "Nothing to unlink at %b%s%b
-         Run 'dotsys install ${topic}' to add the symlink" $light_green $link $rc)"
+    success "$(printf "Nothing to unlink at %s%b%s%b" "$DRY_RUN" $light_green $link $rc)"
     return
   fi
 
   # If target is not a symlink skip it (this is an original file!)
   if [ ! -L "$link" ]; then
-    fail "$(printf "Unlink skipped the $type %b%s%b because it is not a symlink!" $light_green $link $rc)"
+    fail "$(printf "$(cap_first "$type") is not a symlink %s%b$link%b !" "$DRY_RUN" $light_green  $rc)"
+    warn "If you want to remove this file, please do so manually."
     return
   fi
 
   local link_target="$(full_path "$link")"
+  local link_name="$(basename "$link")"
 
   # check for confirmation status
-  if [ -L "$link" ] && [ -z "$SYMLINK_STATE" ]; then
+  if [ -L "$link" ] && [ -z "$SYMLINK_CONFIRMED" ]; then
     user "$(printf "The $type %b%s%b
          $spacer is linked to %b%s%b
          $spacer How do you want to unlink it?
@@ -187,7 +188,7 @@ unlink(){
           break
           ;;
         D )
-          SYMLINK_STATE=delete
+          SYMLINK_CONFIRMED=delete
           break
           ;;
         r )
@@ -195,7 +196,7 @@ unlink(){
           break
           ;;
         R )
-          SYMLINK_STATE=restore
+          SYMLINK_CONFIRMED=restore
           break
           ;;
         s )
@@ -203,7 +204,7 @@ unlink(){
           break
           ;;
         S )
-          SYMLINK_STATE=skip
+          SYMLINK_CONFIRMED=skip
           break
           ;;
         * )
@@ -214,25 +215,44 @@ unlink(){
   fi
 
 
-  action=${action:-$SYMLINK_STATE}
+  action=${action:-$SYMLINK_CONFIRMED}
+
+  local skip_reason="skipped "
+  if [ "$DRY_RUN" ]; then
+      skip_reason="$DRY_RUN"
+  fi
 
   # Skip symlink
   if [ "$action" == "skip" ]; then
-    success "$(printf "Unlink skipped by user %b%s%b == %b%s%b" $green "$link" $rc $green "$link_target" $rc)"
+    if ! [ -f "$backup" ];then backup="none";fi
+    success "$(printf "Unlink %sfor %b%s's %s%b
+                      $spacer existing $type : %b%s%b
+                      $spacer linked to : %b%s%b
+                      $spacer backup $type : %b%s%b" \
+                      "$skip_reason" $green "$topic" "$link_name" $rc \
+                      $green "$link" $rc \
+                      $green "$link_target" $rc \
+                      $green "$backup" $rc)"
 
   # Remove symlink and restore backup
-  elif [ "$action" == "restore" ]; then
+  elif [ "$action" == "restore" ] || [ "$action" == "backup" ]; then
     restore_backup_file "$link"
     if [ $? -eq 0 ]; then
-      success "$(printf "Unlinked and backup restored %b%s%b -> %b%s%b" $green "$backup" $rc $green "$link" $rc)"
+      success "$(printf "Restored backup %b%s%b
+              $spacer -> %b%s%b" $green "$backup" $rc $green "$link" $rc)"
     else
-      success "$(printf "Unlinked %b%s%b, but %b%s%b not found" $green "$link"  $rc $green "$backup" $rc)"
+      warn "$(printf "No backup for %s" $green "$link"  $rc)"
     fi
-
   # Delete the symlink
-  elif [ "$action" == "delete" ]; then # "false" or empty]
+  fi
+
+  if [ "$action" != "skip" ]; then # "false" or empty]
     rm -rf "$link"
-    success "$(printf "Unlinked and removed %b%s%b" $green "$link" $rc)"
+    if [ $? -eq 0 ]; then
+      success "$(printf "Deleted %b%s%b" $green "$link" $rc)"
+    else
+      fail "$(printf "Problem deleting %b%s%b" $green "$link" $rc)"
+    fi
   fi
 
 }
@@ -261,9 +281,9 @@ symlink () {
 
   while [[ $# > 0 ]]; do
     case $1 in
-      -d | delete )    SYMLINK_STATE=delete ;;
-      -b | backup )    SYMLINK_STATE=backup ;;
-      -s | skip )      SYMLINK_STATE=skip ;;
+      -d | delete )    SYMLINK_CONFIRMED=delete ;;
+      -b | backup )    SYMLINK_CONFIRMED=backup ;;
+      -s | skip )      SYMLINK_CONFIRMED=skip ;;
       * )  uncaught_case "$1" "src" "dst" ;;
     esac
     shift
@@ -274,84 +294,132 @@ symlink () {
   local type="$(path_type "$src")"
 
   local dst_full_target="$(full_path "$dst")"
+  local dst_name="$(basename "$dst")"
   src="$(full_path "$src")"
 
+  local exists=
+  if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]; then exists="true";fi
 
-  # Get confirmation if no SYMLINK_STATE
-  if [ -f "$dst" -o -d "$dst" -o -L "$dst" ] && [ -z "$SYMLINK_STATE" ]; then
-    if [ "$dst_full_target" = "$src" ]; then
-      success "$(printf "Symlink already linked %b%s%b == %b%s%b" $green "$dst_full_target" $rc $green "$src" $rc)"
+  if [ "$exists" ] && [ "$dst_full_target" = "$src" ]; then
+      success "$(printf "Symlink %sexists for %b%s's %s%b" "$DRY_RUN" $green "$topic" "$dst_name" $rc)"
       return
+  fi
+
+  # Get confirmation if no SYMLINK_CONFIRMED
+  if [ "$exists" ] && [ -z "$SYMLINK_CONFIRMED" ]; then
+     user "$(printf "Existing $type %b%s%b
+       should be linked to %b%s%b
+       What do you want to do?
+       (%bs%b)kip, (%bS%b) all, (%bo%b)verwrite, (%bO%b) all, (%bb%b)ackup, (%bB%b) all : " \
+       $green "$dst" $rc \
+       $green "$src" $rc \
+       $dark_yellow $rc \
+       $dark_yellow $rc \
+       $dark_yellow $rc \
+       $dark_yellow $rc \
+       $dark_yellow $rc \
+       $dark_yellow $rc)"
+
+    while true; do
+      # Read from tty, needed because we read in outer loop.
+      read user_input < /dev/tty
+
+      case "$user_input" in
+        o )
+          action=delete
+          break
+          ;;
+        O )
+          SYMLINK_CONFIRMED=delete
+          break
+          ;;
+        b )
+          action=backup
+          break
+          ;;
+        B )
+          SYMLINK_CONFIRMED=backup
+          break
+          ;;
+        s )
+          action=skip
+          break
+          ;;
+        S )
+          SYMLINK_CONFIRMED=skip
+          break
+          ;;
+        * )
+          ;;
+      esac
+    done
+    printf "$clear_line $clear_line_above $clear_line_above $clear_line_above"
+
+  fi
+
+  action=${action:-$SYMLINK_CONFIRMED}
+
+  local message=
+  local skip_reason="skipped "
+  if [ "$DRY_RUN" ]; then
+      skip_reason="$DRY_RUN"
+  fi
+
+  if [ "$action" == "skip" ]; then
+    success "$(printf "Symlink %sfor %b%s%b:" "$skip_reason" $green "$dst_name" $rc)"
+    # incorrect link
+    if [ -L "$dst" ]; then
+      warn "$(printf "Symlinked $type : %b%s%b
+                      $spacer currently linked to : %b%s%b
+                      $spacer should be linked to : %b%s%b" $green "$dst" $rc $green "$dst_full_target" $rc $green "$src" $rc)"
+    # Original file not linked
+    elif [ "$exists" ] && [ "$dst_full_target" = "$dst" ]; then
+      warn "$(printf "Original $type : %b%s%b
+                      $spacer should be linked to : %b%s%b" $green "$dst" $rc $green "$src" $rc)"
+
+    # dest not exist
     else
-       user "$(printf "Existing $type %b%s%b
-         will be linked to %b%s%b
-         What do you want to do?
-         (%bs%b)kip, (%bS%b) all, (%bo%b)verwrite, (%bO%b) all, (%bb%b)ackup, (%bB%b) all : " \
-         $green "$dst" $rc \
-         $green "$src" $rc \
-         $light_yellow $rc \
-         $light_yellow $rc \
-         $light_yellow $rc \
-         $light_yellow $rc \
-         $light_yellow $rc \
-         $light_yellow $rc)"
+      warn "$(printf "No $type found at: %b%s%b
+                      $spacer should be linked to : %b%s%b" $green "$dst" $rc $green "$src" $rc)"
 
-      while true; do
-        # Read from tty, needed because we read in outer loop.
-        read user_input < /dev/tty
+    fi
 
-        case "$user_input" in
-          o )
-            action=delete
-            break
-            ;;
-          O )
-            SYMLINK_STATE=delete
-            break
-            ;;
-          b )
-            action=backup
-            break
-            ;;
-          B )
-            SYMLINK_STATE=backup
-            break
-            ;;
-          s )
-            action=skip
-            break
-            ;;
-          S )
-            SYMLINK_STATE=skip
-            break
-            ;;
-          * )
-            ;;
-        esac
-      done
-      printf "$clear_line $clear_line_above $clear_line_above $clear_line_above"
+  elif [ "$action" == "delete" ] && [ "$exists" ]; then
+    message="$(printf "Symlink overwrote %b%s%b" $green "$dst" $rc)"
+    rm -rf "$dst"
+
+  elif [ "$action" == "backup" ] && [ "$exists" ]; then
+    # only create backup once
+    if ! [ -f "${dst}.backup" ] ; then
+      message="$(printf "Symlink backed up %b%s%b
+      $spacer -> %b%s%b" $green "$dst" $rc $green "${dst}.backup" $rc)"
+      mv "$dst" "${dst}.backup"
+    else
+      message="$(printf "Symlink overwrote %b%s%b
+      $spacer already had backup -> %b%s%b" $green "$dst" $rc $green "${dst}.backup" $rc)"
+      rm -rf "$dst"
     fi
   fi
 
-  action=${action:-$SYMLINK_STATE}
-
-  if [ "$action" == "skip" ]; then
-    success "$(printf "Symlink skipped %b%s%b == %b%s%b" $green "$dst" $rc $green "$dst" $rc)"
-
-  elif [ "$action" == "delete" ]; then
-    rm -rf "$dst"
-    success "$(printf "Symlink overwrote %b%s%b" $green "$dst" $rc)"
-
-  elif [ "$action" == "backup" ]; then
-    mv "$dst" "$dst.backup"
-    success "$(printf "Symlink backed up %b%s%b -> %b%s%b" $green "$dst" $rc $green "${dst}.backup" $rc)"
+  if [ "$message" ]; then
+    if [ $? -eq 0 ]; then
+      success "$message"
+    else
+      fail "$message"
+    fi
   fi
 
   if [ "$action" != "skip" ]; then
+    message="$(printf "Symlink linked %b%s%b
+            $spacer -> %b%s%b" $green "$dst" $rc $green "$src"  $rc)"
     # Create native symlinks on Windows.
     export CYGWIN=winsymlinks:nativestrict
     ln -s "$src" "$dst"
-    success "$(printf "Symlink linked %b%s%b -> %b%s%b" $green "$src" $rc $green "$dst"  $rc)"
+    if [ $? -eq 0 ]; then
+      success "$message"
+    else
+      fail "$message"
+    fi
   fi
 }
 
@@ -359,7 +427,7 @@ symlink () {
 restore_backup_file(){
   local file="$1"
   local backup="${dst}.backup"
-  if [ -f backup ];then
+  if [ -f "$backup" ];then
     rm -rf "$file"
     mv "$backup" "$file"
     return 0

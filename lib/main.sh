@@ -8,8 +8,14 @@
 # https://github.com/holman/dotfiles
 # https://github.com/webpro/dotfiles
 
-#TODO: Handle symlink config for alternate locations
-#TODO: Finish install script
+#TODO: URGENT: when manager detected it must create it's state file
+
+#TODO: handle alternate symlink destinations
+#TODO: handle stub files for symlinks
+#TODO: handle .settings files
+#TODO: on new install prompt for --force & --confirm options
+
+#TODO ROADMAP: Handle symlink config for alternate locations
 
 # Fail on errors.
 # set -e
@@ -26,11 +32,11 @@ if ! [ "$DOTSYS_LIBRARY" ];then
     DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 fi
 
-echo "main DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
+#echo "main DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 
 . "$DOTSYS_LIBRARY/common.sh"
 . "$DOTSYS_LIBRARY/yaml.sh"
-. "$DOTSYS_LIBRARY/screenio.sh"
+. "$DOTSYS_LIBRARY/terminalio.sh"
 . "$DOTSYS_LIBRARY/state.sh"
 . "$DOTSYS_LIBRARY/iterators.sh"
 . "$DOTSYS_LIBRARY/platforms.sh"
@@ -48,69 +54,65 @@ DEFAULT_CMD_MANAGER=
 # Not required since state ?
 INSTALLED=()
 
-# current active repo
+# current active repo (set by load_config_vars)
+ACTIVE_REPO=
 ACTIVE_REPO_DIR=
 
-# Set by set_user_vars
+# user info (set by set_user_vars)
 PRIMARY_REPO=
 USER_NAME=
 REPO_NAME=
 
+# persist confirm state
+GLOBAL_CONFIRMED=
+DRY_RUN=
+
 USER_BIN="/usr/local/bin"
 
-# REQUIRED PLATFORM SETUP
 PLATFORM="$(get_platform)"
 
-#log "DOTFILES_ROOT: $(dotfiles_dir)"
+#TODO: Detect platforms like babun and mysys as separate configs, and allow user to specify system.
+
+#debug "DOTFILES_ROOT: $(dotfiles_dir)"
 
 dotsys () {
-    local usage="manage_topic <action> [<topics or repo>] [<limits>] [<options>]"
+    local usage="dotsys <action> [<topics> <limits> <options>]"
     local usage_full="
-    <action> required:  Primary action to take on one or moore topics.
+    <action> required:  Primary action to take on one or more topics.
 
-    -i | install       runs install scripts, downloads repos,  and installs package_manager packages
-    -x | uninstall     runs uninstall scripts deletes repos, and uninstalls package_manager packages
-    -u | upgrade       runs upgrade scripts, upgrades package_manager packages, and
-                       syncs dotsys repos (bumps package versions)
-    -r | reload        runs reload scripts, re-sources bin, re-sources stub files
-                       (does not bump package versions)
-    -f | freeze        creates config file of current state
+    install         runs install scripts, downloads repos,
+                    and installs package_manager packages
+    uninstall       runs uninstall scripts deletes repos,
+                    and uninstalls package_manager packages
+    upgrade         runs upgrade scripts, upgrades packages,
+                    and sync remote repos
+    update          runs update scripts, update package managers
+                    re-sources bin, re-sources stubs
+    freeze [<mode>] creates config file of current state, takes optional mode <default,user,topic,full>
 
+    <topics> optional:
 
-    <topics or repo> optional:
-
-    omitted            Omit topic names to apply action to all available topics
-    topic              Limits action to specified topics (space separated list)
-    repo               Applies to specified repo (user/repo_name)
+    Limits action to specified topics (space separated list)
+    Omit topic for all all available topics
 
     <limits> optional:
-    -d | dotsys        Limit action to dotsys
-    -l | links         Limit action to links
-    -m | managers      Limit action to managers
-    -s | scripts       Limit action to scripts
 
+    -d | dotsys             Limit action to dotsys (excludes package management)
+    -r | repo               Limit action to primary repo management
+    <user/repo>             Same as 'repo' for specified repo
+    -l | links              Limit action to symlinks
+    -m | managers           Limit action to package managers
+    -p | packages           Limit action to package manager's packages
+    -s | scripts            Limit action to scripts
+    -f | from <user/repo>   Apply action to topics from specified repo
 
-    <options> optional:  may come before or after topic list.
+    <options> optional: use to bypass confirmations.
+    --force             force action even if already completed
+    --confirm           bypass topic confirmation and backup / restore backup for existing symlinks
+    --confirm delete    bypass topic confirmation and delete existing symlinks on install & uninstall
+    --confirm backup    bypass topic confirmation and backup existing symlinks on install & restore backups on uninstall
+    --confirm skip      runs through all tasks, but not changes are actually made. (dry run)
 
-    -c | --confirm     <action, delete, backup, restore, skip>
-                       action: pre-confirm topic action only
-                       delete: pre-confirm topic and delete symlink conflicts on install / delete on uninstall
-                       backup: pre-confirm topic and backup symlink conflicts on install / restore backups on uninstall
-                       skip: pre-confirm topic action and skip symlinks
-
-
-    Limit to dotsys:
-    The 'dotsys' limit excludes package manager functions.
-
-    install       symlinks .dotsys directory, runs all topic/install.sh, downloads repos,
-                  but managers packages are not installed (run to bypass package managers)
-    uninstall     removes .dotsys directory, runs all topic/uninstall.sh, , deletes repos,
-                  but managers packages are not uninstalled (run to bypass package managers)
-    upgrade       git pushes or git pulls all repos as required, runs all topic/upgrade.sh,
-                  bypass manager fucntions (run to sync your repo changes)
-    reload        re-sources bins and stubs, runs all topic/reload.sh,
-                  bypass manager.reload functions (run to test topic modifications)
-    freeze        creates config file reflecting current state, excluding managed packages
 
     Example usage:
 
@@ -131,7 +133,7 @@ dotsys () {
                         Symlinked to home or specified directory
 
     scripts:            topic/script.sh
-                        install.sh, uninstall.sh, upgrade.sh, reload.sh
+                        install.sh, uninstall.sh, upgrade.sh, update.sh
 
     bin:                topic/bin/file_name.sh
                         symlinked to dotsys/bin which is in path
@@ -154,7 +156,7 @@ dotsys () {
       install.sh:       Should only need to be run once, on install!
       uninstall.sh:     Should only need to be run once, on uninstall!
       upgrade.sh:       Only use for changes that bump the version.
-      reload.sh:        Only use to reload local changes without a version bump.
+      update.sh:        Only use to update local changes without a version bump.
     "
 
     check_for_help "$1"
@@ -163,14 +165,16 @@ dotsys () {
     local freeze_mode=
 
     case $1 in
-      -i | install )    action="install" ;;
-      -x | uninstall)   action="uninstall" ;;
-      -u | upgrade )    action="upgrade" ;;
-      -r | reload )     action="reload" ;;
-      -l | freeze)      action="freeze"
-           if [[ "$FREEZE_MODES" =~ "$2" ]]; then freeze_mode="$2";shift;fi ;;
-      -e | export)      action="export" ;;
-      * )  error "'$1' is not a valid action%b"
+        install )   action="install" ;;
+        uninstall)  action="uninstall" ;;
+        upgrade )   action="upgrade" ;;
+        update )    action="update" ;;
+        freeze)     action="freeze"
+                    if [[ "$FREEZE_MODES" =~ "$2" ]];then
+                        freeze_mode="$2"
+                        shift
+                    fi ;;
+        * )  error "Invalid action: $1 %b"
            show_usage ;;
     esac
     shift
@@ -182,57 +186,85 @@ dotsys () {
 
     while [[ $# > 0 ]]; do
     case $1 in
-      # limits
-      -d | dotsys )     limits+=("dotsys") ;;
-      -l | links)       limits+=("links") ;;
-      -m | managers)    limits+=("managers") ;;
-      -s | scripts)     limits+=("scripts") ;;
-      -f | from)        from_repo="$2"; shift ;;
+        # limits
+        -d | dotsys )   limits+=("dotsys") ;;
+        -r | repo)      limits+=("repo") ;; #no additional topics permitted
+        -l | links)     limits+=("links") ;;
+        -m | managers)  limits+=("managers") ;;
+        -p | packages)  limits+=("packages") ;;
+        -s | scripts)   limits+=("scripts") ;;
+        -f | from)      from_repo="$2"; shift ;;
 
-      # options
-      --confirm)        P_STATE="${2:-action}"; shift ;;
-      --force)          force="--force";;
-      * )               topics+=("$1") ;;
+        # options
+        --force)        force="--force";;
+        --confirm)      if [[ "$2" =~ (delete|backup|skip) ]]; then
+                            GLOBAL_CONFIRMED="$2"
+                            if [ "$2" = "skip" ]; then
+                                DRY_RUN="(dry run) "
+                            fi
+                            shift
+                        else
+                            GLOBAL_CONFIRMED="backup"
+                        fi ;;
+        -*)  invalid_option ;;
+        *)  topics+=("$1") ;;
     esac
     shift
     done
 
-    log "main fm: $freeze_mode"
-
     required_vars "action"
 
-    print_logo
+    print_debugo
 
-    local P_STATE=
-    local SYMLINK_STATE=
+    debug "dotsys main: a:$action t:${topics[@]} l:$limits conf:$GLOBAL_CONFIRMED force:$force"
 
-
-    #log "dotsys main: a:$action t:${topics[@]} l:$limits"
-
-    # Repo as topic and not freeze.
-    if topic_is_repo && [ "$action" != "freeze" ]; then
-       manage_repo "$action" "${topics[0]}"
-       return
+    # Set persistent options
+    if [ "$DRY_RUN" ]; then
+        GLOBAL_CONFIRMED="skip"
     fi
 
-    # FREEZE List installed topics or create config yaml
+    # Set repo as first topic = limits "repo"
+    if topic_is_repo; then
+        debug "topic is repo: ${topics[0]}"
+        limits+=("repo")
+        from_repo="${topics[0]}"
+        topics=
+    elif in_limits "repo" -r; then
+        debug "repo is in limits"
+        from_repo="repo"
+        topics=
+    fi
+
+    # allow from "repo" as shortcut to active repo
+    if [ "$from_repo" = "repo" ] ; then
+        from_repo="$(get_active_repo)"
+    fi
+
+    #TODO: need to separate repo management
+    # Parses from_repo, Loads config file, manages repo, and sets main repo
+    load_config_vars "$from_repo" "$action"
+
+    # FREEZE installed topics or create config yaml
     if [ "$action" = "freeze" ] && in_limits "dotsys"; then
-        if topic_is_repo; then
-            create_config_yaml "${topics[0]}" "${limits[@]}"
+        debug "main freeze_mode: $freeze_mode"
+        if in_limits -r "repo"; then
+            create_config_yaml "from_repo" "${limits[@]}"
+            return
         else
-            freeze "${limits[@]}"
+            freeze "from_repo" "${limits[@]}"
         fi
+    fi
+
+    # repo management only when "repo in limits"
+    if in_limits -r "repo"; then
         return
     fi
-
-    # Parses from_repo, Loads config file, and sets main repo
-    load_config_vars "$from_repo" "$action"
 
     # get all topics if not specified
     if ! [ "$topics" ]; then
 
         if ! [ "$ACTIVE_REPO_DIR" ]; then
-            error "Could not resolve repo directory"
+            error "Could not resolve active repo directory: $ACTIVE_REPO_DIR"
             return 1
         fi
         local list="$(get_topic_list "$ACTIVE_REPO_DIR")"
@@ -241,6 +273,7 @@ dotsys () {
             msg_help "$( printf "Use %bdotsys add%b or manually create topic folders" $blue $dark_gray)"
         fi
         topics=("$list")
+        debug "topics list: $topics"
     fi
 
     # Show stats
@@ -251,28 +284,41 @@ dotsys () {
     # Iterate topics
     for topic in ${topics[@]};do
 
+        local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
+
         # Load topic config (must be first and not in $(subshell) !)
         load_topic_config_vars "$topic"
 
-        # Abort non existent topics
+        # ABORT: non existent topics
         if ! topic_exists "$topic"; then
+            # message supplied by topic_exits
             continue
         fi
 
-        # Abort on platform exclude
+        # ABORT: on platform exclude
         if platform_excluded "$topic"; then
-            success "$(printf "The topic %b${topic}%b has been excluded for %b${PLATFORM}%b" $light_green $rc $light_green $rc)"
+            task "$(printf "Excluded %b${topic}%b on $PLATFORM" $green $blue)"
             continue
         fi
 
-        # Abort on install if already installed (override --force)
-        if [ "$action" = "install" ] && is_installed "$topic" && [ ! "$force" ]; then
-           task "$(printf "Already ${action}ed %b$topic%b" $light_green $rc)"
+        # ABORT: on install if already installed (override --force)
+        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" && [ ! "$force" ]; then
+           task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         fi
 
+        # ABORT: on uninstall if not installed (override --force)
+        if [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" && [ ! "$force" ]; then
+           task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
+           continue
+        fi
+
+        debug "main pre confirm_task: $GLOBAL_CONFIRMED / $TOPIC_CONFIRMED"
+        # CONFIRM topic
         confirm_task "$action" "$topic" "${limits[@]}"
         if ! [ $? -eq 0 ]; then continue; fi
+        debug "main post confirm_task: $GLOBAL_CONFIRMED / $TOPIC_CONFIRMED"
+
 
         # CHECKS DONE START THE ACTION
 
@@ -281,22 +327,23 @@ dotsys () {
             install_dependencies "$topic"
         fi
 
-        # 2) check if topic is managed and run the manager action
+        # 2) Managed topics need to be managed before scripts are run
         local topic_manager="$(get_topic_manager "$topic")"
         if [ "$topic_manager" ] && in_limits "managers"; then
-            # make sure manager is installed on system
-            if ! is_installed "$topic_manager"; then
+            # make sure the topic manager is installed on system
+            if ! is_installed "dotsys" "$topic_manager"; then
                 info "Installing manager '$topic_manager' for $topics"
                 # install the manager
                 dotsys "install" "$topic_manager" ${limits[@]}
             fi
+            debug "main calling run_manager_task: m:$topic_manager a:$action t:$topic f:$force"
             run_manager_task "$topic_manager" "$action" "$topic" "$force"
         fi
 
         # 3) symlink topic
         if in_limits "links" "dotsys"; then
-            log "$action $topic --confirm $confirmed"
-            symlink_topic "$action" "$topic" --confirm "$confirmed"
+            debug "main call symlink: $action $topic confirmed: $GLOBAL_CONFIRMED / $TOPIC_CONFIRMED"
+            symlink_topic "$action" "$topic"
         fi
 
         # 4) run the appropriate topic script
@@ -304,33 +351,46 @@ dotsys () {
             run_topic_script "$action" "$topic"
         fi
 
-        # 5) If topic IS a manager, let it manage it's packages
-        if in_limits "managers"; then
-            manage_packages "$action" "$topic"
+        # 5) Check if topic IS a manager and manage it's packages
+        if in_limits "packages"; then
+            manage_packages "$action" "$topic" "$force"
         fi
     done
 
-    # make sure repo is installed updated
-    if [ "$action" = "uninstall" ]; then
-        manage_repo "$action" "$from_src"
-    fi
+    # will only uninstall if not repo_in_use
+    manage_repo "uninstall" "$from_repo"
+
 }
 
 
 in_limits () {
-    local limits="${1:-$limits}"
-    if ! [ "$limits" ]; then return 0;fi
+    local option=
+    local search=$@
     local found=1
-    for l in $@; do
-        if [[ ${limits[@]} =~ "$l" ]]; then
-          found=0
+    search=
+    while [[ $# > 0 ]]; do
+        case $1 in
+        -r | --required)  option="required";;
+        * )   search+="$1 "      ;;
+        esac
+        shift
+    done
+
+    if [ "$option" != "required" ] && ! [ "$limits" ]; then
+        return 0
+    fi
+
+    local s
+    for s in $search; do
+        if [[ ${limits[@]} =~ "$s" ]]; then
+            return 0
         fi
     done
     return $found
 }
 
 topic_is_repo () {
-    [[ "${topics[0]}" == *"/"* ]]
+    [ "${topics[0]}" = "repo" ] && topics[0]="$(get_active_repo)" || [[ "${topics[0]}" == *"/"* ]]
 }
 
 
@@ -350,14 +410,16 @@ dotsys_installer () {
          show_usage ;;
     esac
 
+    #TODO: make sure all required dirs and files not in git exist (ie state, user) then remove checks for files and dirs
+
     local user_dotfiles="$(dotfiles_dir)"
 
-    log "$action dotsys DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-    log "$action dotsys user_dotfiles: $user_dotfiles"
+    debug "$action dotsys DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+    debug "$action dotsys user_dotfiles: $user_dotfiles"
 
     # make sure user bin is on path (TODO: need to permanently add to path)
     if [ "${PATH#*$USER_BIN}" == "$PATH" ]; then
-        log "adding /usr/local/bin to path"
+        debug "adding /usr/local/bin to path"
         export PATH=$PATH:/usr/local/bin
     fi
 

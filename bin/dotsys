@@ -34,11 +34,9 @@ fi
 
 DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
-echo "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-echo "DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 source "$DOTSYS_LIBRARY/main.sh"
 
-#dotsys $@
+dotsys $@
 
 
 
