@@ -8,14 +8,13 @@
 # https://github.com/holman/dotfiles
 # https://github.com/webpro/dotfiles
 
-#TODO: URGENT: when manager detected it must create it's state file
-
 #TODO: handle alternate symlink destinations
 #TODO: handle stub files for symlinks
 #TODO: handle .settings files
 #TODO: on new install prompt for --force & --confirm options
 
 #TODO ROADMAP: Handle symlink config for alternate locations
+#TODO ROADMAP:  Detect platforms like babun and mysys as separate configs, and allow user to specify system.
 
 # Fail on errors.
 # set -e
@@ -70,8 +69,6 @@ DRY_RUN=
 USER_BIN="/usr/local/bin"
 
 PLATFORM="$(get_platform)"
-
-#TODO: Detect platforms like babun and mysys as separate configs, and allow user to specify system.
 
 #debug "DOTFILES_ROOT: $(dotfiles_dir)"
 
@@ -358,7 +355,7 @@ dotsys () {
     done
 
     # will only uninstall if not repo_in_use
-    manage_repo "uninstall" "$from_repo"
+    manage_repo "uninstall" "$from_repo" "$force"
 
 }
 

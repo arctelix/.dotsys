@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
 manage_repo (){
-    local action="$1"
-    local repo="$2"
-    #todo: split out branch
-    local branch="${3:-master}"
+    local action=
+    local repo=
+    local branch="master" #todo: implement branch section
 
     local github_repo="https://github.com/$repo"
     local local_repo="$(repo_dir "$repo")"
@@ -13,41 +12,56 @@ manage_repo (){
     local user_name="$(cap_first ${repo%/*})"
     local repo_name="${repo#*/}"
     local state_key="installed_repo"
-    is_installed "dotsys" "$state_key" "$repo"
-    local status=$?
     local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
 
-    debug "-- manage_repo: a:$action repo:$repo"
+
+    local force
+    local silent
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        --force )    force="$1" ;;
+        -s | --silent)  silent="$1" ;;
+        -*)  invalid_option ;;
+        *)  uncaught_case "$1" "action" "repo" "branch" ;;
+        esac
+        shift
+    done
+
+    debug "-- manage_repo: a:$action repo:$repo force:$force silent:$silent"
 
     # determine repo status
-    if [ "$action" = "install" ] && [ $status ]; then
-        status="abort"
-    elif [ "$action" = "uninstall" ] && ! [ $status ]; then
-        status="abort"
+    is_installed "dotsys" "$state_key" "$repo"
+    local repo_status=$?
+
+    if [ "$action" = "install" ] && [ $repo_status -eq 0 ] && ! [ "$force" ]; then
+        repo_status="abort"
+    elif [ "$action" = "uninstall" ] && ! [ $repo_status -eq 0 ] && ! [ "$force" ]; then
+        repo_status="abort"
     elif ! [ -d "$local_repo" ]; then
         # check for remote
         wget "${github_repo}.git" --no-check-certificate -o /dev/null
         # remote repo found
         if [ "$?" -eq 0 ]; then
-            status="remote"
+            repo_status="remote"
         # no remote repo or directory
         else
-            status="new"
+            repo_status="new"
         fi
     else
-        status="existing"
+        repo_status="existing"
     fi
 
     # make sure repo is properly installed (unless installing)
-    if [ "$status" != "abort" ] && [ "$action" != "install" ]; then
+    if [ "$repo_status" != "abort" ] && [ "$action" != "install" ]; then
         # Check existing for git
-        if [ "$status" = "existing" ] && ! [ -d "${local_repo}/.git" ];then
+        if [ "$repo_status" = "existing" ] && ! [ -d "${local_repo}/.git" ];then
             msg "$(printf "Warning: An existing local directory named $repo was found, but \
             it's not installed for use with dotsys.")"
             action="install"
 
         # Check for non existing repo
-        elif [ "$status" != "existing" ]; then
+        elif [ "$repo_status" != "existing" ]; then
             error "$(printf "The specified repo %b$repo%b does not exist.
             \rPlease make sure it is spelled correctly and in your '.dotfiles' directory." $blue $red)"
 
@@ -58,28 +72,28 @@ manage_repo (){
     fi
 
     # confirm action or abort
-    if [ "$status" = "abort" ]; then
-        task "$(printf "Already installed repo: %b$repo%b" $green $blue)"
+    if [ "$repo_status" = "abort" ]; then
+        task "$(printf "Already ${action%e}ed: %b$repo%b" $green $blue)"
         return
-    else
-        confirm_task "$action" "$status repo: $local_repo"
-        if ! [ $? -eq 0 ]; then
-            # check for no primary repo or exit
-            if ! [ "$(state_primary_repo)" ]; then
-                error "$(printf "In order for dotsys to work you will need to create a repository.
-                      \rRun 'dotsys install' to create or download an existing repo.")"
-                exit
-            fi
-            return
-        fi
+    elif ! [ "$silent" ] && ! [ "$TOPIC_CONFIRMED" ]; then
+        confirm_task "$action" "$repo_status repo: $local_repo"
+        if ! [ $? -eq 0 ]; then return;fi
     fi
 
+    # check for primary repo or exit
+#    if ! [ "$(state_primary_repo)" ]; then
+#        error "$(printf "In order for dotsys to work you will need to create a repository.
+#              \rRun 'dotsys install' to create or download an existing repo.")"
+#        exit
+#    fi
+
     # START ACTIONS
+    local action_status=1
 
     if [ "$action" = "install" ]; then
 
         # change into local repo directory
-        if [ "$status" != "existing" ];then
+        if [ "$repo_status" != "existing" ];then
             mkdir -p "$local_repo"
         fi
 
@@ -89,11 +103,11 @@ manage_repo (){
 
         # make sure repo is git!
         if ! is_git; then
-            confirm_task "initialize" "\n$spacer $status repo $local_repo"
+            confirm_task "initialize" "\n$spacer $repo_status repo $local_repo"
             if ! [ $? -eq 0 ]; then exit; fi
 
             # force existing to push to git
-            if [ "$status" == "existing" ];then status=new; fi
+            if [ "$repo_status" == "existing" ];then repo_status=new; fi
 
             if ! [ -f ".dotsys.cfg" ]; then
                 touch .dotsys.cfg
@@ -107,35 +121,35 @@ manage_repo (){
             git commit -m "initialized by dotsys"
 
             if [ "$?" -eq 0 ]; then
-                success "$(printf "Initialize %b$status%b local repo %b$local_repo%b" $green $rc $green $rc)"
+                success "$(printf "Initialize %b$repo_status%b local repo %b$local_repo%b" $green $rc $green $rc)"
             else
-                error "$(printf "Initialize %b$status%b local repo %b$local_repo%b" $green $rc $green $rc)"
+                error "$(printf "Initialize %b$repo_status%b local repo %b$local_repo%b" $green $rc $green $rc)"
                 exit
             fi
         fi
 
         # REMOTE: Has existing remote repo
-        if [ "$status" = "remote" ];then
+        if [ "$repo_status" = "remote" ];then
             git fetch origin master
             if [ "$?" -eq 0 ]; then
-                success "$(printf "Fetched existing %b$status%b repo %b$local_repo%b" $green $rc $green $rc)"
+                success "$(printf "Fetched existing %b$repo_status%b repo %b$local_repo%b" $green $rc $green $rc)"
             else
-                error "$(printf "Fetch existing %b$status%b repo %b$local_repo%b" $green $rc $green $rc)"
+                error "$(printf "Fetch existing %b$repo_status%b repo %b$local_repo%b" $green $rc $green $rc)"
                 exit
             fi
 
         # NEW: initialize remote repo
-        elif [ "$status" = "new" ];then
+        elif [ "$repo_status" = "new" ];then
             confirm_task "initialize" "remote repo" "$github_repo"
             if [ "$?" -eq 0 ]; then
                 # Git hub will prompt for the user password
                 curl -u "$user_name" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"
                 git push origin master
                 if ! [ $? -eq 0 ]; then
-                    fail "$(printf "Initialize %b$status%b  remote repo %b$github_repo%b" $green $rc $green $rc)"
+                    fail "$(printf "Initialize %b$repo_status%b  remote repo %b$github_repo%b" $green $rc $green $rc)"
                     msg "$spacer However, The local repo is ready for topics..."
                 else
-                    success "$(printf "Initialize %b$status%b  remote repo %b$github_repo%b" $green $rc $green $rc)"
+                    success "$(printf "Initialize %b$repo_status%b  remote repo %b$github_repo%b" $green $rc $green $rc)"
 
                 fi
             fi
@@ -145,8 +159,8 @@ manage_repo (){
         # exit repo directory
         cd "$OWD"
 
-        success "$(printf "$(cap_first "$action")ed $status repo %b$local_repo%b" $green $rc)"
         state_install "dotsys" "$state_key" "$repo"
+        action_status=$?
 
         confirm_make_primary_repo "$repo"
 
@@ -157,26 +171,36 @@ manage_repo (){
         fi
         msg "$spacer HINT: Freeze your repo any time with 'dotsys freeze user/repo_name'"
 
-    elif [ "$status" = "update" ];then
+    elif [ "$repo_status" = "update" ];then
         # this should pull if required but not push!
         echo "repo $action not implemented"
+        action_status=$?
 
     elif [ "$action" = "upgrade" ]; then
         # this should push or pull as required
         update_repo "$repo"
+        action_status=$?
 
     elif [ "$action" = "freeze" ]; then
         # list installed repos
         echo "repo $action not implemented"
+        action_status=$?
 
     elif [ "$action" = "uninstall" ]; then
         if ! repo_in_use "$repo"; then
-            confirm_task "$action" "default repo configuration" "to ${repo}/.dotsys-default.cfg"
             if ! [ "$?" -eq 0 ]; then return; fi
             # remove from state only for now
             state_uninstall "dotsys" "$state_key" "$repo"
+            action_status=$?
+        fi
+    fi
+
+    # Success / fail message
+    if ! [ "$silent" ]; then
+        if [ $action_status -eq 0 ]; then
+            success "$(printf "$(cap_first "$action")ed $repo_status repo %b$local_repo%b" $green $rc)"
         else
-            debug "repo still in use, not uninstalled"
+            fail "$(printf "$(cap_first "$action") $repo_status repo %b$local_repo%b" $green $rc)"
         fi
     fi
 
@@ -365,8 +389,7 @@ repo_in_use () {
     local states="$(get_state_list)"
     local s
     for s in $states; do
-        #TODO: Need to make sure key is not user_repo or installed_repo to get accurate result
-        if in_state "$s" "" "$repo"; then
+        if in_state "$s" "!repo" "$repo"; then
         return 0; fi
     done
     return 1

@@ -4,13 +4,18 @@ state_dir () {
   echo "$(dotsys_dir)/state"
 }
 
+# creates a sate file if none exists
+create_state_file(){
+    local file="$(state_dir)/${1}.state"
+    if ! [ -f "$file" ]; then touch "$file"; fi
+}
+
 # adds key:value if key:value does not exist (value optional)
 state_install() {
   local file="$(state_dir)/${1}.state"
   local key="$2"
   local value="$3"
 
-  #if ! [ -f "$file" ]; then touch "$file"; fi
   grep -q "${key}:${value}" "$file" || echo "${key}:${value}" >> "$file"
 }
 
@@ -20,7 +25,6 @@ state_uninstall () {
   local key="$2"
   local value="$3"
 
-  #if ! [ -f "$file" ]; then touch "$file"; fi
   grep -v "${key}:${value}" "$file" > "temp.state" && mv "temp.state" "$file"
 }
 
@@ -50,14 +54,30 @@ is_installed () {
   return $?
 }
 
-# Test if key (optional value) exists in state file
+# Test if key and or value exists in state file
+# use "!$key" to negate values with keys that contain "$key"
+# ie: key="!repo" will not match keys "user_repo:" or "repo:" etc..
 in_state () {
   local file="$(state_dir)/${1}.state"
   local key="$2"
   local value="$3"
+  local results
+  local not
+  local r
 
-  # test if topic is listed in state file
-  #if ! [ -f "$file" ]; then touch "$file"; fi
+  if [[ "$key" == "!"* ]]; then
+      not="${key#!}"
+      key=""
+      results="$(grep "${key}:$value" "$file")"
+      for r in $results; do
+        #debug "result for !$not ${key}:$value  = $r"
+        if [ "$r" ] && ! [[ "$r" =~ ${not}.*:${value} ]]; then
+            return 0
+        fi
+      done
+      return 1
+  fi
+  # test if key and or value is in state file
   grep -q "${key}:$value" "$file"
 }
 
@@ -65,8 +85,8 @@ in_state () {
 get_state_value () {
   local key="$1"
   local file="$(state_dir)/${2:-dotsys}.state"
-  local result="$(grep "^$key:.*$" "$file")"
-  echo "${result#*:}"
+  local results="$(grep "^$key:.*$" "$file")"
+  echo "${results#*:}"
 }
 
 # sets value for unique key

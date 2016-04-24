@@ -328,10 +328,10 @@ validate_config_or_repo (){
         fi
 
         # make sure repo is installed updated
-        #if [ "$action" != "uninstall" ]; then
+        if [ "$action" != "uninstall" ]; then
             manage_repo "$action" "$from_src"
             status=$?
-        #fi
+        fi
 
         # get the repo config file
         config_file="$(get_repo_config_file "$from_src")"

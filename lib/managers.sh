@@ -60,6 +60,7 @@ run_manager_task () {
 
      # record success to state file
      if [ $? -eq 0 ]; then
+         create_state_file "$manager"
          if [ "$action" = "install" ]; then
            state_install "$manager" "$topic"
          elif [ "$action" = "uninstall" ]; then

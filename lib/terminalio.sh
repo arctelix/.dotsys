@@ -163,8 +163,6 @@ confirm_task () {
 
   local confirmed=
 
-  debug "confirm_task: $TOPIC_CONFIRMED"
-
   if ! [ "$TOPIC_CONFIRMED" ] && [ "$topic" ]; then
 
       local text="$(printf "Would you like to %b%s %s%b%s?
