@@ -38,23 +38,19 @@ run_topic_script () {
      success "$(printf "No $action script supplied %sfor %b$topic%b" "$DRY_RUN" $light_green $rc)"
   fi
 
-  debug "run_topic_script received exit status [ $status ] for $topic $action"
-
-  # install
-  if [ "$action" = "install" ]; then
-    if [ $status -le 10 ]; then # success
-        # add to state file if not there
-        state_install "dotsys" "$topic" "$ACTIVE_REPO"
-        INSTALLED+=($topic) # not used any more
-    fi
-
-  # uninstall
-  elif [ "$action" = "uninstall" ]; then
-    if [ $status -le 10 ]; then # success
-      # remove topic form state file
-      state_uninstall "dotsys" "$topic" "$ACTIVE_REPO"
-      INSTALLED=( "${INSTALLED[@]/$topic}" ) # not used any more
-    fi
+  # record success to state file (10 = not found, but not required)
+  if [ $status -le 10 ]; then # success
+      # installed
+      if [ "$action" = "install" ]; then
+            # add to state file if not there
+            state_install "dotsys" "$topic" "$ACTIVE_REPO"
+            INSTALLED+=($topic) # not used any more
+      # uninstalled
+      elif [ "$action" = "uninstall" ]; then
+          # remove topic form state file
+          state_uninstall "dotsys" "$topic" "$ACTIVE_REPO"
+          INSTALLED=( "${INSTALLED[@]/$topic}" ) # not used any more
+      fi
   fi
 
   #return $status
@@ -95,27 +91,27 @@ run_script (){
     # script success
     if [ $status -eq 0 ]; then
       success "$(printf "Script executed %s%b%s%b on %b%s%b" "$DRY_RUN" $green "$script" $rc $green "$PLATFORM" $rc)"
-      printf "success: %s\n" "$script" >> dotsys.debug
+      printf "success: %s\n" "$script" >> $DEBUG_FILE
 
     # script error
     else
       fail "$(printf "Script failed %s%b%s%b on %b%s%b." "$DRY_RUN" $red "$script" $rc $green "$PLATFORM" $rc)"
-      printf "failed: %s\n" "$script" >> dotsys.debug
+      printf "failed: %s\n" "$script" >> $DEBUG_FILE
     fi
 
   # missing required
   elif [ "$required" ]; then
     fail "$(printf "Script not found %s%b%s%b on %b%s%b" "$DRY_RUN" $green "$script" $rc $green "$PLATFORM" $rc)"
-    printf "missing: %s\n" "$script" >> dotsys.debug
+    printf "missing: %s\n" "$script" >> $DEBUG_FILE
     status=11
 
   # missing ok
   else
-    printf "na: %s\n" "$script" >> dotsys.debug
+    printf "na: %s\n" "$script" >> $DEBUG_FILE
     status=10
   fi
 
-  debug "run_script exit status $DRY_RUN[ $status ] for $script"
+  debug "   run_script exit status $DRY_RUN[ $status ] for $script"
 
   return $status
 }
@@ -142,7 +138,7 @@ run_script_func () {
     shift
   done
 
-  debug "--- run_script_func recieved: $topic $file_name $action $required"
+  debug "-- run_script_func received : t:$topic f:$file_name a:$action p:${params[@]} req:$required"
 
   # Returns built in and user script
   local scripts="$(get_topic_scripts "$topic" "$file_name")"
@@ -157,8 +153,9 @@ run_script_func () {
 
   # execute built in function then user script function
   for script in $scripts; do
-      if script_func_exists $script $action; then
-          debug "running $script $action ${params[@]}"
+      if script_func_exists "$script" "$action"; then
+
+          debug "   running $script $action ${params[@]}"
 
           # run action & handle fail
           if ! [ "$DRY_RUN" ]; then
@@ -186,7 +183,7 @@ run_script_func () {
 
   done
 
-  debug "run_script_func exit status $DRY_RUN[ $status ] for $script $action"
+  debug "   run_script_func exit status: $DRY_RUN[ $status ] for $script $action"
 
   return $status
 }

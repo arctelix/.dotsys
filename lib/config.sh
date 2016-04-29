@@ -1,54 +1,350 @@
 #!/bin/sh
 
+# NEVER USE ACTUAL VARS DIRECTLY; USE THIS METHOD OR GET_TOPIC_CONFIG_VAL!
+get_config_val () {
+  # TYPE                         ACTUAL VAR      CALL AS
+  # topic config file (root)     _$topic         get_config_val "$topic"
+  # user config file  (root)     __$topic        get_config_val "_$cfg"
+  # user config file  (topic)    __$topic_$cfg   get_config_val "_$topic" "$cfg"
+  # default config file (root)   ___$cfg         get_config_val "__$cfg"
+  # default config file (topic)  ___$topic_$cfg  get_config_val "__$topic" "$cfg"
+
+  if [ $# -eq 0 ]; then return;fi
+
+  local cfg=""
+  local part=
+
+  # Allow dashes as first param to prevent extra dash on blank param
+  if [ "$1" = "_" ] || [ "$1" = "__" ]; then
+       cfg="$1"
+       shift
+  fi
+  for part in $@; do
+     if ! [ "part" ]; then continue;fi
+     cfg+="_$part"
+  done
+  cfg="$cfg[@]"
+  echo "${!cfg}"
+}
+
 load_config_vars (){
     # Defaults to state_reop config file or specify repo or path to config file
 
     local from="$1"
     local action="${2:-$action}"
-    local config_file=
 
-    debug "load_config_vars $action from: $from"
+    # set by validate_config_or_repo or new_user_config
+    local config_file=
+    local active_repo=
+    local new_user=
+
+    debug "-- load_config_vars: $action from: $from"
+
+    debug "-- loading default config"
+
     # load default cfg (prefix with ___)
     local yaml="$(parse_yaml "$(dotsys_dir)/.dotsys.cfg" "___")"
     #debug "$yaml"
     eval "$yaml" #set default config vars
 
-    local active_repo="$(get_active_repo)"
-    local active_repo_dir="$(repo_dir "$active_repo")"
 
-    # get active repo cfg file if no from supplied
-    if ! [ "$from" ] && [ -d "$active_repo_dir" ]; then
-        confirm_make_primary_repo "$active_repo"
+
+    # validate from and set config_file
+    if [ "$from" ]; then
+        validate_config_or_repo "$from" "$action"
+    fi
+
+    # new user
+    if is_new_user && [ "$action" = "install" ]; then
+        new_user_config "$from"
+
+    # existing user (no from supplied)
+    elif ! [ "$from" ]; then
+        active_repo="$(get_active_repo)"
         config_file="$(get_repo_config_file "$active_repo")"
+    fi
 
-    # get user specified cfg file or repo cfg file
-    elif [ "$from" ]; then
-       validate_config_or_repo "$from" "$action"
+    # Make sure repo is installed updated
+    # Skip on uninstall, unless "repo" is in limits.
+    if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
+        manage_repo "$action" "$active_repo" "$force"
+        status=$?
+    fi
 
-    # assume we got a new user
-    else
-       new_user_config
+    # ABORT HERE ON UNINSTALL REPO
+    if [ "$action" = "uninstall" ] && in_limits "repo" -r; then
+        return
     fi
 
     # load the user config file vars (prefix with __)
     if [ -f "$config_file" ]; then
         yaml="$(parse_yaml "$config_file" "__")"
-        #debug "config vars loaded:"
+        #debug "load_config_vars loaded:"
         #debug "$yaml"
         eval "$yaml" #set config vars
+
     # warn no config
     else
-        warn "No config file was found in $config_file !"
+        warn "No config file was found"
     fi
+
+    # Not required when limited to repo
 
     # must be set after config
     ACTIVE_REPO="$(get_active_repo)"
     ACTIVE_REPO_DIR="$(repo_dir)"
-    info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
 
     # Set default cmd app manager as per config or default
     set_default_managers
 }
+
+# sets config_file & config_file
+# from user specific file or repo
+validate_config_or_repo (){
+
+    local from_src="$1"
+    local action="$2"
+    local prev_error=0
+
+    local status=0
+
+    # FILE: anything with . must be a file
+    if [[ "$from_src" =~ ^.*\..*$ ]]; then
+        config_file="$from_src"
+        active_repo="$(get_config_file_repo "$config_file")"
+
+        # catch file does not exist
+        if ! [ -f "$config_file" ]; then
+            prompt_config_or_repo "$action" "Config file was not found at $config_file"
+            #clear_lines "\n"
+            return
+        fi
+
+        msg "Using config file : $config_file\n"
+
+    # must be repo
+    elif [ "$from_src" ]; then
+
+        # catch repo incorrect format
+        if ! [[ "$from_src" =~ ^[^/].*/.*$ ]]; then
+            ((error_count+=1))
+            prompt_config_or_repo "$action" "Repo must be in the format 'github_user/repo_name'"
+            #clear_lines "\n"
+            return
+        fi
+
+        # get the repo config file
+        config_file="$(get_repo_config_file "$from_src")"
+        active_repo="$from_src"
+
+        msg "Using repo : $active_repo \n"
+    fi
+
+    # repo manager handles all other repo issues
+    # nothing else to validate, pass silently
+
+    return $status
+
+}
+
+prompt_config_or_repo () {
+
+    local action="${1:-install}"
+    local error="$2"
+
+
+    # TODO: find existing repos and offer choices
+    #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name '.dotsys.cfg -exec dirname {}')"
+    #echo "found files: $config_files"
+
+    local default=
+    if [ "$active_repo" ]; then default=" [$active_repo]"
+    elif [ "$config_file" ]; then default=" [$config_file]"
+    fi
+
+    local q_repo="Enter a repo or config file to ${action}${default}"
+    if ! [ "$active_repo" ]; then
+          q_repo+="$(printf "\n%brepo example: github_user/repo_name%b" $dark_gray $rc)"
+    fi
+
+    if [ "$error" ]; then
+        clear_lines "$q_repo"
+        msg "$(printf "%bERROR: ${error}, try again%b" $red $rc)"
+        printf "$q_repo : "
+    else
+        printf "$q_repo : "
+    fi
+
+    while true; do
+        # Read from tty, needed because we read in outer loop.
+        read user_input < /dev/tty
+
+        local repo="$(dotfiles_dir)$user_input"
+
+        if [ "$user_input" = "abort" ]; then
+           exit
+        elif [ "$user_input" = "help" ]; then
+
+            clear_lines "$q_repo"
+            local h_repo="$(printf "%bSETUP HELP:%b
+
+                   \rOPTION 1 (repo):
+
+                   \r  A repo is simply a github repository containing
+                   \r  your topics. Specify a remote github repository
+                   \r  as %bgithub_user/repo_name%b.
+
+                   \r  If the remote repo exists we'll download it. Otherwise,
+                   \r  we'll create it locally in your dotfiles directory and
+                   \r  optionally upload it to github.
+
+                   \r  Then move any existing topics you have to the new folder
+                   \r  %b~/.dotfiles/github_user/repo_name%b.
+
+                   \rOPTION 2 (cofig file):
+
+                   \r  A %bconfig file%b is a way to specify repos & topic configs.
+                   \r  Provide a full path to a %b.dotsys.cfg%b file and we'll take
+                   \r  it form there.
+
+                   \rEASY!%b" \ $yellow $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $rc)"
+
+            printf "\r$h_repo \n\n"
+
+            printf "$q_repo : "
+        elif [ "$user_input" ]; then
+            break
+
+        elif [ "$active_repo" ]; then
+            user_input="$active_repo"
+            break
+        else
+            clear_lines "$q_repo"
+            printf "$q_repo : "
+        fi
+    done
+
+    validate_config_or_repo "$user_input" "$action"
+    return $?
+}
+
+
+# USER CONFIG
+
+is_new_user () {
+    local state_repo="$(state_primary_repo)"
+    ! [ "$state_repo" ]
+    return $?
+}
+
+new_user_config () {
+    local repo="$1"
+
+    print_logo "$repo"
+
+    msg "$(printf "A multiform package manger with dotfile integration!")"
+    printf "\n"
+    msg "$(printf "Before getting started we have a few questions.")"
+    msg_help "$(printf "Use can type %bhelp%b for more info" $blue $dark_gray)"
+    printf "\n"
+
+    prompt_config_or_repo "install"
+
+    if [ "$repo" ]; then
+        set_user_vars "$active_repo"
+    fi
+
+    user_toggle_logo
+    user_toggle_stats
+
+    msg "\nCongratulations ${USER_NAME}, your preferences are set!\n"
+    msg "Now were going to configure your repo.\n"
+}
+
+set_user_vars () {
+    local repo="$1"
+    PRIMARY_REPO="$repo"
+    USER_NAME="$(cap_first ${repo%/*})"
+    REPO_NAME="${repo#*/}"
+}
+
+get_repo_config_file () {
+  echo "$(dotfiles_dir)/${1}/.dotsys.cfg"
+}
+
+get_config_file_repo () {
+    local file="$(dotfiles_dir)/${1}/.dotsys.cfg"
+    if [ -f "$file" ]; then
+        echo "$(dotfiles_dir)/${1}/.dotsys.cfg"
+    fi
+}
+
+freeze() {
+    local dir=$1
+    local topics=($(find $dir -maxdepth 1 -type d -not -name '\.*'))
+    for t in ${topics[@]}
+    do
+        # remove leading ./
+        TS=${t:1}":yes"
+        echo $TS >> dotsys-freeze.txt
+        echo $TS
+    done
+}
+
+user_toggle_logo () {
+    get_user_input "Would you like to see the dotsys logo when
+            $spacer working on multiple topics (it's helpful)"
+    set_state_value "show_logo" $?
+}
+
+user_toggle_stats () {
+    get_user_input "Would you like to see the dotsys stats when
+            $spacer working on multiple topics (it's helpful)"
+    set_state_value "show_stats" $?
+}
+
+print_logo (){
+
+if [ "$(get_state_value "show_logo")" = "1" ]; then return;fi
+if [ $show_logo -eq 1 ]; then return;fi
+
+local repo="${1:-$(get_active_repo)}"
+echo "repo=$repo"
+set_user_vars "${1:-$(get_active_repo)}"
+local message=
+if [ "$USER_NAME" ]; then
+    message="Welcome To Dotsys $USER_NAME"
+else
+    message="WELCOME  TO  YOUR  DOTSYS"
+fi
+
+printf "%b
+  (          )
+  )\ )    ( /(   (
+ (()/( (  )\()|  )\ ) (
+  ((_)))\(_))/)\(()/( )\\
+  _| |((_) |_((_))(_)|(_)
+/ _\` / _ \  _(_-< || (_-<
+\__,_\___/\__/__/\_, /__/
+                 |__/
+
+$message%b\n\n" $dark_red $rc
+# make sure it's only seen once
+show_logo=1
+}
+
+print_stats () {
+    if [ "$(get_state_value "show_stats")" = "1" ]; then return;fi
+    if [ $show_stats -eq 1 ]; then return;fi
+
+    info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
+    info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
+    info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
+    info "$(printf "There are %b${#topics[@]} topics to $action%b" $green $rc)"
+    # make sure it's only seen once
+    show_stats=1
+}
+# TOPIC CONFIG
 
 # read yaml file
 load_topic_config_vars () {
@@ -118,36 +414,6 @@ get_topic_config_val () {
   echo "${val[@]}"
 }
 
-# NEVER USE ACTUAL VARS DIRECTLY; USE THIS METHOD!
-get_config_val () {
-  # TYPE                         ACTUAL VAR      CALL AS
-  # topic config file (root)     _$topic         get_config_val "$topic"
-  # user config file  (root)     __$topic        get_config_val "_$cfg"
-  # user config file  (topic)    __$topic_$cfg   get_config_val "_$topic" "$cfg"
-  # default config file (root)   ___$cfg         get_config_val "__$cfg"
-  # default config file (topic)  ___$topic_$cfg  get_config_val "__$topic" "$cfg"
-
-  if [ $# -eq 0 ]; then return;fi
-
-  local cfg=""
-  local part=
-
-  # Allow dashes as first param to prevent extra dash on blank param
-  if [ "$1" = "_" ] || [ "$1" = "__" ]; then
-       cfg="$1"
-       shift
-  fi
-  for part in $@; do
-     if ! [ "part" ]; then continue;fi
-     cfg+="_$part"
-  done
-  cfg="$cfg[@]"
-  echo "${!cfg}"
-}
-
-get_repo_config_file () {
-  echo "$(dotfiles_dir)/${1}/.dotsys.cfg"
-}
 
 get_topic_manager () {
 
@@ -168,176 +434,5 @@ get_topic_manager () {
     echo "$manager"
 }
 
-
-freeze() {
-    local dir=$1
-    local topics=($(find $dir -maxdepth 1 -type d -not -name '\.*'))
-    for t in ${topics[@]}
-    do
-        # remove leading ./
-        TS=${t:1}":yes"
-        echo $TS >> dotsys-freeze.txt
-        echo $TS
-    done
-}
-
-
-print_debugo (){
-
-if [ "$(get_state_value "show_debugo")" = "1" ]; then return;fi
-
-set_user_vars "$(get_active_repo)"
-if [ "$USER_NAME" ]; then
-    local message="Welcome To Dotsys $USER_NAME"
-else
-    local message="WELCOME  TO  YOUR  DOTSYS"
-fi
-
-printf "%b
-  (          )
-  )\ )    ( /(   (
- (()/( (  )\()|  )\ ) (
-  ((_)))\(_))/)\(()/( )\\
-  _| |((_) |_((_))(_)|(_)
-/ _\` / _ \  _(_-< || (_-<
-\__,_\___/\__/__/\_, /__/
-                 |__/
-
-%s%b\n\n" $dark_red "$message" $rc
-}
-
-
-new_user_config () {
-
-    msg "$(printf "We need configure your primary repo")"
-    msg_help "$(printf "Use can type %bhelp%b for more info" $blue $dark_gray)"
-    printf "\n"
-
-    prompt_config_or_repo "install"
-
-    copy_topics_to_repo "$PRIMARY_REPO"
-
-    user_toggle_debugo
-
-    msg "\nCongratulations, your repo is ready to go ${USER_NAME}!\n"
-}
-
-user_toggle_debugo () {
-    get_user_input "Would you like to disable the dotsys debugo" --false yes --true no
-    set_state_value "show_debugo" $?
-}
-
-
-set_user_vars () {
-    local repo="$1"
-    PRIMARY_REPO="$repo"
-    USER_NAME="$(cap_first ${repo%/*})"
-    REPO_NAME="${repo#*/}"
-}
-
-
-prompt_config_or_repo () {
-
-    local action="${1:-install}"
-    local error="$2"
-
-
-    # TODO: find existing repos and offer choices
-    #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name '.dotsys.cfg -exec dirname {}')"
-    #echo "found files: $config_files"
-
-    local default=
-    if [ "$active_repo" ]; then default=" [$active_repo]"; fi
-    local q_repo="Enter a repo or config file to ${action}${default} : "
-
-
-    if [ "$error" ]; then
-        error "${error}, try again:"
-    else
-        printf "$q_repo"
-    fi
-
-    while true; do
-        # Read from tty, needed because we read in outer loop.
-        read user_input < /dev/tty
-
-        local repo="$(dotfiles_dir)$user_input"
-
-        if [ "$user_input" = "abort" ]; then
-           exit
-        elif [ "$user_input" = "help" ]; then
-
-            printf $clear_line_above
-            local h_repo=
-            h_repo+="%bOPTION 1 (repo): A repo is simply a github repository containing your topics. "
-            h_repo+="Specify a remote github repository as %bgithub_user/repo_name%b.\n\n"
-
-            h_repo+="If the remote repo exists we'll download it. Otherwise, it will be created "
-            h_repo+="locally in your dotfiles directory. Then move any existing topics you may have "
-            h_repo+="to this sub directory %bdotfiles/github_user/repo_name%b.\n\n"
-
-            h_repo+="OPTION 2 (cofig file): A %bconfig file%b is a way to specify repos & topic configs. "
-            h_repo+="Provide a full path to a %b.dotsys.cfg%b file and we'll take it form there.\n\n"
-
-            h_repo+="EASY!%b\n\n"
-
-            printf "$h_repo" $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $rc
-
-            printf "$q_repo"
-        elif [ "$user_input" ]; then
-            break
-
-        else
-            user_input="$active_repo"
-            break
-        fi
-    done
-
-    validate_config_or_repo "$user_input" "$action"
-    return $?
-}
-
-
-validate_config_or_repo (){
-
-    # sets config_file from user specific file or repo
-    local from_src="$1"
-    local action="$2"
-
-    local status=0
-
-    # FILE: anything with . must be a file
-    if [[ "$from_src" =~ ^.*\..*$ ]]; then
-        config_file="$from_src"
-
-        # catch file does not exist
-        if ! [ -f "$config_file" ]; then
-            prompt_config_or_repo "$action" "Config file was not found at $config_file"
-            printf $clear_line_above
-            return
-        fi
-
-    # must be repo
-    elif [ "$from_src" ]; then
-
-        # catch repo incorrect format
-        if ! [[ "$from_src" =~ ^[^/].*/.*$ ]]; then
-            prompt_config_or_repo "$action" "Repo must be in the format 'github_user/repo_name'"
-            printf $clear_line_above
-            return
-        fi
-
-        # make sure repo is installed updated
-        if [ "$action" != "uninstall" ]; then
-            manage_repo "$action" "$from_src"
-            status=$?
-        fi
-
-        # get the repo config file
-        config_file="$(get_repo_config_file "$from_src")"
-    fi
-    return $status
-    # nothing to validate, pass silently
-}
 
 

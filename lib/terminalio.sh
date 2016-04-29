@@ -55,17 +55,17 @@ task() {
 # messages
 
 msg () {
-  printf  "\r%b%b${1}%b\n" $clear_line $yellow $rc
+  printf  "\r%b%b$1%b\n" $clear_line $yellow $rc
 
 }
 
 msg_help () {
-  printf  "\r%b$1. Use %babort%b to skip.\n%b" $dark_gray $blue $dark_gray $rc
+  printf  "\r%b$1. Use %babort%b to skip.%b\n" $dark_gray $blue $dark_gray $rc
 
 }
 
 error () {
-  printf  "\r\n%b%bERROR:%b ${1}%b\n\n" $clear_line $dark_red $red $rc
+  printf  "\r\n%b%bERROR:  %b ${1}%b\n\n" $clear_line $dark_red $red $rc
 
 }
 
@@ -79,8 +79,8 @@ msg_invalid_input (){
 
 # debug debug
 debug () {
-    #return
-    printf "%b$@%b\n" $dark_gray $rc
+    return
+    printf "%b $1 %b\n" $dark_gray $rc
 
 }
 
@@ -104,7 +104,8 @@ get_user_input () {
     local clear="false"
     local invalid="invalid"
 
-    local options="$(printf " (%b${true:0:1})${true:1}%b (%b${false:0:1})${false:1}%b" $yellow $rc $yellow $rc)"
+    local options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
+    $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
 
     while [[ $# > 0 ]]; do
     case "$1" in
@@ -119,7 +120,7 @@ get_user_input () {
     shift
     done
 
-    question=$(printf "$question ?$options")
+    question=$(printf "$question? $options [%b${true}%b]" $dark_gray $rc)
 
     user "${question} : "
 
@@ -140,6 +141,10 @@ get_user_input () {
                 ;;
             help )
                 msg_help "$(printf "$help")"
+                ;;
+            "") state=0
+                user_input="${true}"
+                break
                 ;;
             * )
                 if [ "$invlaid" = "false" ]; then break;fi
@@ -166,12 +171,13 @@ confirm_task () {
   if ! [ "$TOPIC_CONFIRMED" ] && [ "$topic" ]; then
 
       local text="$(printf "Would you like to %b%s %s%b%s?
-         $spacer (%by%b)es, (%bY%b)es all, (%bs%b)kip, (%bS%b)kip all : %b" \
+         $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
          $green "$action" "$topic" $rc " $limits" \
          $yellow $rc \
          $yellow $rc \
          $yellow $rc \
-         $yellow $rc $save_cp)"
+         $yellow $rc \
+         $dark_gray $rc)"
 
       user "$text"
 
@@ -184,7 +190,7 @@ confirm_task () {
               confirmed="true"
               break
               ;;
-            s )
+            n )
               confirmed="false"
               break
               ;;
@@ -192,8 +198,12 @@ confirm_task () {
               TOPIC_CONFIRMED="true"
               break
               ;;
-            S )
+            N )
               TOPIC_CONFIRMED="false"
+              break
+              ;;
+            "" )
+              confirmed="true"
               break
               ;;
             * )
@@ -246,6 +256,12 @@ invalid_option () {
     exit
 }
 
+invalid_limit () {
+    error "invalid limit: $1"
+    show_usage
+    exit
+}
+
 # Checks for a help param and shows help
 # ex: check_for_help "$1"
 check_for_help () {
@@ -269,15 +285,18 @@ required_params () {
 
 # Confirms a list of var names are set
 required_vars () {
-local missing=
+  local missing=
+  local recieved=
   for p in $@; do
     if ! [ "${!p}" ]; then
       missing+="<${p}> "
+    else
+      recieved+="<${p}> "
     fi
   done
   if [ "$missing" ]; then
     error "Missing or incorrect parameters $missing
-    recieved: $@"
+    recieved: $recieved"
     show_usage
   fi
 }
@@ -291,22 +310,25 @@ local missing=
 uncaught_case (){
  local val="$1"
  shift
- local set_var=
- for p in "$@"; do
+ local set_var
+ local vars="$@"
+ local p
+ for p in $vars; do
     if [[ "$val" == "-"* ]]; then
         printf "Invalid parameter '$val'"
         show_usage
     fi
-    if ! [ "${!p}" ]; then
+    # if the supplied variable name is not set
+    if [ -z "${!p}" ]; then
       local eval_exp="${p}=\"$val\""
       eval "$eval_exp"
-      set_var="$p"
+      set_var="$p:-set"
       break
     fi
  done
 
- if ! [ "$set_var" ]; then
-   error "Too many params"
+ if [ -z "$set_var" ]; then
+   error "Too many params: ($vars) have all been set and got value: $val"
    show_usage
  fi
 }

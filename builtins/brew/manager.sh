@@ -1,6 +1,7 @@
 #!/bin/sh
 
 install () {
+  echo "manager.sh install got: $@"
   brew install $@
 }
 

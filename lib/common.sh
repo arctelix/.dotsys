@@ -63,6 +63,10 @@ builtin_topic_dir () {
   echo "$(dotsys_dir)/builtins/$1"
 }
 
+stub_topic_dir () {
+  echo "$(dotsys_dir)/user/$1"
+}
+
 # Gets full path to users home directory based on platform
 user_home_dir () {
   local platform="${1:-$PLATFORM}"
@@ -133,6 +137,45 @@ topic_exists () {
   fi
 }
 
+
+is_array() {
+  local var=$1
+  [[ "$(declare -p $var)" =~ "declare -a" ]]
+}
+
+
+in_limits () {
+    local option=
+    local tests=$@
+    local found=1
+    local limits="${limits:-}"
+    tests=
+    while [[ $# > 0 ]]; do
+        case $1 in
+        -r | --required)  option="required";;
+        * )   tests+="$1 "      ;;
+        esac
+        shift
+    done
+
+    if [ "$option" != "required" ] && ! [ "$limits" ]; then
+        return 0
+    fi
+
+    local t
+    for t in $tests; do
+        if [[ ${limits[@]} =~ "$t" ]]; then
+            return 0
+        fi
+    done
+    return $found
+}
+
+topic_is_repo () {
+    [ "${topics[0]}" = "repo" ] && topics[0]="$(get_active_repo)" || [[ "${topics[0]}" == *"/"* ]]
+}
+
+
 # MISC utils
 
 # Determines if a path is a file or a directory
@@ -169,24 +212,39 @@ external_func () {
   return 1 # file not found
 }
 
+get_dir_list () {
+    local dir="$1"
+    local force="$2"
+    local list
+    local t
+    if ! [ -d "$dir" ];then return 1;fi
 
-is_array() {
-  local var=$1
-  [[ "$(declare -p $var)" =~ "declare -a" ]]
+    list="$(find "$dir" -mindepth 1 -maxdepth 1 -type d -not -name '\.*')"
+    for t in ${list[@]}; do
+        echo "$(basename "$t") "
+    done
 }
 
 get_topic_list () {
     local dir="$1"
-    if ! [ -d "$dir" ];then return 1;fi
-    local topics=("$(find "$dir" -mindepth 1 -maxdepth 1 -type d -not -name '\.*')")
-    local cleaned=()
+    local force="$2"
+    local list
     local t
-    for t in ${topics[@]}
-    do
-        # remove path
-        cleaned+=("${t##*/}")
-    done
-    echo "${cleaned[@]}"
+    if ! [ -d "$dir" ];then return 1;fi
+
+    # only installed topics
+    if [ "$action" != "install" ] && ! [ "$force" ]; then
+        while read line; do
+            t=${line%:*}
+            # skip special state prefixes
+            if [[ "$t" =~ (installed_repo|user_repo|show_logo) ]]; then continue; fi
+            echo "$t"
+        done < "$(state_file "dotsys")"
+    # all defined topic directories
+    else
+        get_dir_list "$dir"
+    fi
 }
+
 
 

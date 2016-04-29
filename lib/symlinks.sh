@@ -288,6 +288,12 @@ symlink () {
     esac
     shift
   done
+
+  # shortcut for typical $src -> $HOME/.$dst
+  if ! [ "$dst" ]; then
+    dst="$HOME/.$(basename "${src%.symlink}")"
+  fi
+
   required_vars "src" "dst"
 
   # file or directory?
@@ -296,6 +302,7 @@ symlink () {
   local dst_full_target="$(full_path "$dst")"
   local dst_name="$(basename "$dst")"
   src="$(full_path "$src")"
+
 
   local exists=
   if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]; then exists="true";fi

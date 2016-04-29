@@ -4,61 +4,97 @@ state_dir () {
   echo "$(dotsys_dir)/state"
 }
 
-# creates a sate file if none exists
-create_state_file(){
-    local file="$(state_dir)/${1}.state"
-    if ! [ -f "$file" ]; then touch "$file"; fi
+state_file () {
+    echo "$(state_dir)/${1}.state"
 }
-
 # adds key:value if key:value does not exist (value optional)
 state_install() {
-  local file="$(state_dir)/${1}.state"
+  local file="$(state_file "$1")"
   local key="$2"
   local value="$3"
+
+  if ! [ -f "$file" ]; then return 1;fi
 
   grep -q "${key}:${value}" "$file" || echo "${key}:${value}" >> "$file"
 }
 
 # removes key:value if key and value exist (value optional)
 state_uninstall () {
-  local file="$(state_dir)/${1}.state"
+  local file="$(state_file "$1")"
+  local temp="$(state_dir)/temp_$1.state"
   local key="$2"
-  local value="$3"
+  local val="$3"
 
-  grep -v "${key}:${value}" "$file" > "temp.state" && mv "temp.state" "$file"
+  if ! [ -f "$file" ]; then return 1;fi
+  debug "   - state_uninstall: f:$file grep ${key}:${val}"
+
+  # grep -v fails on last item so we have to test then remove
+  grep -q "${key}:${value}" "$file"
+  if [ $? -eq 0 ]; then
+     debug "   - state_uninstall FOUND ${key}:${value}, uninstalling"
+     grep -v "${key}:${value}" "$file" > "$temp"
+     mv -f "$temp" "$file"
+  else
+     debug "   - state_uninstall NOT FOUND: f:$file grep ${key}:${val}"
+  fi
+
+
 }
 
-# test if topic is already on system or installed by dotsys
+
+
+# test if key and or value exists in state
+# if key is a topic run installed_test to see if exits on system
 is_installed () {
-  local state="$1"
-  local key="$2"
-  local value="$3"
+    local state="$1"
+    local key="$2"
+    local value="$3"
 
-  local file="$(state_dir)/${state}.state"
-  debug "is_installed k:$key v:$value"
+    local installed=1
+    local manager=
 
-  # test for manager (this was a stupid test i think)
-  #  local manager="$(get_topic_manager "$key")"
-  #  local manager_test="$(get_topic_config_val "$manager" "installed_test")"
-  #  if cmd_exists "${manager_test:-$topic}"; then return 0; fi
+    # test if in specified state file
+    in_state "$state" "$key" "$value"
+    installed=$?
+    debug "   - is_installed $state: $installed"
 
-  # test key is a command
-  local installed_test="$(get_topic_config_val "$key" "installed_test")"
-  if cmd_exists "${installed_test:-$topic}"; then return 0; fi
+    # Check if installed by manager ( packages installed via package.yaml file )
+    if [ "$state" = "dotsys" ] && ! [ "$installed" -eq 0 ]; then
+        local manager="$(get_topic_manager "$key")"
+        in_state "$manager" "$key" "$value"
+        installed=$?
+        debug "   - is_installed ${manager:-not managed}: $installed"
+    fi
 
-  #TODO: implement test for installed from repo or version?
+    # Check if installed on system, not managed by dotsys
+    if ! [ "$installed" -eq 0 ]; then
+        local installed_test="$(get_topic_config_val "$key" "installed_test")"
+        if cmd_exists "${installed_test:-$key}"; then
+            if [ "$action" = "uninstall" ]; then
+                warn "$(printf "Although %b$key is installed%b, it was not installed by dotsys.
+                $spacer You will have to %buninstall it by whatever means it was installed.%b" $green $rc $yellow $rc) "
+                installed=1
+            elif ! [ "$force" ]; then
+                warn "$(printf "Although %b$key is installed%b, it is not managed by dotsys.
+                $spacer Use %bdotsys install $key --force%b to allow dotsys to manage it." $green $rc $yellow $rc)"
+                installed=0
+            fi
+        fi
+        debug "   - is_installed by other means: $installed"
+    fi
 
-  # test if in state file
-  in_state "$state" "$key" "$value"
+    debug "   - is_installed $key:$value final: $installed"
 
-  return $?
+    return $installed
 }
 
 # Test if key and or value exists in state file
 # use "!$key" to negate values with keys that contain "$key"
 # ie: key="!repo" will not match keys "user_repo:" or "repo:" etc..
 in_state () {
-  local file="$(state_dir)/${1}.state"
+  local state="$1"
+  local file="$(state_file "$state")"
+  if ! [ -f "$file" ]; then return 1;fi
   local key="$2"
   local value="$3"
   local results
@@ -68,23 +104,25 @@ in_state () {
   if [[ "$key" == "!"* ]]; then
       not="${key#!}"
       key=""
-      results="$(grep "${key}:$value" "$file")"
+      results="$(grep -q "${key}:$value" "$file")"
       for r in $results; do
-        #debug "result for !$not ${key}:$value  = $r"
+        #debug "   - in_state: result for !$not ${key}:$value  = $r"
         if [ "$r" ] && ! [[ "$r" =~ ${not}.*:${value} ]]; then
             return 0
         fi
       done
       return 1
   fi
+
   # test if key and or value is in state file
-  grep -q "${key}:$value" "$file"
+  debug "   in_state grep ${key}:${value} from $file"
+  grep -q "${key}:${value}" "$file"
 }
 
 # gets value for unique key
 get_state_value () {
   local key="$1"
-  local file="$(state_dir)/${2:-dotsys}.state"
+  local file="$(state_file "${2:-dotsys}")"
   local results="$(grep "^$key:.*$" "$file")"
   echo "${results#*:}"
 }
@@ -93,9 +131,9 @@ get_state_value () {
 set_state_value () {
   local key="$1"
   local value="$2"
-  local file="${3:-dotsys}"
-  state_uninstall "$file" "$key"
-  state_install "$file" "$key" "$value"
+  local state="${3:-dotsys}"
+  state_uninstall "$state" "$key"
+  state_install "$state" "$key" "$value"
 }
 
 # sets / gets primary repo value

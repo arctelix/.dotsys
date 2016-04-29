@@ -63,7 +63,8 @@ create_config_yaml() {
         # init file and root config
         local yaml_file="${repo_d}/.dotsys-${freeze_mode}.cfg"
 
-        task "$(printf "Saving a %b$freeze_mode config%b file to %b$yaml_file%b" $green $rc $green $rc)"
+        task "$(printf "Saving a %b$freeze_mode config%b file to
+                $spacer -> %b$yaml_file%b" $green $rc $green $rc)"
 
         # root level config
         echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > $yaml_file
@@ -79,7 +80,7 @@ create_config_yaml() {
         local node="${n%.*}"
         local fnode="$(echo "$n" | tr . _ )"
 
-        # topic
+        # node is topic
         if [ -d "$i" ];then
             load_topic_config_vars "$node"
             cfg_val_to_file "$level" "$node"
@@ -90,7 +91,7 @@ create_config_yaml() {
             create_config_yaml "$i" "$level"
             level="${level%  }"
 
-        # file
+        # node is file
         elif [ -f "$i" ]; then
             # ignore files list
             if ! [[ "$node" =~ (install|uninstall|update|freeze|upgrade|dotsys) ]]; then
@@ -100,7 +101,7 @@ create_config_yaml() {
 
         # last node
         if [ "$i" = "$_last_node" ]; then
-            success "$(printf "Freeze $freeze_mode config for %b${repo}%b\n$spacer -> %b$yaml_file%b" $green $rc $green $rc)"
+            success "$(printf "Freeze $freeze_mode config for %b${repo}%b to\n$spacer -> %b$yaml_file%b" $green $rc $green $rc)"
             _last_node=""
         fi
 
