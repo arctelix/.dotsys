@@ -52,22 +52,26 @@ load_config_vars (){
     # validate from and set config_file
     if [ "$from" ]; then
         validate_config_or_repo "$from" "$action"
-    fi
-
-    # new user
-    if is_new_user && [ "$action" = "install" ]; then
-        new_user_config "$from"
-
     # existing user (no from supplied)
-    elif ! [ "$from" ]; then
+    else
         active_repo="$(get_active_repo)"
         config_file="$(get_repo_config_file "$active_repo")"
+    fi
+
+    if [ ! "$active_repo" ] ; then
+        if is_new_user && [ "$action" != "uninstall" ]; then
+            new_user_config "$from"
+        else
+            error "A repo must be specified!"
+            exit
+        fi
     fi
 
     # Make sure repo is installed updated
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
-        manage_repo "$action" "$active_repo" "$force"
+        if in_limits "repo" -r; then confirmed="--confirmed"; fi
+        manage_repo "$action" "$active_repo" "$force" "$confirmed"
         status=$?
     fi
 
@@ -136,8 +140,6 @@ validate_config_or_repo (){
         # get the repo config file
         config_file="$(get_repo_config_file "$from_src")"
         active_repo="$from_src"
-
-        msg "Using repo : $active_repo \n"
     fi
 
     # repo manager handles all other repo issues
@@ -232,8 +234,8 @@ prompt_config_or_repo () {
 # USER CONFIG
 
 is_new_user () {
-    local state_repo="$(state_primary_repo)"
-    ! [ "$state_repo" ]
+    ! [ "$(state_primary_repo)" ]
+
     return $?
 }
 
@@ -248,7 +250,7 @@ new_user_config () {
     msg_help "$(printf "Use can type %bhelp%b for more info" $blue $dark_gray)"
     printf "\n"
 
-    prompt_config_or_repo "install"
+    prompt_config_or_repo "$action"
 
     if [ "$repo" ]; then
         set_user_vars "$active_repo"
@@ -293,13 +295,13 @@ freeze() {
 
 user_toggle_logo () {
     get_user_input "Would you like to see the dotsys logo when
-            $spacer working on multiple topics (it's helpful)"
+            $spacer working on multiple topics (it's helpful)?"
     set_state_value "show_logo" $?
 }
 
 user_toggle_stats () {
     get_user_input "Would you like to see the dotsys stats when
-            $spacer working on multiple topics (it's helpful)"
+            $spacer working on multiple topics (it's helpful)?"
     set_state_value "show_stats" $?
 }
 

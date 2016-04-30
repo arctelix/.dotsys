@@ -69,6 +69,37 @@ error () {
 
 }
 
+success_or_fail () {
+    local status="$1"
+    local action="$2"
+    local message="$3"
+    shift; shift; shift
+    # all additional params get executed on fail
+    if [ "$status" -eq 0 ]; then
+        success "$(cap_first "${action%e}ed") $message"
+    else
+        fail "Failed to $action $message"
+        if [ $@ ]; then $@; fi
+        return 1
+    fi
+}
+
+success_or_error () {
+    local status="$1"
+    local action="$2"
+    local message="$3"
+    shift; shift; shift
+    # all additional params get executed on error
+    if [ "$status" -eq 0 ]; then
+        success "$(cap_first "${action%e}ed") $message"
+    else
+        error "Failed to $action $message"
+        if [ $@ ]; then $@; fi
+        exit
+    fi
+}
+
+
 # invalid option
 msg_invalid_input (){
     printf "$clear_line"
@@ -79,7 +110,7 @@ msg_invalid_input (){
 
 # debug debug
 debug () {
-    return
+    #return
     printf "%b $1 %b\n" $dark_gray $rc
 
 }
@@ -97,61 +128,107 @@ clear_lines () {
 }
 
 get_user_input () {
+
+    local usage="get_user_input [<action>]"
+    local usage_full="
+    -o | --o )          alternate options line
+    -c | --clear )      Number + extra/ - less lines to lear [0]
+    -t | --true )       Text to print for 0 value
+                        set to 'false' for required variable input
+    -f | --false        Text to print for 1 value
+    -h | --help         Text to print for help
+    -i | --invalid      Text to print on invalid selection
+                        or 'false' noting is invalid
+    -d | --default      Default value on enter key
+    -n | --noconfirm    Default value on enter key
+      "
+
     local question=
-    local true="yes"
-    local false="no"
+    local true=
+    local false=
     local help=
     local clear="false"
     local invalid="invalid"
+    local default=
+    local options
+    local confirm="true"
 
-    local options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
-    $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
 
     while [[ $# > 0 ]]; do
     case "$1" in
       -o | --o )        options=" $2"; shift ;;# alternate options line
-      -c | --clear )    clear="$2"; shift ;;  # Number of lines to leave [0]
-      -t | --true )     true="$2"; shift ;;   # Text to print for 0 value
-      -f | --false )    false="$2"; shift ;;  # Text to print for 1 value
-      -h | --help )     help="$2"; shift ;;   # Text to print for help
-      -i | --invalid )  invlaid="$2"; shift ;;# Text to print invalid selection
+      -c | --clear )    clear="$2"; shift ;;   # Number + extra/ - less lines to lear [0]
+      -t | --true )     true="$2"; shift ;;    # Text to print for 0 value
+                                               # set to "false" for required variable input
+      -f | --false )    false="$2"; shift ;;   # Text to print for 1 value
+      -h | --help )     help="$2"; shift ;;    # Text to print for help
+      -i | --invalid )  invlaid="$2"; shift ;; # Text to print on invalid selection
+                                               # or "false" no invalid entry.
+      -d | --default )  default="$2"; shift ;;# Default value on enter key
+      -n | --noconfirm )  confirm="false" ;;  # Default value on enter key
       * ) uncaught_case "$1" "question" "true" "false" "help" ;;
     esac
     shift
     done
 
-    question=$(printf "$question? $options [%b${true}%b]" $dark_gray $rc)
+    true="${true:-yes}"
+    false="${false:-no}"
+
+    # any input is ok so just offer false option everything else is true
+    if [ "$true" = "false" ]; then
+        options="$(printf "(%b${false:0:1}%b)%b${false:1}%b" \
+                    $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
+        confirm="true" # if no true option then input is required and must be confirmed
+    # use default options
+    elif ! [ "$options" ]; then
+        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
+                        $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
+    fi
+
+    default="${default:-$true}"
+
+    question=$(printf "$question $options [%b${default}%b]" $dark_gray $rc)
 
     user "${question} : "
-
-    local state=0
-    while true; do
-        read user_input < /dev/tty
-        #user_input="$user_input"
-        case "$user_input" in
-            ${true}|${true:0:1})
-                state=0
-                user_input="${true}"
-                break
-                ;;
-            ${false}|${false:0:1}|abort)
-                state=1
-                user_input="${false}"
-                break
-                ;;
-            help )
-                msg_help "$(printf "$help")"
-                ;;
-            "") state=0
-                user_input="${true}"
-                break
-                ;;
-            * )
-                if [ "$invlaid" = "false" ]; then break;fi
-                msg_invalid_input "$question > $invalid : "
-                ;;
-        esac
-    done
+    if ! [ "$TOPIC_CONFIRMED" ] && [ "$confirm" != "false" ]; then
+        local state=0
+        while true; do
+            read user_input < /dev/tty
+            #user_input="$user_input"
+            case "$user_input" in
+                ${true}|${true:0:1})
+                    state=0
+                    user_input="${true}"
+                    break
+                    ;;
+                ${false}|${false:0:1}|abort)
+                    state=1
+                    user_input="${false}"
+                    break
+                    ;;
+                help )
+                    msg_help "$(printf "$help")"
+                    ;;
+                "") user_input="${default}"
+                    [ "$user_input" = "$true" ]
+                    state=$?
+                    break
+                    ;;
+                * )
+                    # any input is ok
+                    if [ "$invlaid" = "false" ]; then
+                        status=0
+                        break
+                    fi
+                    # use invalid message
+                    msg_invalid_input "$question > $invalid : "
+                    ;;
+            esac
+        done
+    else
+        user_input="$default"
+        printf "\n\r"
+    fi
 
     if [ "$clear" != "false" ]; then
         clear_lines "$question" ${clear:-0}
@@ -164,11 +241,19 @@ confirm_task () {
 
   local action="${1-$action}"
   local topic="${2:-$topic}"
-  local limits="${3}"
-
+  shift; shift
+  local limits=
   local confirmed=
 
-  if ! [ "$TOPIC_CONFIRMED" ] && [ "$topic" ]; then
+  while [[ $# > 0 ]]; do
+    case "$1" in
+      -c | --confirmed )        confirmed="true"; shift ;;# alternate options line
+      * ) uncaught_case "$1" "limits" ;;
+    esac
+    shift
+  done
+
+  if ! [ "$TOPIC_CONFIRMED" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
 
       local text="$(printf "Would you like to %b%s %s%b%s?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
@@ -218,7 +303,7 @@ confirm_task () {
   confirmed="${confirmed:-$TOPIC_CONFIRMED}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(printf "%sing %s%b%s%b%s" $(cap_first "$action") "$DRY_RUN" $green "$topic" $blue " $limits")"
+    task "$(printf "%sing %s%b%s%b%s" $(cap_first "${action%e}") "$DRY_RUN" $green "$topic" $blue " $limits")"
     return 0
   else
     task "$(printf "You skipped %s %b%s%b%s" "$action" $green "$topic" $blue " $limits")"
@@ -277,7 +362,7 @@ required_params () {
   shift
   check_for_help "$1"
   if ! (( $# >= $required )); then
-    error "Requires $required parameters and $# supplied."
+    error "Requires ${#required} parameters and $# supplied."
     show_usage
   fi
 

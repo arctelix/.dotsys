@@ -17,6 +17,8 @@
 #TODO: add got config to new user setup and implement
 #TODO: FOR NEW Installs prompt for --force & --confirm options
 
+#TODO: Finish implementing success_or functions....
+
 #TODO QUESTION: Symlink All choice should apply to all topics? (currently just all symlinks for topic)
 #TODO QUESTION: Hold manager packages install to end of topic run
 
@@ -277,12 +279,17 @@ dotsys () {
         topics=
     fi
 
-    # allow from "repo" as shortcut to active repo
+    # allow "repo" as shortcut to active repo
     if [ "$from_repo" = "repo" ] ; then
         from_repo="$(get_active_repo)"
+        if ! [ "$from_repo" ]; then
+            error "There is no primary repo configured, so
+            $spacer a repo must be explicitly specified"
+            exit
+        fi
     fi
 
-    # Parses from_repo, Loads config file, manages repo
+    # LOAD CONFIG VARS Parses from_repo, Loads config file, manages repo
     if ! [ "$recursive" ]; then
         debug "main -> load config vars"
         load_config_vars "$from_repo" "$action"
@@ -301,7 +308,6 @@ dotsys () {
 
     # END REPO LIMIT if repo in limits dotsys has ended
     if in_limits -r "repo"; then
-        msg "DONE: $from_repo has been ${action%e}ed"
         return
     fi
 
@@ -517,9 +523,6 @@ dotsys () {
             manage_repo "uninstall" "$ACTIVE_REPO" "$force"
         fi
     fi
-
-    msg "DONE, now go kick some arse..
-    ${action%e}ed ${limits[@]} from $ACTIVE_REPO"
 
     debug "main -> FINISHEÍD"
 }

@@ -88,14 +88,12 @@ run_script (){
       status=$?
     fi
 
-    # script success
-    if [ $status -eq 0 ]; then
-      success "$(printf "Script executed %s%b%s%b on %b%s%b" "$DRY_RUN" $green "$script" $rc $green "$PLATFORM" $rc)"
-      printf "success: %s\n" "$script" >> $DEBUG_FILE
+    success_or_fail $status "exicute" "$(printf "script %s%b%s%b on %b%s%b" "$DRY_RUN" $green "$script" $rc $green "$PLATFORM" $rc)"
 
-    # script error
+    # output to debug
+    if [ $? -eq 0 ]; then
+      printf "success: %s\n" "$script" >> $DEBUG_FILE
     else
-      fail "$(printf "Script failed %s%b%s%b on %b%s%b." "$DRY_RUN" $red "$script" $rc $green "$PLATFORM" $rc)"
       printf "failed: %s\n" "$script" >> $DEBUG_FILE
     fi
 
@@ -163,14 +161,9 @@ run_script_func () {
             status=$?
           fi
 
-          # Required function failed
-          if [ ! $status -eq 0 ] && [ "$required" ]; then
-            fail "$(printf "%b%s%b could not $action %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$file_name " $rc )"
-
-          # Success
-          else
-            success "$(printf "%b%s%b ${action}ed %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$file_name " $rc )"
-          fi
+          # Required function success/fail
+          [ ! $status -eq 0 ] && [ "$required" ]
+          success_or_fail $? "$action" "$(printf "%b%s%b %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$file_name " $rc )"
 
       # Required script fail
       elif [ "$required" ]; then
