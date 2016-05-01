@@ -112,8 +112,8 @@ create_config_yaml() {
 cfg_list_to_file () {
     local level="$1"
     local base="$2"
-    local plat=
-    local req=
+    local plat
+    local req
 
     # All level general settings
     cfg_all_levels "$level" "$base"

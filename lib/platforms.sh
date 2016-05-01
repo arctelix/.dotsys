@@ -53,6 +53,7 @@ multi_platform () {
   if [ ${#platforms_a[@]} = 1 ]; then
     exicute_platforms+=("${#platforms_a[0]}")
   else
+    local platform
     for platform in ${platforms_a[@]}; do
       echo "whould you like to install ${platform}?"
       exicute_platforms+=("$platform")

@@ -139,6 +139,7 @@ clear_lines () {
     local lines=$(printf "$1" | wc -l)
     lines=$lines+1 #clears all lines
     local sub=${2:-0} # add (+#) or subtract (-#) lines to clear
+    local c
     for (( c=1; c<=$lines+$sub; c++ )); do printf "$clear_line_above"; done
 }
 
@@ -387,6 +388,7 @@ required_params () {
 required_vars () {
   local missing=
   local recieved=
+  local p
   for p in $@; do
     if ! [ "${!p}" ]; then
       missing+="<${p}> "

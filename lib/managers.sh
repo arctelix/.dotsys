@@ -87,7 +87,7 @@ install_dependencies () {
   if ! [ "$deps" ]; then return 0; fi
 
   info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
-
+  local dep
   for dep in ${deps[@]}; do
     # Check if dep is installed
     if ! cmd_exists "$dep";then

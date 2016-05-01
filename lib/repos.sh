@@ -660,8 +660,8 @@ copy_topics_to_repo () {
 
     # list found topics
     if [ "$found_dirs" ]; then
-
         task "$(printf "Import topics found in %b$dir%b:" $green $rc)"
+        local i
         for i in "${!found_dirs[@]}"; do
             local topic="${found_dirs[$i]}"
             local files="$(find "$dir/$topic" -maxdepth 1 -type f)"
@@ -695,6 +695,7 @@ copy_topics_to_repo () {
 
     local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
     # Confirm each file to move/copy
+    local topic
     for topic in ${found_dirs[@]}; do
         confirm_task "$mode" "$topic \n$spacer from $dir \n$spacer to $repo_dir"
         if [ $? -eq 0 ]; then

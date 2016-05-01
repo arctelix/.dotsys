@@ -9,8 +9,6 @@
 # https://github.com/webpro/dotfiles
 
 
-#TODO: MAKE SURE EVERY FOR LOOP HAS LOCAL VAR DEFINED!!!!!!
-
 #TODO: handle alternate symlink destinations
 #TODO: handle .stub files for symlinks
 #TODO: handle .settings files
@@ -328,7 +326,6 @@ dotsys () {
             from_repo="${from_repo}:$from_branch"
             debug "   new from_repo = $from_repo"
         fi
-
         load_config_vars "$from_repo" "$action"
     fi
 
@@ -347,7 +344,6 @@ dotsys () {
     if in_limits -r "repo"; then
         return
     fi
-
 
 
     # get all topics if not specified
@@ -369,13 +365,6 @@ dotsys () {
         topics=("$list")
         debug "main -> topics list:\n\r$topics"
         debug "main -> end list"
-    fi
-
-
-    # Show logo and config info when more then one topic
-    if ! [ "$recursive" ] && [ ${#topics[@]} -gt 1 ]; then
-        print_logo
-        print_stats
     fi
 
     # Iterate topics

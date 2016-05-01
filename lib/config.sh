@@ -64,9 +64,12 @@ load_config_vars (){
             error "A repo must be specified!"
             exit
         fi
+    # Show logo when more then one topic
+    elif [ ${#topics[@]} -gt 1 ]; then
+        print_logo "$active_repo"
     fi
 
-    # Make sure repo is installed updated
+    # MANAGE REPO Make sure repo is installed updated
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
         debug "   load_config_vars: call manage_repo"
@@ -103,6 +106,9 @@ load_config_vars (){
     # Set default cmd app manager as per config or default
     debug "   load_config_vars: set DEFAULT_MANGER vars"
     set_default_managers
+
+    # Show config info when more then one topic
+    if [ ${#topics[@]} -gt 1 ]; then print_stats; fi
 }
 
 # sets config_file & config_file
@@ -268,7 +274,7 @@ new_user_config () {
 set_user_vars () {
     local repo="$1"
     PRIMARY_REPO="$repo"
-    USER_NAME="$(cap_first ${repo%/*})"
+    USER_NAME="$(cap_first "$(whoami)")" #"$cap_first ${repo%/*})"
     REPO_NAME="${repo#*/}"
 }
 
@@ -287,6 +293,7 @@ get_repo_from_config_file () {
 freeze() {
     local dir=$1
     local topics=($(find $dir -maxdepth 1 -type d -not -name '\.*'))
+    local t
     for t in ${topics[@]}
     do
         # remove leading ./
@@ -314,7 +321,6 @@ if [ "$(get_state_value "show_logo")" = "1" ]; then return;fi
 if [ $show_logo -eq 1 ]; then return;fi
 
 local repo="${1:-$(get_active_repo)}"
-echo "repo=$repo"
 set_user_vars "${1:-$(get_active_repo)}"
 local message=
 if [ "$USER_NAME" ]; then

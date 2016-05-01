@@ -150,6 +150,7 @@ run_script_func () {
   local status=0
 
   # execute built in function then user script function
+  local script
   for script in $scripts; do
       if script_func_exists "$script" "$action"; then
 
@@ -187,7 +188,7 @@ get_topic_scripts () {
   local exists=()
 
   local scripts=("$(builtin_topic_dir $topic)/${file_name}" "$(topic_dir $topic)/${file_name}")
-
+  local path
   for path in ${scripts[@]}; do
       if [ -f "$path" ]; then
         exists+=("$path")
