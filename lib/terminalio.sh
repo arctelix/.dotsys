@@ -21,6 +21,7 @@ clear_line_above="\e[1A\r\e[K"
 spacer="\r\e[K        "
 save_cp="\e[s"
 restore_cp="\e[u"
+indent="        "
 
 # OUTPUT
 
@@ -74,12 +75,13 @@ success_or_fail () {
     local action="$2"
     local message="$3"
     shift; shift; shift
+
     # all additional params get executed on fail
     if [ "$status" -eq 0 ]; then
-        success "$(cap_first "${action%e}ed") $message"
+        success "$(printf "$(cap_first "${action%e}ed") $message")"
     else
-        fail "Failed to $action $message"
-        if [ $@ ]; then $@; fi
+        fail "$(printf "Failed to $action $message")"
+        if [ "$@" ]; then $@; fi
         return 1
     fi
 }
@@ -97,6 +99,19 @@ success_or_error () {
         if [ $@ ]; then $@; fi
         exit
     fi
+}
+
+# adds indent to all but first line
+indent_lines () {
+  local first
+  while read -r line; do
+    if ! [ "$first" ];then
+        first="true"
+        printf "$line\n"
+    else
+        printf "$indent $line\n"
+    fi
+  done <<< "$1"
 }
 
 
@@ -407,12 +422,12 @@ uncaught_case (){
     if [ -z "${!p}" ]; then
       local eval_exp="${p}=\"$val\""
       eval "$eval_exp"
-      set_var="$p:-set"
+      set_var="$p"
       break
     fi
  done
 
- if [ -z "$set_var" ]; then
+ if [ -z "$set_var" ] && [ "$val" ]; then
    error "Too many params: ($vars) have all been set and got value: $val"
    show_usage
  fi

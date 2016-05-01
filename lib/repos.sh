@@ -12,7 +12,6 @@ manage_repo (){
     local repo
     local branch
     local force
-    local silent
     local confirmed
 
     if [ "${TOPIC_CONFIRMED:-"$GLOBAL_CONFIRMED"}" ]; then
@@ -23,13 +22,17 @@ manage_repo (){
         case "$1" in
         --force )       force="$1" ;;
         --confirmed )   confirmed="--confirmed" ;;
-        *)  uncaught_case "$1" "action" "repo" "branch" ;;
+        *)  uncaught_case "$1" "action" "repo";;
         esac
         shift
     done
 
     required_vars "action" "repo"
 
+    debug "-- manage_repo: received  a:$action r:$repo b:$branch $force"
+
+    # separate branch from user/repo/branch
+    split_repo_branch
 
     local github_repo="https://github.com/$repo"
     local local_repo="$(repo_dir "$repo")"
@@ -39,11 +42,14 @@ manage_repo (){
     local repo_name="${repo#*/}"
     local state_key="installed_repo"
 
+    debug "   manage_repo: final ->  a:$action r:$repo lr:$local_repo b:$branch $force"
 
-    # todo: implement branch for git
-    branch="${branch:-master}"
+    # make sure git is installed
+    if ! cmd_exists git;then
+        dotsys install git --recursive
+    fi
 
-    debug "-- manage repo a:$action r:$repo rd:$local_repo b:$branch $force $silent"
+    checkout_branch "$repo" "$branch"
 
     local installed=
     local repo_status=
@@ -75,17 +81,18 @@ manage_repo (){
         fi
     fi
 
-    debug "   manage repo status: $repo_status"
+    debug "   manage_repo status: $repo_status"
 
     # Check for action already complete (we do this first in case of status changes in checks)
     if ! [ "$force" ]; then
         if [ "$action" = "install" ] && [ "$repo_status" = "installed" ]; then
-            repo_status="action_done"
+            complete="true"
 
         elif [ "$action" = "uninstall" ] && [ ! "$repo_status" = "installed" ]; then
-            repo_status="action_done"
+            complete="true"
         fi
     fi
+
 
     # PRECONFIRM CHECKS AND MESSAGES
 
@@ -98,14 +105,12 @@ manage_repo (){
 
         # missing directory (installed)
         if [ "$repo_status" = "missing" ] && repo_in_use "$repo" && ! [ "$force" ]; then
-            warn "$(printf "The local repo $repo is $repo_status
+            error "$(printf "The local repo $repo is $repo_status
                     $spacer and can not be ${action%e}ed.  If a remote repo exists
                     $spacer run 'dotsys install $repo' before ${action%e}ing.
                     $spacer Otherwise replace the repo with it's entire contents.
                     $spacer As a last resort run 'dotsys uninstall $repo --force'.")"
-            confirmed=""
-            action="install"
-            repo_status="remote"
+            exit
 
         # directory not found and (not installed)
         elif [ ! "$installed" ] && ! [ -d "$local_repo" ]; then
@@ -116,11 +121,9 @@ manage_repo (){
            exit
         # directory exists but not installed
         elif [ ! "$installed" ]; then
-            warn "$(printf "The $repo_status repo $repo must be
+            error "$(printf "The $repo_status repo $repo must be
                     $spacer installed before it can be ${action%e}ed.")"
-            confirmed=""
-            action="install"
-            repo_status="existing"
+            exit
 
         # UNINSTALL ONLY
 
@@ -158,8 +161,8 @@ manage_repo (){
 
     fi
 
-    # ABORT: ACTION DONE (we do this after the checks to make sure status has not changed)
-    if [ "$repo_status" = "action_done" ]; then
+    # ABORT: ACTION ALREDY DONE (we do this after the checks to make sure status has not changed)
+    if [ "$complete" ]; then
         task "$(printf "Already ${action%e}ed: %b$repo%b" $green $blue)"
         return
     # CONFIRM
@@ -168,37 +171,31 @@ manage_repo (){
         if ! [ $? -eq 0 ]; then return; fi
     fi
 
-    # START ACTIONS
 
     local action_status=1
 
+    # ACTION INSTALL
     if [ "$action" = "install" ]; then
-
-        # INSTALL GIT
-        if ! cmd_exists git;then
-            dotsys install git --recursive
-        fi
 
         # REMOTE: Clone existing repo
         if [ "$repo_status" = "remote" ];then
             clone_remote_repo "$repo"
 
-        # create full repo directory
+        # create full repo directory (after remote or clone will fail)
         elif [ "$repo_status" != "existing" ];then
             mkdir -p "$local_repo"
+            if ! [ $? -eq 0 ]; then error "Local repo $local_repo could not be created"; exit; fi
         fi
 
-        # SET GIT CONFIG (after remote so we have repo downloaded for config)
+        # GIT CONFIG (after remote so we have repo downloaded for config)
         setup_git_config "$repo"
-
-        if ! [ $? -eq 0 ]; then error "Local repo $local_repo could not be created"; exit; fi
 
         # make sure repo is git!
         if ! is_git; then
             inint_local_repo "$repo"
         fi
 
-        # check existing directory for remote
+        # EXISTING/INSTALLED check for remote
         if [ "$repo_status" = "existing" ] || [ "$repo_status" = "installed" ];then
             info "Checking $repo_status repo for remote $github_repo"
             wget -q "${github_repo}.git" --no-check-certificate -O - > /dev/null
@@ -212,8 +209,15 @@ manage_repo (){
             fi
         fi
 
+        # add a .dotsys.cfg
+        if ! [ -f ".dotsys.cfg" ]; then
+            touch .dotsys.cfg
+            echo "repo:${repo}" >> ".dotsys.cfg"
+        fi
+
         # NEW: initialize remote repo
         if [ "$repo_status" = "new" ];then
+
             init_remote_repo "$repo"
 
             msg "$spacer Don't forget to add topics to your new repo..."
@@ -223,7 +227,7 @@ manage_repo (){
         state_install "dotsys" "$state_key" "$repo"
         action_status=$?
 
-        # if repo is not already the primary offer some options
+        # MAKE PRIMARY if not offer some options
         if [ "$(state_primary_repo)" != "$repo" ]; then
 
             confirm_make_primary_repo "$repo"
@@ -265,10 +269,12 @@ manage_repo (){
         # confirm delete if repo exists
         if [ -d "$local_repo" ]; then
             manage_remote_repo "$repo" push
-            # delete local repo
-            get_user_input "Would you like to delete local repo $repo?"
+            # delete local repo (only if remote is pushed)
             if [ $? -eq 0 ]; then
-                rm -rf "$local_repo"
+                get_user_input "Would you like to delete local repo $repo?"
+                if [ $? -eq 0 ]; then
+                    rm -rf "$local_repo"
+                fi
             fi
         fi
     fi
@@ -278,6 +284,8 @@ manage_repo (){
     return $?
 }
 
+
+
 init_remote_repo () {
     local repo="$1"
     local local_repo="$(repo_dir "$repo")"
@@ -285,23 +293,44 @@ init_remote_repo () {
     local OWD="$PWD"
 
     confirm_task "initialize" "remote repo" "$github_repo"
+    if ! [ $? -eq 0 ]; then return; fi
 
     cd "$local_repo"
 
     git add .
     git commit -m "initialized by dotsys"
 
-    if [ "$?" -eq 0 ]; then
-        # Git hub will prompt for the user password
-        local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
-        git push -u origin master
+    # Git hub will prompt for the user password
+    local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
+    git push -u origin "$branch"
 
-        success_or_fail $? "initialize" "$(printf "%b$repo_status%b  remote repo %b$github_repo%b" $green $rc $green $rc)" \
-                        msg "$spacer However, The local repo is ready for topics..."
+    success_or_fail $? "initialize" "$(printf "%b$repo_status%b repo %b$github_repo%b" $green $rc $green $rc)" \
+                    msg "$spacer However, The local repo is ready for topics..."
 
-    fi
+
 
     cd "$OWD"
+}
+
+checkout_branch (){
+    local repo="$1"
+    local branch="${2:-$branch}"
+
+    debug "   checkout_branch: r:$repo b:$branch"
+    if is_git "$repo"; then
+        local current="$(git rev-parse --abbrev-ref HEAD)"
+        # change branch if branch != current branch
+        if [ "${branch:-$current}" != "$current" ]; then
+            local local_repo="$(repo_dir "$repo")"
+            local OWD="$PWD"
+            cd "$local_repo"
+            local result="$(git checkout "$branch")"
+            success_or_error $? "set" "$(indent_lines "$result")"
+            cd "$OWD"
+        fi
+    else
+        branch="${branch:-master}"
+    fi
 }
 
 init_local_repo (){
@@ -314,21 +343,19 @@ init_local_repo (){
     if ! [ $? -eq 0 ]; then exit; fi
 
     cd "$local_repo"
+    result="$(git init)"
+    success_or_error $? "--" "$(indent_lines "$result")"
+    #success_or_error $? "initialize" "$(printf "%b$repo_status%b local git repo %b$local_repo%b" $green $rc $green $rc)"
+    result="$(git remote add origin "$github_repo")"
+    success_or_error $? "--" "$(indent_lines "$result")"
+    #$success_or_error $? "add" "$(printf "origin %b$repo_status%b local git repo %b$local_repo%b" $green $rc $green $rc)"
+    #git remote -v
+    result="$(git remote add upstream "$github_repo")"
+    success_or_error $? "--" "$(indent_lines "$result")"
+    #success_or_error $? "add" "$(printf "upstream for %b$repo_status%b local git repo %b$local_repo%b" $green $rc $green $rc)"
 
-    # add a .dotsys.cfg
-    if ! [ -f ".dotsys.cfg" ]; then
-        touch .dotsys.cfg
-        echo "repo:${repo}" >> ".dotsys.cfg"
-    fi
-
-    git init
-    success_or_error $? "initialize" "$(printf "%b$repo_status%b local git repo %b$local_repo%b" $green $rc $green $rc)"
-    git remote add origin "$github_repo"
-    git remote -v
-    # set current branch upstream to origin/current branch
-    git branch --set-upstream-to origin/$(git rev-parse --abbrev-ref HEAD)
-
-    success_or_error $? "added remote for" "$(printf "%b$repo_status%b local git repo %b$local_repo%b" $green $rc $green $rc)"
+    checkout_branch "$repo" "$branch"
+    cd "$OWD"
 }
 
 clone_remote_repo () {
@@ -343,8 +370,10 @@ clone_remote_repo () {
 
     cd "$repo_user_dir"
     git clone "$github_repo"
-    if ! [ $? -eq 0 ]; then fail "Could not fetch the remote repo:\n$github_repo"; repo_status="new";fi
     cd "$OWD"
+
+    if ! [ $? -eq 0 ]; then fail "Could not fetch the remote repo:\n$github_repo"; repo_status="new";fi
+
 
 }
 
@@ -474,6 +503,8 @@ manage_remote_repo (){
     local message
     local confirmed
 
+    local branch="$branch"
+
     local status=0
     while [[ $# > 0 ]]; do
     case "$1" in
@@ -488,9 +519,9 @@ manage_remote_repo (){
     shift
     done
 
-    required_vars "repo" "action"
+    required_vars "repo" "task"
 
-    debug "-- manage_remote_repo: $task"
+    debug "-- manage_remote_repo: $task b:$branch"
 
 
     local local_repo="$(repo_dir "$repo")"
@@ -504,19 +535,19 @@ manage_remote_repo (){
 
         cd "$local_repo"
 
-        result="$(git remote update)"
+        result="$(git remote update 2>&1)"
         if ! [ $? -eq 0 ]; then
             status=1
-            if ! [ "$task" = "status" ]; then error "$result"; fi
+            if ! [ "$task" = "status" ]; then error "$(indent_lines "$result")"; fi
             return 1
-        elif ! [ "$task" = "status" ];
-            then info "$result";
+        elif ! [ "$task" = "status" ]; then
+            info "$(indent_lines "$result")";
         fi
 
         # set branch upstream to origin/branch if not already
         if ! git rev-parse @{u} > /dev/null; then
-            debug "-- manage_remote_repo: set branch upstream"
-            (git branch --set-upstream-to origin/$(git rev-parse --abbrev-ref HEAD))
+            debug "-- manage_remote_repo: set current branch upstream"
+            (git branch --set-upstream-to origin/$branch)
         fi
 
         debug "   manage_remote_repo: check status local"
@@ -549,11 +580,12 @@ manage_remote_repo (){
     if [ "$task" = "push" ] || [ "$task" = "pull" ];then
 
         confirm_task "$task"  "$remote_repo" "$confirmed"
-        if ! [ $? -eq 0 ]; then return; fi
-
+        if ! [ $? -eq 0 ]; then return 1; fi
 
         cd "$local_repo"
+
         if [ "$task" = "push" ]; then
+            # custom commit message
             if [ ! "$message" ]; then
                 local user_input
                 message="dotsys $action ${limits[0]} ${topics[@]:-\b}"
@@ -564,9 +596,10 @@ manage_remote_repo (){
             git commit -a -m "$message"
         fi
 
-        # exicute action
-        result="$(git $task origin master )"
-        success_or_fail $? "$task" "$result"
+        # execute action
+        debug "   manage_remote_repo: git $task origin $branch"
+        result="$(git "$task" origin "$branch" 2>&1)"
+        success_or_fail $? "$task" "$(indent_lines "$result")"
         status=$?
 
         cd "$OWD"
@@ -585,7 +618,12 @@ manage_remote_repo (){
 
 
 is_git (){
+    local repo="${1:-$repo}"
+    local repo_dir="$(repo_dir "$repo")"
+    local OWD="$PWD"
+    cd "$repo_dir"
     [ -d .git ] || git rev-parse --git-dir > /dev/null 2>&1
+    cd "$OWD"
 }
 
 
@@ -618,17 +656,28 @@ copy_topics_to_repo () {
         esac
     done
 
-    local repos=($(get_dir_list "$dir"))
+    local found_dirs=($(get_dir_list "$dir"))
 
     # list found topics
-    if [ "$repos" ]; then
+    if [ "$found_dirs" ]; then
 
         task "$(printf "Import topics found in %b$dir%b:" $green $rc)"
-        for i in "${!repos[@]}"; do
-            local topic="${repos[$i]}"
+        for i in "${!found_dirs[@]}"; do
+            local topic="${found_dirs[$i]}"
             local files="$(find "$dir/$topic" -maxdepth 1 -type f)"
-            # remove if topic matches user repo or if directory has no files
-            if ! [ "$files" ] || [ "$topic" = "${repo%/*}" ]; then unset repos[$i]; continue; fi
+            local is_repo="$(find "$dir/$topic" -maxdepth 2 -type f -name dotsys*)"
+
+            # a topic must not be a repo or match current $repo user
+            # and must contain at lest one recognised file type in topic root
+            if [ "$files" ] && ! [ "$is_repo" ] && ! [ "$topic" = "${repo%/*}" ]; then
+                local f
+                for f in $files; do
+                    if ! [[ "$f" =~ (*.symlink|*.sh|*.zsh) ]]; then
+                        unset found_dirs[$i]
+                        continue
+                    fi
+                done
+            fi
             msg "$spacer - $topic"
         done
 
@@ -646,7 +695,7 @@ copy_topics_to_repo () {
 
     local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
     # Confirm each file to move/copy
-    for topic in ${repos[@]}; do
+    for topic in ${found_dirs[@]}; do
         confirm_task "$mode" "$topic \n$spacer from $dir \n$spacer to $repo_dir"
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
@@ -659,7 +708,7 @@ copy_topics_to_repo () {
             fi
             printf "$rc"
 
-            success_or_fail $? "$mode)" "$(printf "$(cap_first $mode) %b$topic%b: %b$repo_dir%b" $green $rc $green $rc)"
+            success_or_fail $? "$mode" "$(printf "$(cap_first $mode) %b$topic%b: %b$repo_dir%b" $green $rc $green $rc)"
 
         else
           clear_lines "" 2 # clear two lines of

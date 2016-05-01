@@ -43,6 +43,7 @@ topic_dir () {
 # converts supplied repo or active repo to full path
 repo_dir () {
     local repo="${1}"
+    local branch
 
     if ! [ "$repo" ]; then
         repo="$(get_active_repo)"
@@ -52,10 +53,23 @@ repo_dir () {
         return 1
     fi
 
+    split_repo_branch
+    # catch abs path
     if [[ "$repo" = /* ]]; then
         echo "$repo"
+    # relative to full path
     else
         echo "$(dotfiles_dir)/$repo"
+    fi
+}
+
+# seperate repo:branch into repo and branch
+# requires predefined local vars "repo" and "branch"
+split_repo_branch () {
+    # [^/]+/[^/]+/[^/]+$ = user/repo/master[end]
+    if [[ "$repo" =~ .+/.+:.+ ]]; then
+        branch="${repo##*:}"
+        repo="${repo%:*}"
     fi
 }
 
@@ -236,8 +250,8 @@ get_topic_list () {
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read line; do
             t=${line%:*}
-            # skip special state prefixes
-            if [[ "$t" =~ (installed_repo|user_repo|show_logo) ]]; then continue; fi
+            # skip system keys
+            if [[ "$STATE_SYSTEM_KEYS" =~ $t ]]; then continue; fi
             echo "$t"
         done < "$(state_file "dotsys")"
     # all defined topic directories

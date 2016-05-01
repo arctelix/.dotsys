@@ -30,37 +30,36 @@ get_config_val () {
 load_config_vars (){
     # Defaults to state_reop config file or specify repo or path to config file
 
-    local from="$1"
-    local action="${2:-$action}"
+    local repo="$1"
+    local action="$2"
 
     # set by validate_config_or_repo or new_user_config
-    local config_file=
-    local active_repo=
-    local new_user=
+    local config_file
+    local active_repo
 
-    debug "-- load_config_vars: $action from: $from"
+    debug "-- load_config_vars: $action from: $repo"
 
-    debug "-- loading default config"
+    debug "   load_config_vars: loading default config"
 
     # load default cfg (prefix with ___)
     local yaml="$(parse_yaml "$(dotsys_dir)/.dotsys.cfg" "___")"
     #debug "$yaml"
     eval "$yaml" #set default config vars
 
-
+    debug "   load_config_vars: validate from"
 
     # validate from and set config_file
-    if [ "$from" ]; then
-        validate_config_or_repo "$from" "$action"
+    if [ "$repo" ]; then
+        validate_config_or_repo "$repo" "$action"
     # existing user (no from supplied)
     else
         active_repo="$(get_active_repo)"
-        config_file="$(get_repo_config_file "$active_repo")"
+        config_file="$(get_config_file_from_repo "$active_repo")"
     fi
 
     if [ ! "$active_repo" ] ; then
         if is_new_user && [ "$action" != "uninstall" ]; then
-            new_user_config "$from"
+            new_user_config "$repo"
         else
             error "A repo must be specified!"
             exit
@@ -70,6 +69,7 @@ load_config_vars (){
     # Make sure repo is installed updated
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
+        debug "   load_config_vars: call manage_repo"
         if in_limits "repo" -r; then confirmed="--confirmed"; fi
         manage_repo "$action" "$active_repo" "$force" "$confirmed"
         status=$?
@@ -77,9 +77,11 @@ load_config_vars (){
 
     # ABORT HERE ON UNINSTALL REPO
     if [ "$action" = "uninstall" ] && in_limits "repo" -r; then
+        debug "   load_config_vars: repo in limits ABORT"
         return
     fi
 
+    debug "   load_config_vars: load config file"
     # load the user config file vars (prefix with __)
     if [ -f "$config_file" ]; then
         yaml="$(parse_yaml "$config_file" "__")"
@@ -93,12 +95,13 @@ load_config_vars (){
     fi
 
     # Not required when limited to repo
-
+    debug "   load_config_vars: set ACTIVE_REPO vars"
     # must be set after config
     ACTIVE_REPO="$(get_active_repo)"
     ACTIVE_REPO_DIR="$(repo_dir)"
 
     # Set default cmd app manager as per config or default
+    debug "   load_config_vars: set DEFAULT_MANGER vars"
     set_default_managers
 }
 
@@ -106,16 +109,16 @@ load_config_vars (){
 # from user specific file or repo
 validate_config_or_repo (){
 
-    local from_src="$1"
+    local input="$1"
     local action="$2"
     local prev_error=0
 
     local status=0
 
     # FILE: anything with . must be a file
-    if [[ "$from_src" =~ ^.*\..*$ ]]; then
-        config_file="$from_src"
-        active_repo="$(get_config_file_repo "$config_file")"
+    if [[ "$input" =~ ^.*\..*$ ]]; then
+        config_file="$input"
+        active_repo="$(get_repo_from_config_file "$config_file")"
 
         # catch file does not exist
         if ! [ -f "$config_file" ]; then
@@ -127,19 +130,18 @@ validate_config_or_repo (){
         msg "Using config file : $config_file\n"
 
     # must be repo
-    elif [ "$from_src" ]; then
+    elif [ "$input" ]; then
 
         # catch repo incorrect format
-        if ! [[ "$from_src" =~ ^[^/].*/.*$ ]]; then
+        if ! [[ "$input" =~ ^[^/].*/.*$ ]]; then
             ((error_count+=1))
-            prompt_config_or_repo "$action" "Repo must be in the format 'github_user/repo_name'"
+            prompt_config_or_repo "$action" "Repo must be in the format 'github_user/repo_name[:branch]'"
             #clear_lines "\n"
             return
         fi
-
         # get the repo config file
-        config_file="$(get_repo_config_file "$from_src")"
-        active_repo="$from_src"
+        config_file="$(get_config_file_from_repo "$input")"
+        active_repo="$input"
     fi
 
     # repo manager handles all other repo issues
@@ -270,14 +272,15 @@ set_user_vars () {
     REPO_NAME="${repo#*/}"
 }
 
-get_repo_config_file () {
-  echo "$(dotfiles_dir)/${1}/.dotsys.cfg"
+get_config_file_from_repo () {
+  echo "$(repo_dir "$1")/.dotsys.cfg"
 }
 
-get_config_file_repo () {
-    local file="$(dotfiles_dir)/${1}/.dotsys.cfg"
+get_repo_from_config_file () {
+    local file="$1"
     if [ -f "$file" ]; then
-        echo "$(dotfiles_dir)/${1}/.dotsys.cfg"
+        local line="$(grep "repo:*" "$file")"
+        echo "${line#*: }"
     fi
 }
 

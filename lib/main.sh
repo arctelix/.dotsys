@@ -9,18 +9,20 @@
 # https://github.com/webpro/dotfiles
 
 
-#TODO: MAKE SURE EVERY FOR LOOP HAD LOCAL VAR DEFINED!!!!!!
+#TODO: MAKE SURE EVERY FOR LOOP HAS LOCAL VAR DEFINED!!!!!!
 
 #TODO: handle alternate symlink destinations
-#TODO: handle stub files for symlinks
+#TODO: handle .stub files for symlinks
 #TODO: handle .settings files
-#TODO: add got config to new user setup and implement
+
+#TODO: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
+
 #TODO: FOR NEW Installs prompt for --force & --confirm options
+#TODO: Finish implementing success_or_ functions....
 
-#TODO: Finish implementing success_or functions....
-
-#TODO QUESTION: Symlink All choice should apply to all topics? (currently just all symlinks for topic)
-#TODO QUESTION: Hold manager packages install to end of topic run
+#TODO QUESTION: Change freeze to show.. as in show status.  ie dotsys show brew, show git, show tmux
+#TODO QUESTION: Symlink "all" choice should apply to all topics? (currently just for topic)
+#TODO QUESTION: Hold package_manager packages install to end of topic run
 
 #TODO ROADMAP:  Detect platforms like babun and mysys as separate configs, and allow user to specify system.
 
@@ -53,7 +55,8 @@ fi
 . "$DOTSYS_LIBRARY/config.sh"
 . "$DOTSYS_LIBRARY/repos.sh"
 
-# GLOBALS
+#GLOBALS
+STATE_SYSTEM_KEYS="installed_repo user_repo show_logo show_stats"
 
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
@@ -69,22 +72,29 @@ REPO_NAME=
 
 # persist state for topic actions & symlinks
 GLOBAL_CONFIRMED=
+
 # persist state for topic actions only
 TOPIC_CONFIRMED=
+
 # text message for dry runs
 DRY_RUN=
 
 #track mangers actively used by topics or packages
 ACTIVE_MANAGERS=()
+
 #track uninstalled topics (populated but not used)
 UNINSTALLED_TOPICS=()
+
 #track installed topics (populated but not used)
 INSTALLED=()
 
+# path to user bin
 USER_BIN="/usr/local/bin"
 
+# Current platform
 PLATFORM="$(get_platform)"
 
+#path to debug file
 DEBUG_FILE="$DOTSYS_REPOSITORY/debug.log"
 
 #debug "DOTFILES_ROOT: $(dotfiles_dir)"
@@ -112,8 +122,8 @@ dotsys () {
     <limits> optional:
 
     -d | dotsys             Limit action to dotsys (excludes package management)
-    -r | repo               Limit action to primary repo management
-    <user/repo>             Same as 'repo' for specified repo
+    -r | repo [branch]      Limit action to primary repo management (not topics)
+    <user/repo[:branch]>    Same as 'repo' for specified repo
     -l | links              Limit action to symlinks
     -m | managers           Limit action to package managers
     -p | packages           Limit action to package manager's packages
@@ -147,19 +157,18 @@ dotsys () {
     symlinks:           topic/file_name.symlink
                         Symlinked to home or specified directory
 
-    scripts:            topic/script.sh
-                        install.sh, uninstall.sh, upgrade.sh, update.sh
 
-    bin:                topic/bin/file_name.sh
+    bins:               topic/bin/file_name.sh
                         symlinked to dotsys/bin which is in path
 
-    manager:            topic/manager.sh
-                        designates a manager topic and defines manager functions
+    managers:           Manages packages of some type, such as brew, pip, npm, etc...
+                        A topic/manager.sh script designates a manager topic and defines
+                        a function for each required action (install, uninstall, freeze, upgrade).
 
-    config              topic/.dotsys.cfg
+    configs:            topic/.dotsys.cfg
                         topic level config file
 
-    stub                topic/file.stub
+    stubs:              topic/file.stub
                         Stubs allow topics to add functionality to each other.
                         For example: The stub for .vimrc is linked to the home
                         directory where vim can read it.  The stub will then source
@@ -167,11 +176,30 @@ dotsys () {
                         Provide vim/vimrc.symlink to not use stubs for that topic.
 
 
-    SCRIPTS:            scripts are optional and placed in each topic root directory
-      install.sh:       Should only need to be run once, on install!
-      uninstall.sh:     Should only need to be run once, on uninstall!
-      upgrade.sh:       Only use for changes that bump the version.
-      update.sh:        Only use to update local changes without a version bump.
+    scripts:            scripts are optional and placed in each topic root directory
+
+      topic.sh          A single script containing functions for each required action
+                        see action function definitions
+
+    action functions:   The rules below are important (please follow them strictly)
+
+      install:          Makes permanent changes that only require running on initial install (run once)!
+      uninstall         Must undo everything done by install (run once)!
+      upgrade           Only use for changes that bump the installed component version!
+                        Topics with a manager typically wont need this, the manager will handle it.
+      update:           Only use to update dotsys with local changes or data (DO NOT BUMP VERSIONS)!
+                        ex: reload a config file so local changes are available in the current session
+                        ex: refresh data from a webservice
+      freeze:           Output the current state of the topic
+                        ex: A manager would list installed topics
+                        ex: git will show the current status
+
+    scripts (depreciated and replaced by topic.sh action functions)
+
+      install.sh        see action function definitions
+      uninstall.sh      see action function definitions
+      upgrade.sh        see action function definitions
+      update.sh         see action function definitions
     "
 
     check_for_help "$1"
@@ -198,6 +226,7 @@ dotsys () {
     local limits=()
     local force=
     local from_repo=
+    local from_branch=
     # allow toggle on a per run basis
     # also used internally to limit to one showing
     # use user_toggle_logo to turn logo off permanently
@@ -208,16 +237,17 @@ dotsys () {
     case $1 in
         # limits
         -d | dotsys )   limits+=("dotsys") ;;
-        -r | repo)      limits+=("repo") ;; #no topics permitted (only manages repo)
+        -r | repo)      limits+=("repo")    #no topics permitted (just branch)
+                        if [ "$2" ]; then from_branch="$2";shift ;fi ;;
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
         -p | packages)  limits+=("packages") ;;
         -s | scripts)   limits+=("scripts") ;;
-        -f | from)      from_repo="$2"; shift ;;
+        -f | from)      from_repo="$2"; shift if;;
 
         # options
-        --tlogo)        show_logo=! $(get_state_value "show_logo") ;;
-        --tstats)       show_stats=! $(get_state_value "show_stats") ;;
+        --tlogo)        show_logo=$(! $(get_state_value "show_logo")) ;;
+        --tstats)       show_stats=$(! $(get_state_value "show_stats")) ;;
         --force)        force="--force" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       DRY_RUN="(dry run) " ;;
@@ -267,7 +297,7 @@ dotsys () {
 
     # HANDLE REPO LIMIT
 
-    # First topic repo or xx/xx = limits "repo"
+    # First topic "repo" or "xx/xx" = limits "repo"
     if topic_is_repo; then
         debug "main -> topic is repo: ${topics[0]}"
         limits+=("repo")
@@ -287,11 +317,18 @@ dotsys () {
             $spacer a repo must be explicitly specified"
             exit
         fi
+
     fi
 
     # LOAD CONFIG VARS Parses from_repo, Loads config file, manages repo
     if ! [ "$recursive" ]; then
         debug "main -> load config vars"
+        if [ "$from_branch" ]; then
+            debug "   got from_branch: $from_branch"
+            from_repo="${from_repo}:$from_branch"
+            debug "   new from_repo = $from_repo"
+        fi
+
         load_config_vars "$from_repo" "$action"
     fi
 
@@ -299,10 +336,10 @@ dotsys () {
     if [ "$action" = "freeze" ] && in_limits "dotsys"; then
         debug "main -> freeze_mode: $freeze_mode"
         if in_limits -r "repo"; then
-            create_config_yaml "$from_repo" "${limits[@]}"
+            create_config_yaml "$ACTIVE_REPO" "${limits[@]}"
             return
         else
-            freeze "$from_repo" "${limits[@]}"
+            freeze "$ACTIVE_REPO" "${limits[@]}"
         fi
     fi
 
