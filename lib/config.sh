@@ -64,8 +64,8 @@ load_config_vars (){
             error "A repo must be specified!"
             exit
         fi
-    # Show logo when more then one topic
-    elif [ ${#topics[@]} -gt 1 ]; then
+    # Show logo when more then one topic or no topics
+    elif ! in_limits "repo" -r && ! [ "${topics[@]}" ] || [ ${#topics[@]} -gt 1 ]; then
         print_logo "$active_repo"
     fi
 

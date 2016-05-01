@@ -92,6 +92,22 @@ symlink_topic () {
 
     dst="${dst_path}$(basename "${src%.symlink}")"
 
+    # check for config  *.symlink -> path/name
+    local link_cfg="$(get_topic_config_val "$topic" "symlinks")"
+    debug "-- symlink_topic link_cfg: $link_cfg"
+    for link in $link_cfg; do
+      local src_name="$(basename "$src")"
+      local alt_name="${link%-\>*}"
+      debug "   symlink_topic CHECKING: $src_name = $alt_name"
+      # check for file name match *.symlink
+      if [ "$src_name" = "$alt_name" ]; then
+         dst="${link#*-\>}"
+         mkdir -p "$(dirname "$dst")"
+         debug "   symlink_topic MATCHED $alt_name -> $dst"
+         break
+      fi
+    done
+
 
     if [ "$action" = "link" ] ; then
       symlink "$src" "$dst"
@@ -308,7 +324,7 @@ symlink () {
   if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]; then exists="true";fi
 
   if [ "$exists" ] && [ "$dst_full_target" = "$src" ]; then
-      success "$(printf "Symlink %sexists for %b%s's %s%b" "$DRY_RUN" $green "$topic" "$dst_name" $rc)"
+      success "$(printf "Symlink %sexists for %s %b%s%b" "$DRY_RUN" "$type" $green "$dst_name" $rc)"
       return
   fi
 

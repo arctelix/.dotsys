@@ -162,9 +162,16 @@ run_script_func () {
             status=$?
           fi
 
+          local message="$(printf "%b%s%b %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$file_name " $rc )"
+
           # Required function success/fail
-          [ ! $status -eq 0 ] && [ "$required" ]
-          success_or_fail $? "$action" "$(printf "%b%s%b %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$file_name " $rc )"
+          if [ "$required" ]; then
+              success_or_fail $status "$action" "$message"
+
+          # Only show success for not required
+          elif [ $status -eq 0 ]; then
+                success_or_fail $status "$action" "$message"
+          fi
 
       # Required script fail
       elif [ "$required" ]; then

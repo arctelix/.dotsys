@@ -81,7 +81,7 @@ success_or_fail () {
         success "$(printf "$(cap_first "${action%e}ed") $message")"
     else
         fail "$(printf "Failed to $action $message")"
-        if [ "$@" ]; then $@; fi
+        if [ "$@" ]; then printf "$@"; fi
         return 1
     fi
 }

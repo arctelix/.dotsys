@@ -8,8 +8,6 @@
 # https://github.com/holman/dotfiles
 # https://github.com/webpro/dotfiles
 
-
-#TODO: handle alternate symlink destinations
 #TODO: handle .stub files for symlinks
 #TODO: handle .settings files
 
@@ -241,7 +239,7 @@ dotsys () {
         -m | managers)  limits+=("managers") ;;
         -p | packages)  limits+=("packages") ;;
         -s | scripts)   limits+=("scripts") ;;
-        -f | from)      from_repo="$2"; shift if;;
+        -f | from)      from_repo="$2"; shift ;;
 
         # options
         --tlogo)        show_logo=$(! $(get_state_value "show_logo")) ;;
@@ -492,7 +490,7 @@ dotsys () {
 
         # 3) symlinks
         if in_limits "links" "dotsys"; then
-            debug "main -> call symlink: $action $topic confirmed? gc:$GLOBAL_CONFIRMED tc:$TOPIC_CONFIRMED"
+            debug "main -> call symlink_topic: $action $topic confirmed? gc:$GLOBAL_CONFIRMED tc:$TOPIC_CONFIRMED"
             symlink_topic "$action" "$topic"
         fi
 
