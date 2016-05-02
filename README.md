@@ -38,8 +38,11 @@ Upgrade a just few topic packages:
 
 Upgrade a repo (auto push or pull remote repo)
 > dotsys upgrade repo           # your default repo's master branch
+
 > dotsys upgrade repo min       # your default repo min branch
+
 > dotsys upgrade user/repo      # another repo's master branch
+
 > dotsys upgrade user/repo:min  # another repo's full branch
 
 Remove a topic's software package and all system changes (topic files remain intact):
