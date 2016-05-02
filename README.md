@@ -5,7 +5,7 @@
 This system is based on the topic-centric concept introduced by Zach Holman.  If 
 you are using this system and are familiar with package mangers like brew..
 
-### Yoy already know how to use it!
+### You already know how to use it!
 
 NOTE: A repo is any github repository containing topic-centric dotfiles
 

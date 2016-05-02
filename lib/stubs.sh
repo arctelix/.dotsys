@@ -18,8 +18,14 @@
 #  opt (b) only available with stubbed topics!!!
 #  Always backup .. why optional
 
-create_topic_stub () {
-    local template=$1
-    local stub_name=$2
+stub_topic () {
+    local topic="$topic"
+    local template="$(find "$(builtin_topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -not -name '\.template')"
+    local stub_file="$(find "$(builtin_topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -not -name '\.template')"
+    
+    if [ "$template" ]; then
 
+    elif [ "$stub_file" ]
+
+    fi
 }
