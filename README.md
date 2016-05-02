@@ -10,22 +10,13 @@ you are using this system and are familiar with package mangers like brew..
 NOTE: A repo is any github repository containing topic-centric dotfiles
 
 Bootstrap a new machine from a remote repo:
-> dotsys install github_user_/repo_name
-
-Try a somebody else's vim config:
-> dotsys install vim from other_user/repo_name
+> dotsys install from github_user_/repo_name
 
 Install a new topic on your system:
 > dotsys install tmux
 
-Install a new OS app (no topic required):
-> dotsys install app google-chrome
-
-Install a new command line utility (no topic required):
-> dotsys install cmd zip
-
-Install a node package (no topic required):
-> dotsys install node package gulp
+Try a somebody else's vim config:
+> dotsys install vim from other_user/repo_name
 
 Update all local data (update package lists, reload bash config, etc):
 > dotsys update
@@ -33,26 +24,32 @@ Update all local data (update package lists, reload bash config, etc):
 Update just package managers:
 > dotsys update managers
 
-Update only brew:
+Update brew:
 > dotsys update brew
 
-Upgrade everything on your system:
+Update your local repo (pull changes from remote):
+> dotsys update repo
+
+Upgrade everything on your system (that nuts!):
 > dotsys upgrade
 
-Upgrade a software packages:
-> dotsys upgrade vim
+Upgrade a just few topic packages:
+> dotsys upgrade vim tmux node
 
-Upgrade your repo (auto push or pull remote repo)
-> dotsys upgrade repo
+Upgrade a repo (auto push or pull remote repo)
+> dotsys upgrade repo           # your default repo's master branch
+> dotsys upgrade repo min       # your default repo min branch
+> dotsys upgrade user/repo      # another repo's master branch
+> dotsys upgrade user/repo:min  # another repo's full branch
 
-Remove a topic's software package and system changes (topic files remain intact):
+Remove a topic's software package and all system changes (topic files remain intact):
 > dotsys uninstall vim
 
 Remove all packages and changes installed with dotsys:
 > dotsys uninstall
 
-Remove all changes from a repo you tried:
-> dotsys uninstall other_user/repo_name
+Remove all changes from a repo you tried and hated:
+> dotsys uninstall from other_user/repo_name
 
 
 ### Why another dotfile management system ?
@@ -61,6 +58,20 @@ Most people have developed dotfile systems that integrate system settings and so
 which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to 
 really share and fork dotfiles.  Dotsys separates these functions so dotfies can be easily managed 
 ,shared shared with everyone, and forked in a more usefull way.
+
+### Why do i need dotsys if i don't manage my dotfiles as topics ?
+
+Because we have some brains built in, right out of the box you can do things like..
+
+Install a new OS app (no topic required):
+> dotsys install app google-chrome
+
+Install a new command line utility (no topic required):
+> dotsys install cmd zip
+
+Install a node package (no topic required):
+> dotsys install node packages gulp
+
 
 ### Why another package manger ?
 
