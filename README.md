@@ -57,34 +57,41 @@ Remove all changes from a repo you tried:
 
 ### Why another dotfile management system ?
 
-Most people have developed dotfile systems that integrate system configuration and bootstrapping 
+Most people have developed dotfile systems that integrate system settings and software instalation 
 which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to 
-really share dotfiles.  Dotsys separates these two concepts so dotfies can be shared with everyone.
+really share and fork dotfiles.  Dotsys separates these functions so dotfies can be easily managed 
+,shared shared with everyone, and forked in a more usefull way.
 
 ### Why another package manger ?
 
-Dotsys is not really a package manager at all.  We simply chooses the correct package manager
-for any given topic on a given platform.  By allowing any topic to be a manger and allow any topic
-to be managed the system is limitless. Secondly, there are no existing package managers 
-out there that support customisation of packages (dotfiles) and dotsys does!
+Dotsys is not really a package manager at all, more like a package_manager wrapper.  We simply chooses 
+the correct package manager for any given topic on a given platform.  By allowing any topic to be a 
+manger and allow any topic to be managed the system is limitless. Secondly, there are no existing package 
+managers  out there that support custom setting management (dotfiles) and dotsys does!  The best way to 
+illustrate this is by example.
 
 Say you run the command:
 > dotsys install gulp
 
-Depending on your system dotsys will do the following:
-- Ubuntu   : install Node.js with **apt-get** and install **gulp** with **npm**
-- Debian   : install Node.js with **apt-get** and install **gulp** with **npm**
-- BSD      : install Node.js with **pkg** and install **gulp** with **npm**
-- Mac      : install Node.js with **brew** and install **gulp** with **npm**
-- Windows  : install Node.js with **Scoop** and install **gulp** with **npm**
-- Linux    : install node.js with **yum** and install **gulp** with **npm**
-- Babun    : install Node.js with **pact** and install **gulp** with **npm**
-- Mysys    : install Node.js with **mingw-get** and install **gulp** with **npm**
+Dotsys will check for node and if not installed will:
+- Ubuntu   : install Node.js with **apt-get** 
+- Debian   : install Node.js with **apt-get** 
+- BSD      : install Node.js with **pkg** 
+- Mac      : install Node.js with **brew**
+- Windows  : install Node.js with **Scoop**
+- Linux    : install node.js with **yum**
+- Babun    : install Node.js with **pact**
+- Mysys    : install Node.js with **mingw-get**
 
-In case you were wondering.. 
+After it's installed, your node topic's custom install function wil be run. Finally dotsys wil check 
+for any symlinks you have in your topic, such as an npmrc.symlink and symlink it to the right place.
+
+Then dotsys will will install **gulp** with **npm** and repeat process for your npm topic.
+
+In case you were wondering if this would work.. 
 > dotsys install google-chrome
 
-Yes, dotsys will install cask and install chrome with cask on a mac, chocolaty on windows, etc..
+Yes, dotsys will install cask and then install chrome with cask on a mac, chocolaty on windows, etc..
 
 
 ### That's cool, what else does it do ?
@@ -131,6 +138,11 @@ If you want to use Babun use command prompt to execute:
 > path/to/.dotsys/install.bat
 
 Otherwise install your posix shell of choice (Cygwin, Mysys, etc.) and follow the instructions for Not Windows.
+
+### How do I learn more about dotsys and it's features ?
+
+Just ask dotsys for help.
+> dotsys --help
 
 
 
