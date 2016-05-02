@@ -109,6 +109,7 @@ Yes, dotsys will install cask and then install chrome with cask on a mac, chocol
 - On screen confirmation for all tasks or ride hands free!
 - Guided configuration (no docs or code to read).
 - Optionally migrate existing dotfiles and or topics to dotsys.
+- Automatically backs up any original files we replace (safety first!).
 - Management and organization of OS settings and versions (soon).
 - An API you already know how to use.
 - AND MANY MORE FEATURES
