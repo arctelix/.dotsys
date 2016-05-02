@@ -142,17 +142,21 @@ If you are interested in helping out that would be awesome!
 
 ### All platforms (except pre windows 10 w/Bash)
 
-1) Place the extracted repo ".dotsys" in the directory you want to install it (your dotfiles directory is a great choice)
-2) From your shell of choice run the install script:
+1. Place the extracted directory ".dotsys" where want to install it (your home directory is cool)
+2. From your posix shell of choice run the install script:
 > path/to/.dotsys/install.sh
 
-Then just follow the prompts in your termnal.
+Then just follow the prompts in your terminal.
 
-### Windows without bash integration
-If you want to use Babun use command prompt to execute:
+### Windows without native bash integration
+
+For a babun setup (noce the .bat extention):
 > path/to/.dotsys/install.bat
 
-Otherwise install your posix shell of choice (Cygwin, Mysys, etc.) and follow the instructions for Not Windows.
+Alternatively, install your posix shell of choice (Cygwin, Mysys, etc.) and run: 
+> path/to/.dotsys/install.sh
+
+Then just follow the prompts in your terminal.
 
 ### How do I learn more about dotsys and it's features ?
 
