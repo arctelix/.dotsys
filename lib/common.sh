@@ -5,24 +5,32 @@
 
 # PATHS
 
-full_path () {
-  local file="$1"
+#full_path () {
+#  local file="$1"
+#  printf "$(drealpath "$file")"
+#  return $?
 
-  if [ "$PLATFORM" == 'freebsd' ]; then
-    printf "$(realpath "$file")"
-    return $?
 
-  elif [ "$PLATFORM" == 'mac' ]; then
-    local fp=$(readlink "$file")
-    if [ ! "$?" ] || [ ! "$fp" ]; then
-      [[ "$file" = /* ]] && printf "$file" || printf "${PWD}/${file#./}"
-    else
-      printf "$fp"
-    fi
-    return $?
-  fi
-  printf "$(readlink --canonicalize-existing "$file")"
+#  if [ "$PLATFORM" == 'freebsd' ]; then
+#    printf "$(realpath "$file")"
+#    return $?
+#
+#  elif [ "$PLATFORM" == 'mac' ]; then
+#    local fp=$(readlink "$file")
+#    if [ ! "$?" ] || [ ! "$fp" ]; then
+#      [[ "$file" = /* ]] && printf "$file" || printf "${PWD}/${file#./}"
+#    else
+#      printf "$fp"
+#    fi
+#    return $?
+#  fi
+#  printf "$(readlink --canonicalize-existing "$file")"
+#}
+
+drealpath(){
+    sh "$DOTSYS_LIBRARY/drealpath" $@
 }
+
 
 dotfiles_dir () {
   echo "$(user_home_dir)/.dotfiles"
@@ -53,7 +61,7 @@ repo_dir () {
         return 1
     fi
 
-    split_repo_branch
+    _split_repo_branch
     # catch abs path
     if [[ "$repo" = /* ]]; then
         echo "$repo"
@@ -65,7 +73,7 @@ repo_dir () {
 
 # seperate repo:branch into repo and branch
 # requires predefined local vars "repo" and "branch"
-split_repo_branch () {
+_split_repo_branch () {
     # [^/]+/[^/]+/[^/]+$ = user/repo/master[end]
     if [[ "$repo" =~ .+/.+:.+ ]]; then
         branch="${repo##*:}"
@@ -77,27 +85,9 @@ builtin_topic_dir () {
   echo "$(dotsys_dir)/builtins/$1"
 }
 
-stub_topic_dir () {
-  echo "$(dotsys_dir)/user/$1"
+dotsys_user_bin () {
+  echo "$(dotsys_dir)/user/bin"
 }
-
-# Gets full path to users home directory based on platform
-user_home_dir () {
-  local platform="${1:-$PLATFORM}"
-
-  case "$platform" in
-    mac|linux|msys|cygwin|freebsd )
-      echo "$HOME"
-      ;;
-    windows )
-      echo "$(printf "%s" "$(cygpath --unix $USERPROFILE)")"
-      ;;
-    * )
-      fail "$(printf "Cannot determine home directories for platform %b%s%b" $green "$platform" $rc)"
-      ;;
-  esac
-}
-
 
 # MISC TESTS
 
@@ -123,23 +113,6 @@ script_exists() {
   return 1
 }
 
-# Executes a function with params if a command exists
-if_cmd() {
-  if cmd_exists "$1"; then
-    shift
-    "$@"
-  fi
-
-}
-
-# Executes a function with params if a command does not exist
-if_not_cmd() {
-  if ! cmd_exists "$1"; then
-    shift
-    "$@"
-  fi
-}
-
 topic_exists () {
   local topic="$1"
    # Verify built in or & user defined directories
@@ -151,7 +124,7 @@ topic_exists () {
   fi
 }
 
-
+# not used
 is_array() {
   local var=$1
   [[ "$(declare -p $var)" =~ "declare -a" ]]
@@ -203,13 +176,9 @@ path_type () {
   echo "$type"
 }
 
-# Gets the value of a dynamically named variable
-# my_var=$(dv $dynmic_suffix)
-dv (){
-  echo ${!1}
-}
 
 # Executes a function in an external script
+# not used
 external_func () {
   if [ -f "$1" ]; then
     # source the script
@@ -243,21 +212,36 @@ get_topic_list () {
     local dir="$1"
     local force="$2"
     local list
-    local t
-    if ! [ -d "$dir" ];then return 1;fi
+    local topic
+
 
     # only installed topics
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read line; do
-            t=${line%:*}
+            topic=${line%:*}
             # skip system keys
-            if [[ "$STATE_SYSTEM_KEYS" =~ $t ]]; then continue; fi
-            echo "$t"
+            if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
+            echo "$topic"
         done < "$(state_file "dotsys")"
     # all defined topic directories
     else
+        if ! [ -d "$dir" ];then return 1;fi
         get_dir_list "$dir"
     fi
+}
+
+get_installed_topic_paths () {
+    local list
+    local topic
+    local repo
+
+    while read line; do
+        topic=${line%:*}
+        repo=${line#*:}
+        # skip system keys
+        if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
+        echo "$repo/$topic"
+    done < "$(state_file "dotsys")"
 }
 
 

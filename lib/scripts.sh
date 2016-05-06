@@ -83,7 +83,7 @@ run_script (){
 
   if script_exists "$script"; then
     # run the script
-    if ! [ "$DRY_RUN" ];then
+    if ! [ "$DRY_RUN" != "\b" ];then
       sh "$script" ${params[@]}
       status=$?
     fi
@@ -122,7 +122,7 @@ run_script (){
 # other = function executed with error
 run_script_func () {
   local topic="$1"
-  local file_name="$2"
+  local script_name="$2"
   local action="$3"
   shift; shift; shift
   local params=()
@@ -136,14 +136,14 @@ run_script_func () {
     shift
   done
 
-  debug "-- run_script_func received : t:$topic f:$file_name a:$action p:${params[@]} req:$required"
+  debug "-- run_script_func received : t:$topic f:$script_name a:$action p:${params[@]} req:$required"
 
   # Returns built in and user script
-  local scripts="$(get_topic_scripts "$topic" "$file_name")"
+  local scripts="$(get_topic_scripts "$topic" "$script_name")"
 
   # Verify required script was found
   if ! [ "$scripts" ] && [ "$required" ]; then
-    fail "${file_name} is required for $topic"
+    fail "${script_name} is required for $topic"
     return 11
   fi
 
@@ -157,12 +157,12 @@ run_script_func () {
           debug "   running $script $action ${params[@]}"
 
           # run action & handle fail
-          if ! [ "$DRY_RUN" ]; then
+          if ! [ "$DRY_RUN" != "\b" ]; then
             $script $action ${params[@]}
             status=$?
           fi
 
-          local message="$(printf "%b%s%b %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$file_name " $rc )"
+          local message="$(printf "%b%s%b %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$script_name " $rc )"
 
           # Required function success/fail
           if [ "$required" ]; then
@@ -175,7 +175,7 @@ run_script_func () {
 
       # Required script fail
       elif [ "$required" ]; then
-          fail "$(printf "%b%s%b's %s%b%s%b file does not define the required %b%s%b function" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$file_name " $rc $green "$action" $rc )"
+          fail "$(printf "%b%s%b's %s%b%s%b file does not define the required %b%s%b function" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$script_name " $rc $green "$action" $rc )"
           status=12
       # Silent fail when not required
       else

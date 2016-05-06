@@ -90,7 +90,8 @@ Say you run the command:
 Dotsys will check for node and if not installed will:
 - Ubuntu   : install Node.js with **apt-get** 
 - Debian   : install Node.js with **apt-get** 
-- BSD      : install Node.js with **pkg** 
+- BSD      : install Node.js with **pkg**
+- ArchLinux: install Node.js with **pacman** 
 - Mac      : install Node.js with **brew**
 - Windows  : install Node.js with **Scoop**
 - Linux    : install node.js with **yum**
@@ -110,20 +111,23 @@ Yes, dotsys will install cask and then install chrome with cask on a mac, chocol
 
 ### That's cool, what else does it do ?
 
-- Supports Mac, Enterprise Linux, Fedora, FreeBSD, OpenBSD, Ubunto, Debian, Windows 10 w/Bash, Windows Babun, Windows Cygwin, Windows Mysys
+- Supports Mac, all Linux variations, FreeBSD, OpenBSD, Ubunto, Debian, Windows 10 w/Bash, Windows Babun, Windows Cygwin, Windows Mysys
 - Supports all posix compliant shells and has NO DEPENDENCIES.
-- Decouples package-managers and dotfiles form the configuration.
-- Minimal and intelligent defaults that are easily superseded. 
-- Dependency management system for topics.
 - Allows a configuration to be deployed on multiple platforms.
+- Decouples software installation and system config from dotfiles.
 - Automates repository download, installation, and management.
 - Supports multiple repositories and branches.
-- Easily review and modify what you want before install.
+- Save unlimited configurations for one repository.
+- Manages personal information and separates from public repo. 
+- Minimal and intelligent defaults that are easily superseded.
+- Allows user to choose exactly what they want form a config!
+- Easily review and modify yaml configs before installation.
 - Constant visual feedback on what's happening.
-- On screen confirmation for all tasks or ride hands free!
-- Guided configuration (no docs or code to read).
+- Provides dependency management system for topics.
+- Guided setup and install (no docs or code to read).
 - Optionally migrate existing dotfiles and or topics to dotsys.
-- Automatically backs up any original files we replace (safety first!).
+- Automatically backs up any original files (safety first!).
+- Separates dotfiles configs from extension sourcing.
 - Management and organization of OS settings and versions (soon).
 - An API you already know how to use.
 - AND MANY MORE FEATURES
@@ -138,25 +142,36 @@ The api could change and things could break at any time.
 If you are interested in helping out that would be awesome!
 
 
-## Installation 
+# Installation
 
-### All platforms (except pre windows 10 w/Bash)
+1) First download and extract the dotsys repository a location 
+of your choosing (your home directory is cool).
 
-1. Place the extracted directory ".dotsys" where want to install it (your home directory is cool)
-2. From your posix shell of choice run the install script:
-> path/to/.dotsys/install.sh
+Make sure the root directory is called ".dotsys"
 
-Then just follow the prompts in your terminal.
+## All platforms (except pre windows 10 w/Bash)
 
-### Windows without native bash integration
+2) From your posix compatible shell of choice run the install script:
 
-For a babun setup (noce the .bat extention):
-> path/to/.dotsys/install.bat
+`path/to/.dotsys/installer.sh`
 
-Alternatively, install your posix shell of choice (Cygwin, Mysys, etc.) and run: 
-> path/to/.dotsys/install.sh
+3) Follow the prompts in your terminal.
 
-Then just follow the prompts in your terminal.
+## Windows without native bash integration
+
+OPTION 1: To use babun as your base system
+
+2) Run the following script from the command prompt (notice the .bat extension):
+ 
+`path/to/.dotsys/installer.bat`
+
+OPTION 2:
+
+2) Install your posix shell of choice (Cygwin, Mysys, etc.)
+
+OPTION 1&2: 
+
+3) Now follow the steps for All Platforms
 
 ### How do I learn more about dotsys and it's features ?
 

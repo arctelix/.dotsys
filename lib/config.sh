@@ -362,10 +362,13 @@ load_topic_config_vars () {
     local topic="$1"
     local loaded="_${topic}_config_loaded"
     local file="$(topic_dir ${topic})/.dotsys.cfg"
+    local default_file="$(topic_dir ${topic})/.dotsys.cfg"
     # exit if config is loaded or does not exist
     if [ "${!loaded}" ] || ! [ -f "$file" ];then return; fi
-    # Load topic config ( is eval the only way? )
-    eval "$(parse_yaml $file "_${topic}_")"
+    # Load default topic config
+    eval "$(parse_yaml "$default_file" "_${topic}_")"
+    # overwrite default with repo topic config
+    eval "$(parse_yaml "$file" "_${topic}_")"
     eval "${loaded}=true"
 }
 
@@ -425,25 +428,6 @@ get_topic_config_val () {
   echo "${val[@]}"
 }
 
-
-get_topic_manager () {
-
-    local topic="$1"
-
-    local manager=$(get_topic_config_val "$topic" "manager")
-
-    if ! [ "$manager" ]; then
-      return
-    fi
-
-    # convert generic names to defaults
-    if [ "$manager" = "cmd" ]; then
-      manager="$DEFAULT_CMD_MANAGER"
-    elif [ "$manager" = "app" ]; then
-      manager="$DEFAULT_APP_MANAGER"
-    fi
-    echo "$manager"
-}
 
 
 

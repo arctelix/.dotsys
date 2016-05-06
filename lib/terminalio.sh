@@ -71,35 +71,42 @@ error () {
 }
 
 success_or_fail () {
-    local status="$1"
-    local action="$2"
-    local message="$3"
-    shift; shift; shift
-
-    # all additional params get executed on fail
-    if [ "$status" -eq 0 ]; then
-        success "$(printf "$(cap_first "${action%e}ed") $message")"
-    else
-        fail "$(printf "Failed to $action $message")"
-        if [ "$@" ]; then printf "$@"; fi
-        return 1
-    fi
+    func_or_func_msg success fail $1 "$2" "$3"
 }
 
 success_or_error () {
-    local status="$1"
-    local action="$2"
-    local message="$3"
-    shift; shift; shift
-    # all additional params get executed on error
-    if [ "$status" -eq 0 ]; then
-        success "$(cap_first "${action%e}ed") $message"
+    func_or_func_msg success error $1 "$2" "$3"
+}
+
+func_or_func_msg () {
+    local zero_func="$1"
+    local other_func="$2"
+    local status="$3"
+    local action="$4"
+    local message="$5"
+    shift; shift; shift; shift; shift
+
+    if [ $status -eq 0 ]; then
+        if [ "$action" ]; then
+            action="${action%ed}"
+            action="$(cap_first "${action%e}ed")"
+            $zero_func "$action $message"
+        else
+            $zero_func "$message"
+        fi
     else
-        error "Failed to $action $message"
+        if [ "$action" ]; then
+            $other_func "Failed to $action $message"
+        else
+            $other_func "Failed to $message"
+        fi
+        # all additional params get executed here
         if [ $@ ]; then $@; fi
         exit
     fi
+    return $status
 }
+
 
 # adds indent to all but first line
 indent_lines () {
@@ -126,7 +133,13 @@ msg_invalid_input (){
 # debug debug
 debug () {
     #return
-    printf "%b $1 %b\n" $dark_gray $rc
+    printf "%b$1 %b\n" $dark_gray $rc
+
+}
+
+not_implimented () {
+    #return
+    printf "$spacer NOT IMPLEMENTED: %b$1 %b\n" $gray $rc
 
 }
 
@@ -147,14 +160,14 @@ get_user_input () {
 
     local usage="get_user_input [<action>]"
     local usage_full="
-    -o | --o )          alternate options line
+    -o | --options )          alternate options line
     -c | --clear )      Number + extra/ - less lines to lear [0]
     -t | --true )       Text to print for 0 value
-                        set to 'false' for required variable input
+                        set to 'none' for required variable input
     -f | --false        Text to print for 1 value
     -h | --help         Text to print for help
     -i | --invalid      Text to print on invalid selection
-                        or 'false' noting is invalid
+                        or 'none' noting is invalid
     -d | --default      Default value on enter key
     -n | --noconfirm    Default value on enter key
       "
@@ -162,27 +175,28 @@ get_user_input () {
     local question=
     local true=
     local false=
-    local help=
+    local help
+    local default
+    local options
     local clear="false"
     local invalid="invalid"
-    local default=
-    local options
     local confirm="true"
 
 
     while [[ $# > 0 ]]; do
     case "$1" in
-      -o | --o )        options=" $2"; shift ;;# alternate options line
+      -o | --options )  options=" $2"; shift ;;# alternate options line
       -c | --clear )    clear="$2"; shift ;;   # Number + extra/ - less lines to lear [0]
       -t | --true )     true="$2"; shift ;;    # Text to print for 0 value
-                                               # set to "false" for required variable input
+                                               # or "none" require input.
       -f | --false )    false="$2"; shift ;;   # Text to print for 1 value
+                                               # or "none" require input.
       -h | --help )     help="$2"; shift ;;    # Text to print for help
       -i | --invalid )  invlaid="$2"; shift ;; # Text to print on invalid selection
-                                               # or "false" no invalid entry.
+                                               # or "none" no invalid entry.
       -d | --default )  default="$2"; shift ;;# Default value on enter key
-      -n | --noconfirm )  confirm="false" ;;  # Default value on enter key
-      * ) uncaught_case "$1" "question" "true" "false" "help" ;;
+      -n | --noconfirm )  confirm="none" ;;  # Default value on enter key
+      * ) uncaught_case "$1" "question" "true" "none" "help" ;;
     esac
     shift
     done
@@ -191,14 +205,27 @@ get_user_input () {
     false="${false:-no}"
 
     # any input is ok so just offer false option everything else is true
-    if [ "$true" = "false" ]; then
+    if [ "$options" != "none" ] && [ "$true" = "none" ]; then
         options="$(printf "(%b${false:0:1}%b)%b${false:1}%b" \
-                    $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
+                    $yellow $rc $yellow $rc)"
         confirm="true" # if no true option then input is required and must be confirmed
+
+    # any input is ok so just offer true option everything else is true
+    elif [ "$options" != "none" ] && [ "$false" = "none" ]; then
+        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b" \
+                    $yellow $rc $yellow $rc)"
+        confirm="true" # if no false option then input is required and must be confirmed
+
     # use default options
     elif ! [ "$options" ]; then
         options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
                         $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
+
+    # no options input required
+    else
+        true="none"
+        false="none"
+        confirm="true" # if no true option then input is required and must be confirmed
     fi
 
     default="${default:-$true}"
@@ -225,14 +252,21 @@ get_user_input () {
                 help )
                     msg_help "$(printf "$help")"
                     ;;
-                "") user_input="${default}"
+                "") # blank value ok
+                    if [ "$true" = "none" ]; then
+                        status=1
+                        user_input=
+                        break
+                    fi
+                    # blank value = default choice
+                    user_input="${default}"
                     [ "$user_input" = "$true" ]
                     state=$?
                     break
                     ;;
                 * )
                     # any input is ok
-                    if [ "$invlaid" = "false" ]; then
+                    if [ "$invlaid" = "none" ]; then
                         status=0
                         break
                     fi
@@ -255,25 +289,34 @@ get_user_input () {
 
 confirm_task () {
 
+  local usage="confirm_task <action> <topic> <limits>..."
+
   local action="${1-$action}"
-  local topic="${2:-$topic}"
-  shift; shift
-  local limits=
+  local prefix="${2:-\b}"
+  local topic="${3:-$topic}"
+  local extra_lines=()
+  shift; shift; shift
   local confirmed=
 
   while [[ $# > 0 ]]; do
     case "$1" in
       -c | --confirmed )        confirmed="true"; shift ;;# alternate options line
-      * ) uncaught_case "$1" "limits" ;;
+      * ) extra_lines+=("$1") ;;
     esac
     shift
   done
 
+  local line
+  local lines=""
+  for line in "${extra_lines[@]}"; do
+    lines+="\n$spacer $line"
+  done
+
   if ! [ "$TOPIC_CONFIRMED" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
 
-      local text="$(printf "Would you like to %b%s %s%b%s?
+      local text="$(printf "Would you like to %b%s%b %s %b%s%b %s?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
-         $green "$action" "$topic" $rc " $limits" \
+         $green "$action" $rc "$prefix" $green "$topic" $rc "$lines" \
          $yellow $rc \
          $yellow $rc \
          $yellow $rc \
@@ -319,10 +362,10 @@ confirm_task () {
   confirmed="${confirmed:-$TOPIC_CONFIRMED}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(printf "%sing %s%b%s%b%s" $(cap_first "${action%e}") "$DRY_RUN" $green "$topic" $blue " $limits")"
+    task "$(printf "%sing %s %s %b%s%b%s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $blue "$extra_lines")"
     return 0
   else
-    task "$(printf "You skipped %s %b%s%b%s" "$action" $green "$topic" $blue " $limits")"
+    task "$(printf "You skipped %s %s %b%s%b%s" "$action" "$prefix" $green "$topic" $blue "$extra_lines")"
     return 1
   fi
 }

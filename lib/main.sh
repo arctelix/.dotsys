@@ -1,26 +1,51 @@
 #!/bin/sh
 
 # Main entry point and command handler
-
+#
 # Author: arctelix
+#
 # Thanks to the following sources:
 # https://github.com/agross/dotfiles
 # https://github.com/holman/dotfiles
 # https://github.com/webpro/dotfiles
+#
+# Other useful reference
+# http://superuser.com/questions/789448/choosing-between-bashrc-profile-bash-profile-etc
+#
+# Licence: The MIT License (MIT)
+# Copyright (c) 2016 Arctelix
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+# modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+# BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+# OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#TODO: handle .stub files for symlinks
-#TODO: handle .settings files
 
+
+#TODO: Append *.stub to git ignore for every repo
 #TODO: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
 
+#TODO: handle .settings files
 #TODO: FOR NEW Installs prompt for --force & --confirm options
-#TODO: Finish implementing success_or_ functions....
+#TODO: Finish implementing func_or_func_msg....
+#TODO: Detect platforms like babun and mysys as separate configs, and allow user to specify system.
+#TODO: Create option to delete unused topics from non primary repos from user's .dotfies .directory after install
 
-#TODO QUESTION: Change freeze to show.. as in show status.  ie dotsys show brew, show git, show tmux
-#TODO QUESTION: Symlink "all" choice should apply to all topics? (currently just for topic)
-#TODO QUESTION: Hold package_manager packages install to end of topic run
+#TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show git, show tmux?
+#TODO QUESTION: Symlink "(o)ption all" choices should apply to all topics? (currently just for current topic)?
+#TODO QUESTION: Hold manager's packages install to end of topic run?
+#TODO QUESTION: Currently repo holds user files, maybe installed topics should be copied to internal user directory.
+# - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
+# - Currently if a repo is deleted the data is gone, the change would protect topics in use.
 
-#TODO ROADMAP:  Detect platforms like babun and mysys as separate configs, and allow user to specify system.
+
 
 # Fail on errors.
 # set -e
@@ -38,7 +63,6 @@ if ! [ "$DOTSYS_LIBRARY" ];then
 fi
 
 #echo "main DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
-
 . "$DOTSYS_LIBRARY/common.sh"
 . "$DOTSYS_LIBRARY/yaml.sh"
 . "$DOTSYS_LIBRARY/terminalio.sh"
@@ -50,10 +74,11 @@ fi
 . "$DOTSYS_LIBRARY/symlinks.sh"
 . "$DOTSYS_LIBRARY/config.sh"
 . "$DOTSYS_LIBRARY/repos.sh"
+. "$DOTSYS_LIBRARY/stubs.sh"
+
 
 #GLOBALS
 STATE_SYSTEM_KEYS="installed_repo user_repo show_logo show_stats"
-
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
 
@@ -73,7 +98,7 @@ GLOBAL_CONFIRMED=
 TOPIC_CONFIRMED=
 
 # text message for dry runs
-DRY_RUN=
+DRY_RUN="\b"
 
 #track mangers actively used by topics or packages
 ACTIVE_MANAGERS=()
@@ -84,11 +109,11 @@ UNINSTALLED_TOPICS=()
 #track installed topics (populated but not used)
 INSTALLED=()
 
-# path to user bin
-USER_BIN="/usr/local/bin"
-
 # Current platform
 PLATFORM="$(get_platform)"
+
+# path to platform's system user bin
+PLATFORM_USER_BIN="$(platform_user_bin)"
 
 #path to debug file
 DEBUG_FILE="$DOTSYS_REPOSITORY/debug.log"
@@ -123,6 +148,8 @@ dotsys () {
     -l | links              Limit action to symlinks
     -m | managers           Limit action to package managers
     -p | packages           Limit action to package manager's packages
+    -c | cmd                Limit action to cmd manager's packages
+    -a | app                Limit action to app manager's packages
     -s | scripts            Limit action to scripts
     -f | from <user/repo>   Apply action to topics from specified repo
 
@@ -142,27 +169,35 @@ dotsys () {
     - Uninstall one or more topics
       $ dotsys uninstall vim tmux
     - Upgrade one or more topics and bypass confirmation (symlinks will need to be confirmed)
-      $ dotsys upgrade brew dotsys --confirm action
+      $ dotsys upgrade brew dotsys --confirm delete
     - Upgrade one or more topics and bypass confirmation (symlinks will need to be confirmed)
-      $ dotsys upgrade brew dotsys --confirm action
+      $ dotsys upgrade brew dotsys --confirm backup
+    - Install a manager package without a topic
+      $ dotsys install brew packages google-chrome
+    - Install a command line util without a topic using default manager
+      $ dotsys install cmd git
+    - Install an os app without a topic using default manager
+      $ dotsys install app google-chrome
+
 
     Organization:
 
     Each topic consists of symlinks, scripts, managers, stubs, bins, configs.
 
-    symlinks:           topic/file_name.symlink
+    symlinks:           topic/*.symlink
                         Symlinked to home or specified directory
 
 
-    bins:               topic/bin/file_name.sh
-                        symlinked to dotsys/bin which is in path
+    bins:               topic/bin
+                        All files inside a topic bin will be available
+                        on the command line by simlinking to dotsys/bin.
 
-    managers:           Manages packages of some type, such as brew, pip, npm, etc...
-                        A topic/manager.sh script designates a manager topic and defines
-                        a function for each required action (install, uninstall, freeze, upgrade).
+    managers:           topic/manager.sh
+                        Manages packages of some type, such as brew,
+                        pip, npm, etc.. (see script manager.sh for details)
 
-    configs:            topic/.dotsys.cfg
-                        topic level config file
+    configs:            repo/.dotsys.cfg repo level config file
+                        topic/.dotsys.cfg topic level config file
 
     stubs:              topic/file.stub
                         Stubs allow topics to add functionality to each other.
@@ -174,24 +209,30 @@ dotsys () {
 
     scripts:            scripts are optional and placed in each topic root directory
 
-      topic.sh          A single script containing functions for each required action
-                        see action function definitions
+      topic/topic.sh    A single script containing optional functions for each required
+                        action (see function definitions)
+      topic/manager.sh  Designates a topic as a manager. Functions handle packages not the manager!
+                        Required functions: install, uninstall, freeze, upgrade
+                        Not supported: update
 
-    action functions:   The rules below are important (please follow them strictly)
+      script functions: The rules below are important (please follow them strictly)
 
-      install:          Makes permanent changes that only require running on initial install (run once)!
-      uninstall         Must undo everything done by install (run once)!
-      upgrade           Only use for changes that bump the installed component version!
-                        Topics with a manager typically wont need this, the manager will handle it.
-      update:           Only use to update dotsys with local changes or data (DO NOT BUMP VERSIONS)!
-                        ex: reload a config file so local changes are available in the current session
-                        ex: refresh data from a webservice
-      freeze:           Output the current state of the topic
-                        ex: A manager would list installed topics
-                        ex: git will show the current status
+        install:          Makes permanent changes that only require running on initial install (run once)!
 
-    scripts (depreciated and replaced by topic.sh action functions)
+        uninstall         Must undo everything done by install (run once)!
 
+        upgrade           Only use for changes that bump the installed component version!
+                          Topics with a manager typically wont need this, the manager will handle it.
+
+        update:           Only use to update dotsys with local changes or data (DO NOT BUMP VERSIONS)!
+                          ex: reload a local config file so changes are available in the current session
+                          ex: refresh data from a webservice
+
+        freeze:           Output the current state of the topic
+                          ex: A manager would list installed topics
+                          ex: git will show the current status
+
+    depreciated scripts:use topic.sh functions
       install.sh        see action function definitions
       uninstall.sh      see action function definitions
       upgrade.sh        see action function definitions
@@ -234,17 +275,18 @@ dotsys () {
         # limits
         -d | dotsys )   limits+=("dotsys") ;;
         -r | repo)      limits+=("repo")    #no topics permitted (just branch)
-                        if [ "$2" ]; then from_branch="$2";shift ;fi ;;
+                        if [ "$2" ] && [[ "$2" != "-"* ]]; then from_branch="$2";shift ;fi ;;
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
         -p | packages)  limits+=("packages") ;;
-        -s | scripts)   limits+=("scripts") ;;
+        -a | app)       limits+=("packages") ;;
+        -c | cmd)       limits+=("scripts") ;;
         -f | from)      from_repo="$2"; shift ;;
 
         # options
         --tlogo)        show_logo=$(! $(get_state_value "show_logo")) ;;
         --tstats)       show_stats=$(! $(get_state_value "show_stats")) ;;
-        --force)        force="--force" ;;
+        --force)        force="$1" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       DRY_RUN="(dry run) " ;;
         --confirm)      if [[ "$2" =~ (delete|backup|skip) ]]; then
@@ -272,7 +314,7 @@ dotsys () {
     debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo"
 
     # Set persistent options
-    if [ "$DRY_RUN" ]; then
+    if [ "$DRY_RUN" != "\b" ]; then
         GLOBAL_CONFIRMED="skip"
     fi
 
@@ -283,7 +325,7 @@ dotsys () {
     # for example: 'dotsys install <manager> packages'              # all installed packages
     # todo: Considering api format 'dotsys <manager> install <package>'
     if in_limits "packages" -r && is_manager "${topics[0]}" && [ ${#topics[@]} -gt 1 ] ; then
-      local manager="${topics[0]}"
+      local manager="$(get_default_manager "${topics[0]}")" # checks for app or cmd
       local i=0 # just to make my syntax checker not fail (weird)
       unset topics[$i]
       debug "main -> ONLY $action $manager ${limits[@]} ${topics[@]} $force"
@@ -293,13 +335,15 @@ dotsys () {
 
     # HANDLE REPO LIMIT
 
-    # First topic "repo" or "xx/xx" = limits "repo"
+    # First topic "repo" or "xx/xx" is equivalent to setting limits="repo"
     if topic_is_repo; then
         debug "main -> topic is repo: ${topics[0]}"
         limits+=("repo")
         from_repo="${topics[0]}"
         topics=
-    elif in_limits "repo" -r; then
+
+    # allows syntax action "repo"
+    elif [ ! "$from_repo" ] && in_limits "repo" -r; then
         debug "main -> repo is in limits"
         from_repo="repo"
         topics=
@@ -363,6 +407,12 @@ dotsys () {
         topics=("$list")
         debug "main -> topics list:\n\r$topics"
         debug "main -> end list"
+    fi
+
+    # We stub here rather then during symlink process
+    # to get all user info up front for auto install
+    if [ "$action" = "install" ] || [ "$action" = "upgrade" ] && in_limits "repo" "dotsys"; then
+        create_all_req_stubs $action "${topics[@]}"
     fi
 
     # Iterate topics
@@ -449,18 +499,18 @@ dotsys () {
 
 
         # ABORT: on install if already installed (override --force)
-        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" && [ ! "$force" ]; then
+        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         # ABORT: on uninstall if not installed (override --force)
-        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" && [ ! "$force" ]; then
+        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         fi
 
         # CONFIRM TOPIC
         debug "main -> call confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
-        confirm_task "$action" "$topic" "${limits[@]}"
+        confirm_task "$action" "" "$topic" "${limits[@]}"
         if ! [ $? -eq 0 ]; then continue; fi
         debug "main -> post confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
 
@@ -569,31 +619,52 @@ dotsys_installer () {
          show_usage ;;
     esac
 
-    #TODO: make sure all required dirs and files not in git exist (ie state, user) then remove checks for files and dirs
+    print_logo
 
-    local user_dotfiles="$(dotfiles_dir)"
+    get_user_input "The installation of dotsys is designed to be minimal.
+            $spacer However, we need to do a few things.  You can always
+            $spacer run '.dotsys/installer.sh uninstall' to uninstall it."
+
+    local current_shell="${SHELL##*/}"
+
+    #TODO: need to make sure stubs are installed for current sheell and sourced.
+
+    local dotfiles_dir="$(dotfiles_dir)"
 
     debug "$action dotsys DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-    debug "$action dotsys user_dotfiles: $user_dotfiles"
+    debug "$action dotsys user_dotfiles: $dotfiles_dir"
 
-    # make sure user bin is on path (TODO: need to permanently add to path)
-    if [ "${PATH#*$USER_BIN}" == "$PATH" ]; then
+    # make sure PLATFORM_USER_BIN is on path
+    if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
         debug "adding /usr/local/bin to path"
+        #TODO: .profile persists user bin on path, should we add to path file?
         export PATH=$PATH:/usr/local/bin
     fi
 
-    # create / remove user .dotfiles directory
+    #TODO: make sure all required dirs and files exist (ie state, user) then remove checks from funcs
+    # create required directories
     if [ "$action" = "install" ]; then
-        mkdir -p "$user_dotfiles"
-    elif [ "$action" = "uninstall" ]; then
-        rm -rf "$user_dotfiles"
+        mkdir -p "$dotfiles_dir"
+        mkdir -p "$DOTSYS_REPOSITORY/user/bin"
+        mkdir -p "$DOTSYS_REPOSITORY/stubs"
     fi
 
-    # Add dotsys to path temporarily
-    #export PATH=$PATH:$ds_bin
+    # install/uninstall realpath
+    run_script_func "realpath" "topic.sh"
 
+    if cmd_exists realpath; then
+        printf "$(realpath "$file")"
+        return $?
+    fi
+
+    # symlink contents of .dotsys/bin
     symlink_topic "$action" dotsys
+
+    # were going to have to do this
+    #dotsys install shell bash zsh
 }
+
+
 
 
 

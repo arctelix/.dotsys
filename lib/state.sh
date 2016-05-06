@@ -131,9 +131,12 @@ in_state () {
 # gets value for unique key
 get_state_value () {
   local key="$1"
+  local status=0
   local file="$(state_file "${2:-dotsys}")"
   local results="$(grep "^$key:.*$" "$file")"
+  if ! [ $? -eq 0 ]; then status=1 ;fi
   echo "${results#*:}"
+  return $status
 }
 
 # sets value for unique key

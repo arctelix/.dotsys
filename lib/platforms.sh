@@ -9,6 +9,8 @@
 
 PLATFORMS="mac linux freebsd windows mysys"
 
+#TODO: implement tests for new platform platform names cygwin* *windows *bsd
+
 get_platform () {
   if [ -n "$PLATFORM" ]; then
     printf "$PLATFORM"
@@ -21,15 +23,91 @@ get_platform () {
     printf "linux"
   elif [ "$(uname -s)" == "FreeBSD" ]; then
     printf "freebsd"
+  elif [ "$(uname -s)" == "OpenBSD" ]; then
+    printf "openbsd"
   elif [ "$(uname -o)" == "Cygwin" ]; then
-    printf "windows"
+    printf "cygwin-windows"
   elif [ "$(uname -o)" == "Msys" ]; then
-    printf "msys"
+    printf "msys-windows"
   else
     printf "unknown"
   fi
 }
 
+
+platform_user_bin () {
+
+  if [ -n "$PLATFORM_USER_BIN" ]; then
+    printf "$PLATFORM_USER_BIN"
+    return
+  fi
+
+  local path="/usr/local/bin"
+  local missing_var
+
+  case "$(get_platform)" in
+      mac|linux|*bsd )
+          echo "$path"
+          return
+      ;;
+      cygwin* ) path="$CYGWIN_HOME/$path"
+
+          if ! [ -d "$path" ]; then
+              missing_var="CYGWIN_HOME"
+          else
+              echo "$(printf "%s" "$(cygpath --unix "$CYGWIN_HOME")")"
+              return
+          fi
+      ;;
+      msys* ) path="$MSYS_HOME/$path"
+
+          if ! [ "$MSYS_HOME" ]; then
+              MSYS_HOME="/c/msys/1.0"
+              path="$MSYS_HOME/$path"
+          fi
+          #TODO: Need solution to cygpath for msys
+          if ! [ -d "$path" ]; then
+              missing_var="CYGWIN_HOME"
+          else
+              echo "$MSYS_HOME"
+              return
+          fi
+
+      ;;
+  esac
+
+  error "$(printf "Cannot determine the $path directly for platform %b%s%b" \
+                   green "$platform" $rc)"
+
+  if [ "$missing_var" ]; then
+
+    msg_help "You need to set the environment variable $missing_var to the absolute
+            \rpath of your system root where usr/local/bin resides.
+            \rex:/c/msys/1.0 or /c/cygwin"
+
+  fi
+
+  exit
+}
+
+# Gets full path to users home directory based on platform
+user_home_dir () {
+  local platform="${1:-$PLATFORM}"
+
+  if [ "$HOME" ]; then
+      echo "$HOME"
+      return
+  fi
+
+  case "$platform" in
+    cygwin* )
+      echo "$(printf "%s" "$(cygpath --unix $USERPROFILE)")"
+      ;;
+    * )
+      fail "$(printf "Cannot determine home directories for platform %b%s%b" $green "$platform" $rc)"
+      ;;
+  esac
+}
 
 
 platform_excluded () {

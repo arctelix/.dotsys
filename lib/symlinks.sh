@@ -30,7 +30,6 @@ symlink_topic () {
   # Reset the persist state
   local SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
 
-  local home="$(user_home_dir)"
 
   required_params 2 "$@"
   local action=
@@ -73,16 +72,17 @@ symlink_topic () {
   # handle dotsys topic
   if [ "$topic" = "dotsys" ]; then
      symlinks=("$(find "${DOTSYS_REPOSITORY}/bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
-     dst_path="${USER_BIN}/"
+     dst_path="${PLATFORM_USER_BIN}/"
+
 
   # all other topics
   else
-     # Find files and directories named *.symlink below each topic directory, exclude dot files.
-     symlinks="$(/usr/bin/find "$(topic_dir $topic)" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.symlink' -not -name '\.*')"
-     dst_path="$home/."
+     # Find *.symlink *.stub below each topic directory, exclude dot files.
+     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.symlink' -o -name '*.stub' -not -name '\.*')"
+     #TODO URGENT : do not link .symlink if .stub is found .symlink if .stub found
   fi
 
-
+  local src
   while IFS=$'\n' read -r src; do
     # No simlinks found
     if [[ -z "$src" ]]; then
@@ -90,23 +90,8 @@ symlink_topic () {
       continue
     fi
 
-    dst="${dst_path}$(basename "${src%.symlink}")"
-
-    # check for config  *.symlink -> path/name
-    local link_cfg="$(get_topic_config_val "$topic" "symlinks")"
-    debug "-- symlink_topic link_cfg: $link_cfg"
-    for link in $link_cfg; do
-      local src_name="$(basename "$src")"
-      local alt_name="${link%-\>*}"
-      debug "   symlink_topic CHECKING: $src_name = $alt_name"
-      # check for file name match *.symlink
-      if [ "$src_name" = "$alt_name" ]; then
-         dst="${link#*-\>}"
-         mkdir -p "$(dirname "$dst")"
-         debug "   symlink_topic MATCHED $alt_name -> $dst"
-         break
-      fi
-    done
+    # check for alternate dst in config  *.symlink -> path/name
+    dst="$(get_symlink_dst "$src" "$dst_path")"
 
 
     if [ "$action" = "link" ] ; then
@@ -122,12 +107,50 @@ symlink_topic () {
       symlink "$src" "$dst"
 
     elif [ "$action" = "freeze" ]; then
-      echo freeze_sumlinks not_implimented
+      not_implimented "freese symlink_topic"
     fi
 
   done <<< "$symlinks"
 }
 
+# Requires local topic var
+# converts symlink src path to symlink target path
+get_symlink_dst () {
+    local src_file="$1"
+    local dst_path="$2"
+    local link_cfg="$(get_topic_config_val "$topic" "symlinks")"
+    local src_name
+    local alt_name
+    local base_name="$(basename "$src_file")"
+
+    if ! [ "$dst_path" ]; then
+        dst_path="$(user_home_dir)"
+    fi
+
+    #remove extensions
+    base_name="${base_name%.symlink}"
+    base_name="${base_name%.stub}"
+
+    # create dst path+file name
+    dst_file="$dst_path/.$base_name"
+
+    # check topic config for symlink paths
+    while IFS=$'\n' read -r link; do
+      src_name="$(basename "$src_file")"
+      alt_name="${link%-\>*}"
+
+      # return config path if found
+      if [ "$src_name" = "$alt_name" ]; then
+         dst_file="${link#*-\>}"
+         mkdir -p "$(dirname "$dst_file")"
+         echo "$dst_file"
+         break
+      fi
+    done <<< "$link_cfg"
+
+    # return original if not found
+    echo "$dst_file"
+}
 # Unlink a singe file or directory
 unlink(){
 
@@ -177,7 +200,7 @@ unlink(){
     return
   fi
 
-  local link_target="$(full_path "$link")"
+  local link_target="$(drealpath "$link")"
   local link_name="$(basename "$link")"
 
   # check for confirmation status
@@ -234,7 +257,7 @@ unlink(){
   action=${action:-$SYMLINK_CONFIRMED}
 
   local skip_reason="skipped "
-  if [ "$DRY_RUN" ]; then
+  if [ "$DRY_RUN" != "\b" ]; then
       skip_reason="$DRY_RUN"
   fi
 
@@ -315,9 +338,9 @@ symlink () {
   # file or directory?
   local type="$(path_type "$src")"
 
-  local dst_full_target="$(full_path "$dst")"
+  local dst_full_target="$(drealpath "$dst")"
   local dst_name="$(basename "$dst")"
-  src="$(full_path "$src")"
+  src="$(drealpath "$src")"
 
 
   local exists=
@@ -384,12 +407,12 @@ symlink () {
 
   local message=
   local skip_reason="skipped "
-  if [ "$DRY_RUN" ]; then
+  if [ "$DRY_RUN" != "\b" ]; then
       skip_reason="$DRY_RUN"
   fi
 
   if [ "$action" == "skip" ]; then
-    success "$(printf "Symlink %sfor %b%s%b:" "$skip_reason" $green "$dst_name" $rc)"
+    success "$(printf "Symlink %s for %b%s%b:" "$skip_reason" $green "$dst_name" $rc)"
     # incorrect link
     if [ -L "$dst" ]; then
       warn "$(printf "Symlinked $type : %b%s%b

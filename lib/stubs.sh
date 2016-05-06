@@ -1,31 +1,324 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-# TODO: IMPLIMENT STUBS (GIT IS DONE)
+
 # CONCEPT NOTES:
-# stubs and tempaltes go into the builtins directoy
-# builtin stubs copied into the internal user directory during stub process
-# if a template is detected the template script will run (custom user info)
-# user symlinks are symlinked into internal user directory
-# finally stub in internal user directly (original file) is symlinked to destination
+# stubs (file.stub) go into the builtins directory
+# or use file.stub.sh to collect custom user info
+# stub process copies file.stub to stub directory or runs file.stub.sh and saves to sub directory
 
-# If home directory has a file matching stub we move it to topic directory if no topic/topic symlink exists
-# if a topic symlink already exists in topic add new symlink options:
+# If home directory has a file matching the stub and no topic/file.symlink exists move it there.
+#TODO: new symlink options & defaults
+# if topic/file.symlink already exists in topic add new symlink options:
 # A file named 'file name' was found, which version do you want to use?
 #  - (f)ound (keep found version, move to repo and backup repo version)
 #  - (r)epo (keep repo version, backup found, same as existing backup option)
 #  - (s)kip
 #  - (b)both (copy found version to topic and add to stub file, backup found in home)
 #  opt (b) only available with stubbed topics!!!
-#  Always backup .. why optional
+#  Always backup .. I don't know what i was thinking making this optional.
 
-stub_topic () {
-    local topic="$topic"
-    local template="$(find "$(builtin_topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -not -name '\.template')"
-    local stub_file="$(find "$(builtin_topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -not -name '\.template')"
-    
-    if [ "$template" ]; then
 
-    elif [ "$stub_file" ]
 
+# Checks user's system for existing configs and move to repo
+# Make sure this only happens for new user install process
+# or those configs will not get loaded
+add_existing_conf_files () {
+    local topic
+    local topic_stubs
+
+    confirm_task "add" "existing config files to" "dotsys" \
+         "(we'll confirm each file before moving it)"
+    if ! [ $? -eq 0 ]; then return;fi
+
+    # iterate builtin topics
+    for topic in "$(get_dir_list "$(dotsys_dir)/builtins")"; do
+        local topic_dir="$(topic_dir "$topic")"
+
+        # skip if user already has topic in repo
+        if [ -d "$topic_dir" ]; then continue;fi
+
+        # iterate topic sub files
+        local stub_files="$(get_builtin_stub_files "$topic")"
+        local stub_dst
+        local topic_dst
+        local builtin_stub_src
+        while IFS=$'\n' read -r builtin_stub_src; do
+
+            stub_dst="$(get_symlink_dst "$builtin_stub_src")"
+
+            # Check for existing original file (symlinks will be taken care of during stub process)
+            if ! [ -L "$stub_dst" ] && [ -f "$stub_dst" ]; then
+                confirm_task "move" "existing config file for" "$topic" \
+                   "$(printf "%bfrom:%b $$stub_dst \n$spacer %bto:%b $$ACTIVE_REPO" $green rc $green $rc)"
+                if ! [ $? -eq 0 ]; then continue;fi
+
+                # backup and move file
+                topic_dst="$topic_dir/$(basename "${stub_dst#.}")"
+                cp "$stub_dst" "${stub_dst}.dsbak"
+                mkdir -p "$(dirname "$topic_dst")"
+                mv "$stub_dst" "$topic_dst"
+
+            fi
+        done <<< "$stub_files"
+    done
+}
+
+# Collects all required user data at start of process
+# Stubs will be symlink with other symlinks
+create_all_req_stubs () {
+    local action="$1"
+    local topics="$2"
+    local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
+    local topic
+
+    if [ "$builtins" ]; then
+        info "Stub files allow dotsys to source topic related files
+      $spacer from other topics, such as *.sh files as well as gather
+      $spacer topic specific options and user information."
     fi
+
+    for topic in $builtins; do
+        debug "-- create_all_req_stubs for: $topic"
+        # skip if topic not present in user repo
+        if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "$topics" =~ "$topic" ]]; then continue; fi
+        create_topic_stubs "$topic" "$action"
+    done
+
+    warn "If you imported non dotsys topics and your existing dotfiles
+  $spacer source files by extension such as, *.sh, you can remove that
+  $spacer functionality since dotsys stub files do that for you."
+
+
+}
+
+# Create all stubs for a topic
+create_topic_stubs () {
+    local topic="$1"
+    local action="$2"
+    local file
+
+    local builtin_stubs="$(get_builtin_stub_files "$topic")"
+    while IFS=$'\n' read -r file; do
+        local stub_name="$(basename "${file%.*}")"
+        local stub_target="$(get_topic_stub_target "$topic" "$file")"
+        if ! [ -f "$stub_target" ] && ! [ "$topic" = "shell" ]; then continue;fi
+        confirm_task "create" "the stub file for" "${topic}'s $stub_name"
+        create_user_stub "$topic" "$stub_name"
+    done <<< "$builtin_stubs"
+}
+
+get_builtin_stub_files(){
+    local topic="$1"
+    echo "$(find "$(builtin_topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
+}
+
+# returns the stub file symlink target
+get_topic_stub_target(){
+    local topic="$1"
+    local stub_src="$2"
+    echo "$(topic_dir "$topic")/"$(basename "${stub_src%.stub}.symlink")""
+}
+
+# create custom stub file in user/repo/topic
+create_user_stub () {
+
+    # stub file variables are defined as {TOPIC_VARIABLE_NAME}
+    # ex: {GIT_USER_EMAIL} checks for git_user_email ins state defaults to global user_email
+    # ex: {USER_EMAIL} uses global user_email (does not check for topic specif value)
+
+    local topic="$1"
+    local stub_name="$2"
+    local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
+    local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
+
+    # abort if stub src or stub target file is not found
+    if ! [ -f "$stub_src" ] || ! [ -f "$stub_target" ]; then return;fi
+
+    local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
+    local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
+    local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
+    shift; shift
+
+    debug "-- create_user_stub: $stub_src
+                     -> $stub_dst"
+
+    # Create output file
+    cp -f "$stub_src" "$stub_out"
+
+    # set required stub target (for portability no -i option)
+    sed  -e "s|{STUB_TARGET}|$stub_target|g" "$stub_out" > "$stub_tmp"
+    mv -f "$stub_tmp" "$stub_out"
+
+
+    local variables="$(sed -n 's|.*[^\$]{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
+
+    # TODO (IF NEEDED): IF topic specific dynamic values become common
+    # implement topic/*.stub.vars script to provide custom values.
+    # get_custom_stub_vars $topic
+    # > returns a list of "VARIABLE=some value" pairs
+    # variables+="$@"
+
+    local var
+    local var_text
+    local g_state_key
+    local val
+
+    for var in $variables; do
+        # global key lower case and remove $topic_ or topic_
+        g_state_key="$(echo "$var" | tr '[:upper:]' '[:lower:]')"
+        g_state_key="${g_state_key#topic_}"
+        g_state_key="${g_state_key#$topic_}"
+        # topic key
+        t_state_key="${topic}_$g_state_key"
+        # always use global key as text
+        var_text="$(echo "$g_state_key" | tr '_' ' ')"
+
+
+
+        debug "   create_user_stub var($var) key($g_state_key) text($var_text)"
+
+        # check system vars
+        if [ "$var" = "DOTSYS_BIN" ]; then
+            val="$(dotsys_user_bin)"
+        elif [ "$var" = "USER_NAME" ]; then
+            val="$USER_NAME"
+        elif [ "$var" = "CREDENTIAL_HELPER" ]; then
+            val="$(get_credential_helper)"
+
+        # get topic_state_key and set value
+        else
+            debug "   create_user_stub checking for state key: ${topic}_$g_state_key"
+            val="$(get_state_value "$t_state_key" "user")"
+        fi
+
+        # DO NOT REMOVE: If required for custom values
+        # check for "VARIABLE=some value"
+        # if ! [ "$val" ]; then
+        #   var="${var#=}" # if no value result wil be var
+        #   val="${var%=}" # if no value result wil be var
+        #   if [ "$var" = "$val"  ]; then val="";fi
+        # fi
+
+        debug "   create_user_stub pre user $var = $val "
+
+        # Get user input if no val found
+        if ! [ "$val" ]; then
+            # use global_state_key value as default
+            debug "   create_user_stub get default: $g_state_key"
+            def="$(get_state_value "${g_state_key}" "user" || "non")"
+
+            local user_input
+            get_user_input "What is your $topic $var_text for $stub_name?" --options "none" --default "$def"
+
+            # abort stub process
+            if ! [ $? -eq 0 ]; then return;fi
+
+            # set user provided value
+            val="${user_input:-$def}"
+
+            # record user val to state
+            set_state_value "${topic}_state_key" "$val" "user"
+        fi
+
+        # modify the variable
+        sed -e "s|{$var}|$val|g" "$stub_out" > "$stub_tmp"
+        mv -f "$stub_tmp" "$stub_out"
+
+    done
+
+    # move to user/repo/topic
+    mkdir -p "$(dirname "$stub_dst")"
+    mv -f "$stub_out" "$stub_dst"
+
+    success_or_fail $? "create" "$(printf "stub file for %b$topic $stub_name%b:
+        $spacer ->%b$stub_dst%b" $green $rc $green $rc)"
+
+}
+
+
+# this is for git, may be useful else where..
+get_credential_helper () {
+    local helper='cache'
+    if [ "$PLATFORM" == "mac" ]; then
+        helper='osxkeychain'
+    fi
+    echo "$helper"
+}
+
+
+#TODO: needs to be incorporated into main (probably simlink prcess?)
+link_topic_bin () {
+
+    local topic="$1"
+    local action="$2"
+    local topic_bin="$(topic_dir "$topic")/bin"
+    local user_bin="$(user_bin)"
+
+    if ! [ -d "$topic_bin" ]; then return;fi
+
+    usage="link_topic_bin [<option>]"
+    usage_full="
+    -s | --silent        Suppress command already exists warning
+    "
+    local silent
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -s | --silent )      silent="$1" ;;
+        *)  invalid_option ;;
+        esac
+        shift
+    done
+
+    # search for files in topic bin and link/unlink
+    local files=("$(find "$topic_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
+    local file
+    while IFS=$'\n' read -r file; do
+        local command="$(basename "$file")"
+        if ! [ "$silent" ] && cmd_exists $command; then
+            warn "The command '$command' already exists"
+            get_user_input "Are you sure you want to supersede it with
+                    $spacer $file?"
+            if ! [ $? -eq 0 ]; then return 0;fi
+        fi
+
+        if [ "$action" = "upgrade" ]; then
+            symlink "$file" "$user_bin"
+
+        elif [ "$action" = "update" ]; then
+            symlink "$file" "$user_bin"
+
+        elif [ "$action" = "freeze" ]; then
+            not_implimented "link_topic_bin freeze"
+
+        elif [ "$action" = "install" ]; then
+            symlink "$file" "$user_bin"
+
+        elif [ "$action" = "uninstall" ]; then
+            unlink "$file"
+
+        fi
+    done <<< "$files"
+}
+
+
+# TODO: topic/stubfile.sh will likely be needed
+# this works for shell script config files
+# need solution for topics like vim with own lang
+# use shell script to append source_topic_files to stub..
+source_topic_files () {
+    local topic="$1"
+    local installed="$(get_installed_topic_paths)"
+    local t_dir
+
+    if [ "$topic" = "shell" ]; then
+        topic="sh"
+    fi
+    for t_dir in $installed; do
+        local files=("$(find "$t_dir" -mindepth 1 -maxdepth 1 -type f -not -name '\.*' -name "*.$topic")")
+        local file
+        while IFS=$'\n' read -r file; do
+            source "$file"
+        done
+    done
 }

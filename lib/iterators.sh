@@ -34,6 +34,7 @@ iterate_topics (){
   fi
 
   local platforms="$(get_platform)"
+  local platform
   while IFS=$'\n' read -r platform; do
 
     echo

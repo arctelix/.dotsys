@@ -5,6 +5,28 @@ set_default_managers (){
   DEFAULT_CMD_MANAGER="$(get_topic_config_val "" "cmd_manager" )"
 }
 
+get_default_manager (){
+    local manager="$1"
+    # convert generic names to defaults
+    if [ "$manager" = "cmd" ]; then
+      manager="$DEFAULT_CMD_MANAGER"
+    elif [ "$manager" = "app" ]; then
+      manager="$DEFAULT_APP_MANAGER"
+    fi
+    echo "$manager"
+}
+
+get_topic_manager () {
+    local topic="$1"
+    local manager=$(get_topic_config_val "$topic" "manager")
+
+    # check unmanned topic
+    if ! [ "$manager" ]; then return; fi
+    # check cmd/app
+    manager="$(get_default_manager "$manager")"
+    echo "$manager"
+}
+
 run_manager_task () {
   local usage="run_manager_task <manager> <action> <topics>"
   local usage_full="Installs and uninstalls dotsys.
@@ -126,6 +148,8 @@ get_package_list () {
   local array=()
 
   if [ -f "$package_file" ];then
+    local key
+    local val
     while IFS=":" read -r key val; do
         if [ "$key" ] && [[ "${key:0:1}" != "#" ]] && ! [[ "$val" =~ ^(x| x|no| no)$ ]]; then
           array+=("$key")

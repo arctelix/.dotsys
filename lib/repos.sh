@@ -30,7 +30,7 @@ manage_repo (){
 
     # separate branch from user/repo/branch
     local branch="master"
-    split_repo_branch
+    _split_repo_branch
 
     debug "-- manage_repo: received  a:$action r:$repo b:$branch $force"
 
@@ -69,9 +69,8 @@ manage_repo (){
     else
         # check for remote
         info "Checking for specified remote 1 $github_repo"
-        wget -q "${github_repo}.git" --no-check-certificate -O - > /dev/null
         # remote repo found
-        if [ "$?" -eq 0 ]; then
+        if has_remote_repo "$repo"; then
             info "Found uninstalled remote repo: $github_repo"
             repo_status="remote"
         # no remote repo or directory
@@ -163,11 +162,14 @@ manage_repo (){
 
     # ABORT: ACTION ALREDY DONE (we do this after the checks to make sure status has not changed)
     if [ "$complete" ]; then
-        task "$(printf "Already ${action%e}ed: %b$repo%b" $green $blue)"
+        # we don't want to see this unless we are actually installing a repo
+        if in_limits "repo" -r; then
+            task "$(printf "Already ${action%e}ed: %b$repo%b" $green $blue)"
+        fi
         return
     # CONFIRM
     elif ! [ "$confirmed" ]; then
-        confirm_task "$action" "$repo_status repo: \n$spacer $local_repo"
+        confirm_task "$action" "" "$repo_status repo:" "$local_repo"
         if ! [ $? -eq 0 ]; then return; fi
     fi
 
@@ -176,6 +178,11 @@ manage_repo (){
 
     # ACTION INSTALL
     if [ "$action" = "install" ]; then
+
+        # make sure git is installed
+        if ! cmd_exists git;then
+            dotsys install git manager --recursive
+        fi
 
         # REMOTE: Clone existing repo
         if [ "$repo_status" = "remote" ];then
@@ -187,7 +194,7 @@ manage_repo (){
             if ! [ $? -eq 0 ]; then error "Local repo $local_repo could not be created"; exit; fi
         fi
 
-        # GIT CONFIG (after remote so we have repo downloaded for config)
+        # GIT CONFIG (after remote so we have repo downloaded for any existing config)
         setup_git_config "$repo"
 
         # make sure repo is git!
@@ -197,9 +204,7 @@ manage_repo (){
 
         # EXISTING/INSTALLED check for remote
         if [ "$repo_status" = "existing" ] || [ "$repo_status" = "installed" ];then
-            info "Checking $repo_status repo for remote $github_repo"
-            wget -q "${github_repo}.git" --no-check-certificate -O - > /dev/null
-            if [ $? -eq 0 ]; then
+            if has_remote_repo "$repo"; then
                 manage_remote_repo "$repo" auto
                 if ! [ $? -eq 0 ]; then
                     exit
@@ -227,18 +232,23 @@ manage_repo (){
         state_install "dotsys" "$state_key" "$repo"
         action_status=$?
 
+        # Moved to main
+        #create_all_req_stubs
+
         # MAKE PRIMARY if not offer some options
         if [ "$(state_primary_repo)" != "$repo" ]; then
 
             confirm_make_primary_repo "$repo"
 
             # create dotsys-export.yaml
-            confirm_task "freeze" "repo" "to ${repo}/.dotsys-default.cfg"
+            confirm_task "freeze" "repo" "${repo}" "-> ${repo}/.dotsys-default.cfg"
             if [ "$?" -eq 0 ]; then
                 create_config_yaml "$repo"
             fi
             msg "$spacer HINT: Freeze any time with 'dotsys freeze user/repo_name'"
         fi
+
+        if [ "$action" != "install" ]; then return; fi
 
     elif [ "$action" = "update" ];then
         # this should pull if required but not push!
@@ -332,22 +342,30 @@ manage_remote_repo (){
 
         cd "$local_repo"
 
+#        result="$(git remote 2>&1)"
+#        if ! [[ $? "result" =~ origin ]]; then
+#            init_local_repo "$repo"
+#        fi
         result="$(git remote update 2>&1)"
-        if ! [ $? -eq 0 ]; then
-            status=1
+        if ! [ $? -eq 0 ] || ! [ "$result" = "Fetching origin" ]; then
             if ! [ "$task" = "status" ]; then
-                error "$(indent_lines "$result")"
+                fail "$(indent_lines "${result:-"No remote configured for repo"}")"
             fi
+            init_local_repo "$repo"
         elif ! [ "$task" = "status" ]; then
-            info "$(indent_lines "$result")";
+            info "$(indent_lines "${result}")";
         fi
 
         # set branch upstream to origin/branch if not already
-        if ! git rev-parse @{u} > /dev/null; then
-            debug "-- manage_remote_repo: set current branch upstream"
+        debug "   manage_remote_repo: check for upstream"
+        if ! $(git rev-parse @{u} > /dev/null); then
+            debug "   manage_remote_repo: set current branch upstream"
             result="$(git branch --set-upstream-to origin/$branch 2>&1)"
-            success_or_fail $? "set upstream:" "$(indent_lines "$result")"
-            if ! [ $? -eq 0 ]; then init_remote_repo "$repo";fi
+            success_or_fail $? "" "$(indent_lines "$result")"
+            if ! [ $? -eq 0 ]; then
+                debug "-- manage_remote_repo: caLL init_remote_repo"
+                init_remote_repo "$repo"
+            fi
         fi
 
         debug "   manage_remote_repo: check status local"
@@ -379,7 +397,7 @@ manage_remote_repo (){
 
     if [ "$task" = "push" ] || [ "$task" = "pull" ];then
 
-        confirm_task "$task"  "$remote_repo" "$confirmed"
+        confirm_task "$task" "" "$remote_repo" "$confirmed"
         if ! [ $? -eq 0 ]; then return 1; fi
 
         cd "$local_repo"
@@ -389,7 +407,7 @@ manage_remote_repo (){
             if [ ! "$message" ]; then
                 local user_input
                 message="dotsys $action ${limits[0]} ${topics[@]:-\b}"
-                get_user_input "Would you like to add a custom commit message?\n$spacer" --invalid false --default "$message"
+                get_user_input "Would you like to add a custom commit message?\n$spacer" --invalid none --default "$message"
                 if [ $? -eq 0 ]; then message="$user_input"; fi
             fi
             git add .
@@ -422,7 +440,7 @@ init_remote_repo () {
     local github_repo="https://github.com/$repo"
     local OWD="$PWD"
 
-    confirm_task "initialize" "remote repo" "$github_repo"
+    confirm_task "initialize" "remote" "repo:" "$github_repo"
     if ! [ $? -eq 0 ]; then return; fi
 
     cd "$local_repo"
@@ -444,34 +462,13 @@ init_remote_repo () {
     cd "$OWD"
 }
 
-checkout_branch (){
-    local repo="$1"
-    local branch="${2:-$branch}"
-
-    debug "   checkout_branch: r:$repo b:$branch"
-    if is_git "$repo"; then
-        local current="$(git rev-parse --abbrev-ref HEAD)"
-        # change branch if branch != current branch
-        if [ "${branch:-$current}" != "$current" ]; then
-            local local_repo="$(repo_dir "$repo")"
-            local OWD="$PWD"
-            cd "$local_repo"
-            local result="$(git checkout "$branch")"
-            success_or_error $? "set" "$(indent_lines "$result")"
-            cd "$OWD"
-        fi
-    else
-        branch="${branch:-master}"
-    fi
-}
-
 init_local_repo (){
     local repo="$1"
     local local_repo="$(repo_dir "$repo")"
     local github_repo="https://github.com/$repo"
     local OWD="$PWD"
 
-    confirm_task "initialize" "$repo_status repo for git:\n$spacer  $local_repo"
+    confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo"
     if ! [ $? -eq 0 ]; then exit; fi
 
     cd "$local_repo"
@@ -480,12 +477,37 @@ init_local_repo (){
     success_or_error $? "" "$(indent_lines "$result")"
 
     result="$(git remote add origin "$github_repo" 2>&1)"
-    success_or_fail $? "Add remote origin" "$(indent_lines "$result")"
+    success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
 
     #git remote -v
     checkout_branch "$repo" "$branch"
 
+    result="$(git branch --set-upstream-to origin/$branch 2>&1)"
+    success_or_fail $? "" "$(indent_lines "$result")"
+
     cd "$OWD"
+}
+
+checkout_branch (){
+    local repo="$1"
+    local branch="${2:-$branch}"
+
+    debug "   checkout_branch: r:$repo b:$branch"
+    if is_git "$repo"; then
+        cd "$local_repo"
+        local current="$(git rev-parse --abbrev-ref HEAD)"
+        # change branch if branch != current branch
+        if [ "${branch:-$current}" != "$current" ]; then
+            local local_repo="$(repo_dir "$repo")"
+            local OWD="$PWD"
+            cd "$local_repo"
+            local result="$(git checkout "$branch")"
+            success_or_error $? "set" "$(indent_lines "$result")"
+        fi
+        cd "$OWD"
+    else
+        branch="${branch:-master}"
+    fi
 }
 
 clone_remote_repo () {
@@ -507,46 +529,50 @@ clone_remote_repo () {
 
 }
 
+git con
+
 #TODO: test on windows
 setup_git_config () {
     local repo="$1"
     local template="$(builtin_topic_dir "git")/gitconfig.template"
+    local repo_dir="$(repo_dir "$repo")"
+    local OWD="$PWD"
 
-    confirm_task "configure" "git for $repo"
+    confirm_task "configure" "git for" "$repo"
 
     if [ $? -eq 1 ]; then return; fi
 
-    # make sure git is installed
-    if ! cmd_exists git;then
-        dotsys install git --recursive
-    fi
+    cd "$repo_dir"
 
-    git_credential='cache'
-    if [ "$PLATFORM" == "mac" ]; then
-        git_credential='osxkeychain'
-    fi
-
-    # repo_cfg_file names (local and global gitconfig.symlink files)
-    local repo_cfg_global="$(repo_dir "$repo")/git/gitconfig.symlink"
-    local repo_cfg_local="$(repo_dir "$repo")/git/gitconfig.local.symlink"
     local cfg
 
     for cfg in "global" "local"; do
+
+        # state prifx for cfg
+        local state_prefix="git"
+        if [ "$cfg" = "local" ]; then
+            state_prefix+="_$cfg"
+        fi
+
+        # check for global as local default
         local global_authorname="$(git config --global user.name || "none")"
         local global_authoremail="$(git config --global user.email || "none")"
-        local authorname="$(git config --$cfg user.name)"
-        local authoremail="$(git config --$cfg user.email)"
-        local repo_cfg_file="repo_cfg_${cfg}"
-        repo_cfg_file="${!repo_cfg_file}"
 
+        # check live config & state for value
+        local authorname="$(git config --$cfg user.name || get_state_value "${state_prefix}_user_name" "user" )"
+        local authoremail="$(git config --$cfg user.email || get_state_value "${state_prefix}_user_email" "user" )"
+
+        # set default
         local default_user="${authorname:-$global_authorname}"
         local default_email="${authoremail:-$global_authoremail}"
 
 
         if [ "$cfg" = "local" ]; then
-            get_user_input "Use the global settings for your repo?"
-            if [ $? -eq 0 ]; then
-                cfg="none"
+            if ! [ "$authorname" ] || ! [ "$authoremail" ]; then
+                get_user_input "Use the global settings for your repo?"
+                if [ $? -eq 0 ]; then
+                    continue
+                fi
             fi
         fi
 
@@ -565,59 +591,58 @@ setup_git_config () {
         authorname="${authorname:-$global_authorname}"
         authoremail="${authoremail:-$global_authoremail}"
 
-        # add global only configs
+        local repo_gitconfig
+        # global config & create stub
         if [ "$cfg" = "global" ]; then
-            git config "--$cfg" credential.helper "$git_credential"
+            repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
+            git config "--$cfg" credential.helper "$(get_credential_helper)"
             success "$(printf "git %b$cfg credential%b set to: %b$git_credential%b" $green $rc $green $rc)"
 
-        # create local config file in repo .git dir (git init will recognize and preserve it)
+        # local config
         elif [ "$cfg" = "local" ]; then
+            repo_gitconfig="${repo_dir}/git/gitconfig.local.symlink"
             local repo_git_dir="$(repo_dir "$repo")/.git"
             mkdir -p "$repo_git_dir"
             touch "${repo_git_dir}/config"
         fi
 
-        # add local/global configs
+        # local/global configs
         if [ "$cfg" != "none" ]; then
+            # set vars for immediate use & record to user state for stubs
+
+            set_state_value "${state_prefix}_user_name" "$authorname" "user"
             git config "--$cfg" user.name "$authorname"
             success "$(printf "git %b$cfg author%b set to:  %b$authorname%b" $green $rc $green $rc)"
 
+            set_state_value "${state_prefix}_user_email" "$authoremail" "user"
             git config "--$cfg" user.email "$authoremail"
             success "$(printf "git %b$cfg email%b set to: %b$authoremail%b" $green $rc $green $rc)"
 
-            git config "--$cfg" include.path "$repo_cfg_file"
-            success "$(printf "git %b$cfg include%b set to: %b$repo_cfg_file%b" $green $rc $green $rc)"
-        fi
+            # source users existing repo gitconfig.symlink or gitconfig.local.symlink
+            git config "--$cfg" include.path "$repo_gitconfig"
+            success "$(printf "git %b$cfg include%b set to: %b$repo_gitconfig%b" $green $rc $green $rc)"
 
-        # make custom stub file and add to internal user directory
-        if [ "$cfg" != "none" ]; then
-            local stub_dir="$(stub_topic_dir "git")"
-            local stub_name=".gitconfig"
-            if [ "$cfg" = "local" ]; then
-                stub_name+=".local"
+            # create stub file
+            if [ "$cfg" = "global" ]; then
+                create_user_stub "git" "gitconfig"
             fi
-
-            local stub_file="${stub_dir}/${stub_name}.stub"
-
-            mkdir -p "$stub_dir"
-
-            # create the custom stub file
-            sed -e "s/AUTHORNAME/$authorname/g" \
-                -e "s/AUTHOREMAIL/$authoremail/g" \
-                -e "s/CREDENTIAL_HELPER/$git_credential/g" \
-                -e "s|INCLUDE|$repo_cfg_file'|g" "$template" > "$stub_file"
-
-            success_or_fail $? "created" "$(printf "stub file for %b$cfg git configuration%b:
-                $spacer ->%b$stub_file%b" $green $rc $green $rc)"
-
         fi
+
+
     done
+
+    cd "$OWD"
 
     success "Git has been configured for $repo"
 
 }
 
-
+has_remote_repo (){
+    local repo="$1"
+    local remote="https://github.com/$repo"
+    wget -q "${remote}.git" --no-check-certificate -O - > /dev/null
+    return $?
+}
 
 is_git (){
     local repo="${1:-$repo}"
@@ -699,7 +724,7 @@ copy_topics_to_repo () {
     # Confirm each file to move/copy
     local topic
     for topic in ${found_dirs[@]}; do
-        confirm_task "$mode" "$topic \n$spacer from $dir \n$spacer to $repo_dir"
+        confirm_task "$mode" "" "$topic" $(printf "%bfrom:%b $dir \n$spacer %bto:%b $repo_dir" $green rc $green $rc)
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
             #local topic="${t##*/}"
@@ -725,7 +750,7 @@ confirm_make_primary_repo (){
     # if repo is same as state, bypass check
     if [ "$(state_primary_repo)" = "$repo" ]; then return ; fi
 
-    confirm_task "make" "this your primary repo "$(repo_dir "$repo")""
+    confirm_task "make" "this your" "primary repo:" "$(repo_dir "$repo")"
     if [ $? -eq 0 ]; then
         state_primary_repo "$repo"
         set_user_vars "$repo"

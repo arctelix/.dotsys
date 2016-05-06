@@ -1,8 +1,0 @@
-[user]
-        name = AUTHORNAME
-        email = AUTHOREMAIL
-[credential]
-        helper = CREDENTIAL_HELPER
-
-[include]
-	path = INCLUDE
