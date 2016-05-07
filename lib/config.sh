@@ -65,7 +65,7 @@ load_config_vars (){
             exit
         fi
     # Show logo when more then one topic or no topics
-    elif ! in_limits "repo" -r && ! [ "${topics[@]}" ] || [ ${#topics[@]} -gt 1 ]; then
+    elif verbose_mode; then
         print_logo "$active_repo"
     fi
 
@@ -306,18 +306,40 @@ freeze() {
 user_toggle_logo () {
     get_user_input "Would you like to see the dotsys logo when
             $spacer working on multiple topics (it's helpful)?"
-    set_state_value "show_logo" $?
+    set_state_value "show_logo" $? "user"
 }
 
 user_toggle_stats () {
     get_user_input "Would you like to see the dotsys stats when
             $spacer working on multiple topics (it's helpful)?"
-    set_state_value "show_stats" $?
+    set_state_value "show_stats" $? "user"
+}
+
+user_toggle_stubs () {
+    info "The stub file process allows topics to collect user specific
+  $spacer information and sources topic related files from other topics
+  $spacer such as *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"
+
+    get_user_input "Would you like use dotsys sub files?"
+    local status=$?
+    set_state_value "use_stub_files" $status "user"
+
+    if ! [ $status -eq 0 ]; then return;fi
+    warn "If your *.symlink files source files from topics by extension
+  $spacer such as, *.shell, *.bash, *.zsh, etc.. you should remove those
+  $spacer functions if you installed the associated dotsys stub file.
+
+  $spacer IMPORTANT NOTE: Dotsys does not source *.sh files from topics!
+  $spacer - shell extensions are sourced by all shells.
+  $spacer - bash  extensions are sourced by bash only.
+  $spacer - zsh  extensions are sourced by zsh only.
+  $spacer Check your topic directories for new *.stub files
+  $spacer to see which topics are stubbed and what they do."
 }
 
 print_logo (){
 
-if [ "$(get_state_value "show_logo")" = "1" ]; then return;fi
+if ! get_state_value "show_logo" "user"; then return;fi
 if [ $show_logo -eq 1 ]; then return;fi
 
 local repo="${1:-$(get_active_repo)}"
@@ -345,7 +367,7 @@ show_logo=1
 }
 
 print_stats () {
-    if [ "$(get_state_value "show_stats")" = "1" ]; then return;fi
+    if ! get_state_value "show_stats" "user"; then return;fi
     if [ $show_stats -eq 1 ]; then return;fi
 
     info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
@@ -355,6 +377,7 @@ print_stats () {
     # make sure it's only seen once
     show_stats=1
 }
+
 # TOPIC CONFIG
 
 # read yaml file

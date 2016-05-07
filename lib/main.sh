@@ -13,7 +13,7 @@
 # http://superuser.com/questions/789448/choosing-between-bashrc-profile-bash-profile-etc
 #
 # Licence: The MIT License (MIT)
-# Copyright (c) 2016 Arctelix
+# Copyright (c) 2016 Arctelix https://github.com/arctelix
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 # files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -31,6 +31,7 @@
 
 #TODO: Append *.stub to git ignore for every repo
 #TODO: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
+#TODO: change .dotsys.cfg to dotsys.cfg so we can hide them with a .
 
 #TODO: handle .settings files
 #TODO: FOR NEW Installs prompt for --force & --confirm options
@@ -52,6 +53,9 @@
 
 # Show executed commands
 #set -x
+
+# Dotsys debug system true/false
+DEBUG=false
 
 if ! [ "$DOTSYS_LIBRARY" ];then
     if [ ! -f "$0" ];then
@@ -78,7 +82,7 @@ fi
 
 
 #GLOBALS
-STATE_SYSTEM_KEYS="installed_repo user_repo show_logo show_stats"
+STATE_SYSTEM_KEYS="installed_repo"
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
 
@@ -97,16 +101,20 @@ GLOBAL_CONFIRMED=
 # persist state for topic actions only
 TOPIC_CONFIRMED=
 
-# text message for dry runs
+# Default dry run state is off
+# use 'dry_run 0' to toggle on
+# use 'if dry_run' to test for state
+DRY_RUN_STATE=1
+# Default dry run message is back space
 DRY_RUN="\b"
 
-#track mangers actively used by topics or packages
+# track mangers actively used by topics or packages
 ACTIVE_MANAGERS=()
 
-#track uninstalled topics (populated but not used)
+# track uninstalled topics (populated but not used)
 UNINSTALLED_TOPICS=()
 
-#track installed topics (populated but not used)
+# track installed topics (populated but not used)
 INSTALLED=()
 
 # Current platform
@@ -115,8 +123,11 @@ PLATFORM="$(get_platform)"
 # path to platform's system user bin
 PLATFORM_USER_BIN="$(platform_user_bin)"
 
-#path to debug file
+# path to debug file
 DEBUG_FILE="$DOTSYS_REPOSITORY/debug.log"
+
+# Determines if logo,stats,and other verbose messages are shownm
+VERBOSE_MODE=
 
 #debug "DOTFILES_ROOT: $(dotfiles_dir)"
 
@@ -147,15 +158,18 @@ dotsys () {
     <user/repo[:branch]>    Same as 'repo' for specified repo
     -l | links              Limit action to symlinks
     -m | managers           Limit action to package managers
+    -s | scripts            Limit action to scripts
+    -f | from <user/repo>   Apply action to topics from specified repo
     -p | packages           Limit action to package manager's packages
     -c | cmd                Limit action to cmd manager's packages
     -a | app                Limit action to app manager's packages
-    -s | scripts            Limit action to scripts
-    -f | from <user/repo>   Apply action to topics from specified repo
 
     <options> optional: use to bypass confirmations.
     --force             force action even if already completed
-    --dryrun)           runs through all tasks, but not changes are actually made (must confirm each task)
+    --tlogo             Toggle logo for this run only
+    --tstats            Toggle stats for this run only
+    --debug             Debug mode on
+    --dryrun            Runs through all tasks, but no changes are actually made (must confirm each task)
     --confirm           bypass topic confirmation and backup / restore backup for existing symlinks
     --confirm delete    bypass topic confirmation and delete existing symlinks on install & uninstall
     --confirm backup    bypass topic confirmation and backup existing symlinks on install & restore backups on uninstall
@@ -180,40 +194,47 @@ dotsys () {
       $ dotsys install app google-chrome
 
 
-    Organization:
+    Organization:       NOTE: Any file or directory prefixed with a "." will be ignored by dotsys
 
-    Each topic consists of symlinks, scripts, managers, stubs, bins, configs.
 
-    symlinks:           topic/*.symlink
+      repos:            .dotfiels/user_name/repo_name
+                        A repo contains a set of topics and correlates to a github repository
+                        You can install topics from as many repos as you like.
+
+      symlinks:         topic/*.symlink
                         Symlinked to home or specified directory
 
 
-    bins:               topic/bin
+      bins:             topic/bin
                         All files inside a topic bin will be available
-                        on the command line by simlinking to dotsys/bin.
+                        on the command line by simlinking to dotsys/bin
 
-    managers:           topic/manager.sh
+      managers:         topic/manager.sh
                         Manages packages of some type, such as brew,
                         pip, npm, etc.. (see script manager.sh for details)
 
-    configs:            repo/.dotsys.cfg repo level config file
-                        topic/.dotsys.cfg topic level config file
+      configs:          Configs are yaml like configuration files that tell
+                        dotsys how to handle a repo and or topics.  You can
+                        customize almost everything about a repo and topic
+                        behavior with .dotsys.cfg file.
+                        repo/dotsys.cfg repo level config file
+                        topic/dotsys.cfg topic level config file
 
-    stubs:              topic/file.stub
-                        Stubs allow topics to add functionality to each other.
-                        For example: The stub for .vimrc is linked to the home
-                        directory where vim can read it.  The stub will then source
-                        the vim/vimrc.stub and search for topic/*.vimrc files.
-                        Provide vim/vimrc.symlink to not use stubs for that topic.
-
+      stubs:            topic/file.stub
+                        Stubs allow topics to collect user information and to add
+                        functionality to each other. For example: The stub for
+                        .vimrc is symlinked to your $HOME
+                        directory where vim will read it.  The stub will then source
+                        your vim/vimrc.symlink and search for other topic/*.vim files.
 
     scripts:            scripts are optional and placed in each topic root directory
 
       topic/topic.sh    A single script containing optional functions for each required
                         action (see function definitions)
+
       topic/manager.sh  Designates a topic as a manager. Functions handle packages not the manager!
-                        Required functions: install, uninstall, freeze, upgrade
-                        Not supported: update
+                        Required functions for installing packages: install, uninstall, upgrade
+                        Not supported: update & freeze as these are in the manager topic.sh file.
 
       script functions: The rules below are important (please follow them strictly)
 
@@ -278,21 +299,23 @@ dotsys () {
                         if [ "$2" ] && [[ "$2" != "-"* ]]; then from_branch="$2";shift ;fi ;;
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
+        -s | scripts)   limits+=("scripts") ;;
+        -f | from)      from_repo="$2"; shift ;;
         -p | packages)  limits+=("packages") ;;
         -a | app)       limits+=("packages") ;;
-        -c | cmd)       limits+=("scripts") ;;
-        -f | from)      from_repo="$2"; shift ;;
+        -c | cmd)       limits+=("packages") ;;
 
         # options
-        --tlogo)        show_logo=$(! $(get_state_value "show_logo")) ;;
-        --tstats)       show_stats=$(! $(get_state_value "show_stats")) ;;
         --force)        force="$1" ;;
+        --tlogo)        ! get_state_value "show_logo"; show_logo=$? ;;
+        --tstats)       ! get_state_value "show_stats"; show_stats=$? ;;
+        --debug)        DEBUG="true" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
-        --dryrun)       DRY_RUN="(dry run) " ;;
+        --dryrun)       dry_run 0 ;;
         --confirm)      if [[ "$2" =~ (delete|backup|skip) ]]; then
                             GLOBAL_CONFIRMED="$2"
                             if [ "$2" = "dryrun" ]; then
-                                DRY_RUN="(dry run) "
+                                dry_run 0
                                 GLOBAL_CONFIRMED="skip"
                             fi
                             shift
@@ -309,21 +332,33 @@ dotsys () {
 
     required_vars "action"
 
-    TOPIC_CONFIRMED="${TOPIC_CONFIRMED:-$GLOBAL_CONFIRMED}"
-
     debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo"
 
-    # Set persistent options
-    if [ "$DRY_RUN" != "\b" ]; then
+    # SET VERBOSE_MODE
+    verbose_mode
+
+    # SET CONFIRMATIONS
+
+    # bypass confirmations when topics provided
+    if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
+        debug "main -> Set GLOBAL_CONFIRMED = backup (Topics specified or not install/uninstall)"
+        GLOBAL_CONFIRMED="backup"
+    fi
+
+    # override for dryrun option
+    if dry_run; then
         GLOBAL_CONFIRMED="skip"
     fi
 
-    # ALLOW direct manager package manipulation
+    TOPIC_CONFIRMED="${TOPIC_CONFIRMED:-$GLOBAL_CONFIRMED}"
+
+    # DIRECT MANGER PACKAGE MANAGEMENT
     # This allows dotsys to manage packages without a topic directory
+    # <manager> may be 'cmd' 'app' or specific manager name
     # for example: 'dotsys install <manager> packages <packages>'   # specified packages
     # for example: 'dotsys install <manager> packages file'         # all packages in package file
     # for example: 'dotsys install <manager> packages'              # all installed packages
-    # todo: Considering api format 'dotsys <manager> install <package>'
+    # todo: Consider api format 'dotsys <manager> install <package>'
     if in_limits "packages" -r && is_manager "${topics[0]}" && [ ${#topics[@]} -gt 1 ] ; then
       local manager="$(get_default_manager "${topics[0]}")" # checks for app or cmd
       local i=0 # just to make my syntax checker not fail (weird)
@@ -412,7 +447,7 @@ dotsys () {
     # We stub here rather then during symlink process
     # to get all user info up front for auto install
     if [ "$action" = "install" ] || [ "$action" = "upgrade" ] && in_limits "repo" "dotsys"; then
-        create_all_req_stubs $action "${topics[@]}"
+        manage_stubs $action "${topics[@]}"
     fi
 
     # Iterate topics
@@ -646,7 +681,9 @@ dotsys_installer () {
     if [ "$action" = "install" ]; then
         mkdir -p "$dotfiles_dir"
         mkdir -p "$DOTSYS_REPOSITORY/user/bin"
-        mkdir -p "$DOTSYS_REPOSITORY/stubs"
+        mkdir -p "$DOTSYS_REPOSITORY/state"
+        touch "$DOTSYS_REPOSITORY/state/dotsys.state"
+        touch "$DOTSYS_REPOSITORY/state/user.state"
     fi
 
     # install/uninstall realpath

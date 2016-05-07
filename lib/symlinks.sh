@@ -78,16 +78,39 @@ symlink_topic () {
   # all other topics
   else
      # Find *.symlink *.stub below each topic directory, exclude dot files.
-     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.symlink' -o -name '*.stub' -not -name '\.*')"
+     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
+     #stubs="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -not -name '\.*')"
      #TODO URGENT : do not link .symlink if .stub is found .symlink if .stub found
   fi
-
+  local last_stub
   local src
   while IFS=$'\n' read -r src; do
+
+    local no_ext="${src%.*}"
+    local stub="${no_ext}.stub"
+
+    debug "src: $src"
+    debug "stub   : $stub"
+
     # No simlinks found
     if [[ -z "$src" ]]; then
-      success "$(printf "No symlinks required %sfor %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
+      success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
       continue
+    fi
+
+    if [ "$last_stub" = "$no_ext" ]; then
+        debug "symlink CONTINUE: already stubbed: $src"
+        continue
+    fi
+
+    if [ "$src" = "$stub" ]; then
+        last_stub="$no_ext"
+        debug "symlinking stub: $src"
+#        debug "changing symlink src to stub:
+#        \rfrom: $src
+#        \rto->: $stub"
+#        #remove .symlink from symlinks
+#        src="$stub"
     fi
 
     # check for alternate dst in config  *.symlink -> path/name
@@ -189,13 +212,13 @@ unlink(){
 
   # does not exits
   if [ ! -e "$link" ]; then
-    success "$(printf "Nothing to unlink at %s%b%s%b" "$DRY_RUN" $light_green $link $rc)"
+    success "$(printf "Nothing to unlink at %s %b%s%b" "$DRY_RUN" $light_green $link $rc)"
     return
   fi
 
   # If target is not a symlink skip it (this is an original file!)
   if [ ! -L "$link" ]; then
-    fail "$(printf "$(cap_first "$type") is not a symlink %s%b$link%b !" "$DRY_RUN" $light_green  $rc)"
+    fail "$(printf "$(cap_first "$type") is not a symlink %s %b$link%b !" "$DRY_RUN" $light_green  $rc)"
     warn "If you want to remove this file, please do so manually."
     return
   fi
@@ -257,14 +280,14 @@ unlink(){
   action=${action:-$SYMLINK_CONFIRMED}
 
   local skip_reason="skipped "
-  if [ "$DRY_RUN" != "\b" ]; then
+  if ! dry_run; then
       skip_reason="$DRY_RUN"
   fi
 
   # Skip symlink
   if [ "$action" == "skip" ]; then
     if ! [ -f "$backup" ];then backup="none";fi
-    success "$(printf "Unlink %sfor %b%s's %s%b
+    success "$(printf "Unlink %s for %b%s's %s%b
                       $spacer existing $type : %b%s%b
                       $spacer linked to : %b%s%b
                       $spacer backup $type : %b%s%b" \
@@ -337,9 +360,9 @@ symlink () {
 
   # file or directory?
   local type="$(path_type "$src")"
-
   local dst_full_target="$(drealpath "$dst")"
   local dst_name="$(basename "$dst")"
+  local message
   src="$(drealpath "$src")"
 
 
@@ -347,24 +370,31 @@ symlink () {
   if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]; then exists="true";fi
 
   if [ "$exists" ] && [ "$dst_full_target" = "$src" ]; then
-      success "$(printf "Symlink %sexists for %s %b%s%b" "$DRY_RUN" "$type" $green "$dst_name" $rc)"
+      success "$(printf "Symlink %s for %s %b%s%b is good" "$DRY_RUN" "$type" $green "$dst_name" $rc)"
       return
   fi
 
   # Get confirmation if no SYMLINK_CONFIRMED
   if [ "$exists" ] && [ -z "$SYMLINK_CONFIRMED" ]; then
-     user "$(printf "Existing $type %b%s%b
-       should be linked to %b%s%b
-       What do you want to do?
-       (%bs%b)kip, (%bS%b) all, (%bo%b)verwrite, (%bO%b) all, (%bb%b)ackup, (%bB%b) all : " \
-       $green "$dst" $rc \
-       $green "$src" $rc \
-       $dark_yellow $rc \
-       $dark_yellow $rc \
-       $dark_yellow $rc \
-       $dark_yellow $rc \
-       $dark_yellow $rc \
-       $dark_yellow $rc)"
+
+     if [ -L "$dst" ]; then
+        message="Existing $type is improperly linked"
+     else
+        message="Existing $type is not symlinked"
+     fi
+
+     user "$(printf "$message: %b%s%b
+             $spacer It should be linked to %b%s%b
+             $spacer How do you want to fix it?
+             $spacer (%bs%b)kip, (%bS%b) all, (%bo%b)verwrite, (%bO%b) all, (%bb%b)ackup, (%bB%b) all : " \
+               $green "$dst" $rc \
+               $green "$src" $rc \
+               $dark_yellow $rc \
+               $dark_yellow $rc \
+               $dark_yellow $rc \
+               $dark_yellow $rc \
+               $dark_yellow $rc \
+               $dark_yellow $rc)"
 
     while true; do
       # Read from tty, needed because we read in outer loop.
@@ -407,7 +437,7 @@ symlink () {
 
   local message=
   local skip_reason="skipped "
-  if [ "$DRY_RUN" != "\b" ]; then
+  if dry_run; then
       skip_reason="$DRY_RUN"
   fi
 

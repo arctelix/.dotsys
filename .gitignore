@@ -1,5 +1,4 @@
 state/*
 user/*
-stubs/*
 *.private
 .DS_Store

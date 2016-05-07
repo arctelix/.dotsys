@@ -131,11 +131,17 @@ in_state () {
 # gets value for unique key
 get_state_value () {
   local key="$1"
-  local status=0
   local file="$(state_file "${2:-dotsys}")"
-  local results="$(grep "^$key:.*$" "$file")"
-  if ! [ $? -eq 0 ]; then status=1 ;fi
-  echo "${results#*:}"
+  local status=0
+
+  local line="$(grep "^$key:.*$" "$file")"
+  status=$?
+  local val="${line#*:}"
+  if [ "$val" = "1" ] || [ "$val" = "0" ]; then
+    status=$val
+  else
+    echo "$val"
+  fi
   return $status
 }
 
@@ -154,9 +160,9 @@ state_primary_repo(){
   local key="user_repo"
 
   if [ "$repo" ]; then
-    set_state_value "$key" "$repo"
+    set_state_value "$key" "$repo" "user"
   else
-    echo "$(get_state_value "$key")"
+    echo "$(get_state_value "$key" "user")"
   fi
 }
 

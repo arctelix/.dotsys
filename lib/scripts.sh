@@ -35,7 +35,7 @@ run_topic_script () {
 
   # no script required for topic
   if [ $status -eq 10 ]; then
-     success "$(printf "No $action script supplied %sfor %b$topic%b" "$DRY_RUN" $light_green $rc)"
+     success "$(printf "No $action script supplied %s for %b$topic%b" "$DRY_RUN" $light_green $rc)"
   fi
 
   # record success to state file (10 = not found, but not required)
@@ -83,7 +83,7 @@ run_script (){
 
   if script_exists "$script"; then
     # run the script
-    if ! [ "$DRY_RUN" != "\b" ];then
+    if ! dry_run;then
       sh "$script" ${params[@]}
       status=$?
     fi
@@ -157,7 +157,7 @@ run_script_func () {
           debug "   running $script $action ${params[@]}"
 
           # run action & handle fail
-          if ! [ "$DRY_RUN" != "\b" ]; then
+          if ! dry_run; then
             $script $action ${params[@]}
             status=$?
           fi

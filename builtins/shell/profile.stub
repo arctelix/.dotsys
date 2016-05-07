@@ -8,20 +8,17 @@
 # FOR TESTING
 echo "dotsys stub profile loaded"
 
-echo "pwd: $(pwd)"
-echo "$PWD: $PWD"
-
 # Ensure user-installed binaries supersede system
 export PATH=/usr/local/bin:$PATH
 
 # Ensure dotsys-installed binaries supersede user-installed
-# export PATH={DOTSYS_BIN}:$PATH
+export PATH={DOTSYS_BIN}:$PATH
 
 # PUT YOUR CUSTOM CONFIGS IN THE FILE NAMED BELOW
 stub_target="{STUB_TARGET}"
 test -f "$stub_target" && source "$stub_target"
 
-#Source .sh files from topics
+#Source .shell files from topics
 dotsys source_topic_files shell
 
 

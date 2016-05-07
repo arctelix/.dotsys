@@ -41,9 +41,9 @@ DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 if [ "$1" = "ds_test" ]; then
   source "$DOTSYS_LIBRARY/main.sh"
   shift
-  echo "\n"
+  echo
   warn "You have entered dotsys test mode by using the key word 'ds_test'!"
-  echo "\n"
+  echo
   $@
 
 # allows access to all common.sh funcs
@@ -63,7 +63,7 @@ elif [ "$1" = "source_topic_files" ]; then
 else
   source "$DOTSYS_LIBRARY/main.sh"
   dotsys $@
-  echo "\n"
+  echo
 fi
 
 

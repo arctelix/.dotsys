@@ -2,15 +2,11 @@
 " THIS IS A DOTSYS STUB FILE (DO NOT ALTER THIS FILE)
 """""""""""""""""""""""""""""""""""""""""""""""""""""
 " All customizations should be made in your topic vimrc.symlink.
-" Any changes to this file will be lost on topic install.
 
 " => Source the users vimrc file
-
-let s:user_file = fnamemodify(resolve(expand('<sfile>:p')), ':h') . "/vimrc.symlink"
+let s:user_file = "{STUB_TARGET}"
 if filereadable(s:user_file)
     execute 'source ' . s:user_file
-else
-    echo "DOTSYS ERROR: Could not locate the your vimrc source:\n" . s:user_file
 endif
 
 

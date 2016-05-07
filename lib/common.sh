@@ -91,6 +91,27 @@ dotsys_user_bin () {
 
 # MISC TESTS
 
+# Test for VERBOSE_MODE
+verbose_mode (){
+    if ! [ "$VERBOSE_MODE" ]; then
+        if ! in_limits "repo" -r && ! [ "${topics[0]}" ] || [ ${#topics[@]} -gt 1 ]; then
+            VERBOSE_MODE=0 # verbose on
+        else
+            VERBOSE_MODE=1 # verbose of
+        fi
+    fi
+    return "$VERBOSE_MODE"
+}
+
+dry_run (){
+    local state="$1"
+    if [ "$state" ]; then
+        DRY_RUN_STATE=0
+        DRY_RUN="(dry run)"
+    fi
+    return $DRY_RUN_STATE
+}
+
 # Test for the existence of a command
 cmd_exists() {
   if ! [ "$1" ];then return 1;fi
@@ -167,12 +188,18 @@ topic_is_repo () {
 
 # Determines if a path is a file or a directory
 path_type () {
-  local type=
-  if [ -d "$1" ];then
-    type="directory"
-  elif [ -f "$1" ];then
-    type="file"
+  local type="\b"
+
+  if [ -L "$1" ];then
+    type="symlinked"
   fi
+
+  if [ -d "$1" ];then
+    type="$type directory"
+  elif [ -f "$1" ];then
+    type="$type file"
+  fi
+
   echo "$type"
 }
 
@@ -243,6 +270,8 @@ get_installed_topic_paths () {
         echo "$repo/$topic"
     done < "$(state_file "dotsys")"
 }
+
+
 
 
 

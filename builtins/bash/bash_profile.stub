@@ -10,10 +10,10 @@ echo "dotsys stub bash_profile loaded"
 export ARCHFLAGS="-arch x86_64"
 
 # Load .profile if it exists
-test -f ~/.profile && source "$HOME/.profile"
+test -f $HOME/.profile && source "$HOME/.profile"
 
 # Load .bashrc if it exists
-test -f ~/.bashrc && source "$HOME/.bashrc"
+test -f $HOME/.bashrc && source "$HOME/.bashrc"
 
 # PUT YOUR CUSTOM CONFIGS IN THE FILE NAMED BELOW
 stub_target="{STUB_TARGET}"

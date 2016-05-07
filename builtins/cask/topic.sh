@@ -22,33 +22,3 @@ freeze () {
 
 $@ # Required for function execution
 
-
-
-# removed apps
-#    bash-completion2
-#    bats
-#    battery
-#    coreutils
-#    cmake
-#    dockutil
-#    ffmpeg
-#    fasd
-#    gifsicle
-#    git
-#    gnu-sed --with-default-names
-#    grep --with-default-names
-#    hub
-#    httpie
-#    imagemagick
-#    jq
-#    mackup
-#    peco
-#    psgrep
-#    python
-#    shellcheck
-#    ssh-copy-id
-#    svn
-#    tree
-#    vim
-#    wget
-#    wifi-password

@@ -64,31 +64,30 @@ add_existing_conf_files () {
 }
 
 # Collects all required user data at start of process
-# Stubs will be symlink with other symlinks
-create_all_req_stubs () {
+# Creates stub file in user directory
+# The stub is not symlinked to destination until symlink process
+manage_stubs () {
     local action="$1"
-    local topics="$2"
+    local topics=("$2")
     local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
     local topic
 
-    if [ "$builtins" ]; then
-        info "Stub files allow dotsys to source topic related files
-      $spacer from other topics, such as *.sh files as well as gather
-      $spacer topic specific options and user information."
+    # check if user accepted subs
+    if ! get_state_value "use_stub_files" "user"; then return;fi
+
+    if [ "${#topics[@]}" -gt 1 ]; then
+        confirm_task "create" "stub files for" "${topics[@]}"
     fi
 
     for topic in $builtins; do
         debug "-- create_all_req_stubs for: $topic"
-        # skip if topic not present in user repo
-        if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "$topics" =~ "$topic" ]]; then continue; fi
+        # always stub shell (it's required by dotsys)!
+        if ! [ "$topic" = "shell" ];then
+            # abort if no user topic directory or if topic is not in current scope
+            if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
+        fi
         create_topic_stubs "$topic" "$action"
     done
-
-    warn "If you imported non dotsys topics and your existing dotfiles
-  $spacer source files by extension such as, *.sh, you can remove that
-  $spacer functionality since dotsys stub files do that for you."
-
-
 }
 
 # Create all stubs for a topic
@@ -100,9 +99,7 @@ create_topic_stubs () {
     local builtin_stubs="$(get_builtin_stub_files "$topic")"
     while IFS=$'\n' read -r file; do
         local stub_name="$(basename "${file%.*}")"
-        local stub_target="$(get_topic_stub_target "$topic" "$file")"
-        if ! [ -f "$stub_target" ] && ! [ "$topic" = "shell" ]; then continue;fi
-        confirm_task "create" "the stub file for" "${topic}'s $stub_name"
+        #confirm_task "create" "the stub file for" "${topic}'s $stub_name"
         create_user_stub "$topic" "$stub_name"
     done <<< "$builtin_stubs"
 }
@@ -131,8 +128,11 @@ create_user_stub () {
     local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
     local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
 
-    # abort if stub src or stub target file is not found
-    if ! [ -f "$stub_src" ] || ! [ -f "$stub_target" ]; then return;fi
+    # abort if there is no stub for topic
+    if ! [ -f "$stub_src" ]; then
+        error "$topic does not have a stub file at:\n$stub_src"
+        return
+    fi
 
     local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
     local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
@@ -230,8 +230,10 @@ create_user_stub () {
     mkdir -p "$(dirname "$stub_dst")"
     mv -f "$stub_out" "$stub_dst"
 
-    success_or_fail $? "create" "$(printf "stub file for %b$topic $stub_name%b:
-        $spacer ->%b$stub_dst%b" $green $rc $green $rc)"
+    if ! is_installed "dotsys" "$topic"; then
+        success_or_fail $? "create" "$(printf "stub file for %b$topic $stub_name%b:
+            $spacer ->%b$stub_dst%b" $green $rc $green $rc)"
+    fi
 
 }
 
@@ -308,17 +310,19 @@ link_topic_bin () {
 # use shell script to append source_topic_files to stub..
 source_topic_files () {
     local topic="$1"
-    local installed="$(get_installed_topic_paths)"
+    local installed_topics="$(get_installed_topic_paths)"
+    local src_cmd="${2:-source}"
     local t_dir
-
-    if [ "$topic" = "shell" ]; then
-        topic="sh"
-    fi
-    for t_dir in $installed; do
-        local files=("$(find "$t_dir" -mindepth 1 -maxdepth 1 -type f -not -name '\.*' -name "*.$topic")")
+    debug "-- source_topic_files for: $topic"
+    for t_dir in $installed_topics; do
+        local files="$(find "$t_dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
         local file
+        debug "  source_topic_files from: $t_dir"
         while IFS=$'\n' read -r file; do
-            source "$file"
-        done
+            debug "   source_topic_files file: $file"
+            $src_cmd "$file"
+        done <<< $files
     done
 }
+
+SYSTEM_SH_FILES="manager.sh topic.sh install.sh update.sh upgrade.sh freeze.sh uninstall.sh"

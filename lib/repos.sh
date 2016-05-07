@@ -83,7 +83,8 @@ manage_repo (){
     debug "   manage_repo status: $repo_status"
 
     # Check for action already complete (we do this first in case of status changes in checks)
-    if ! [ "$force" ]; then
+    # Force only works when repo in limits, otherwise just silently skip
+    if ! in_limits "repo" -r || ! [ "$force" ]; then
         if [ "$action" = "install" ] && [ "$repo_status" = "installed" ]; then
             complete="true"
 
@@ -162,7 +163,7 @@ manage_repo (){
 
     # ABORT: ACTION ALREDY DONE (we do this after the checks to make sure status has not changed)
     if [ "$complete" ]; then
-        # we don't want to see this unless we are actually installing a repo
+        # we don't want to see this message unless we are actually installing a repo
         if in_limits "repo" -r; then
             task "$(printf "Already ${action%e}ed: %b$repo%b" $green $blue)"
         fi
@@ -181,7 +182,7 @@ manage_repo (){
 
         # make sure git is installed
         if ! cmd_exists git;then
-            dotsys install git manager --recursive
+            dotsys install cmd git --recursive
         fi
 
         # REMOTE: Clone existing repo
@@ -214,11 +215,8 @@ manage_repo (){
             fi
         fi
 
-        # add a .dotsys.cfg
-        if ! [ -f ".dotsys.cfg" ]; then
-            touch .dotsys.cfg
-            echo "repo:${repo}" >> ".dotsys.cfg"
-        fi
+        # Make sure all repos have required files!
+        install_required_repo_files "$repo"
 
         # NEW: initialize remote repo
         if [ "$repo_status" = "new" ];then
@@ -273,7 +271,7 @@ manage_repo (){
         fi
 
         # remove from state (check for installed and user default)
-        state_uninstall "dotsys" "user_repo" "$repo"
+        state_uninstall "user" "user_repo" "$repo"
         state_uninstall "dotsys" "$state_key" "$repo"
         action_status=$?
         # confirm delete if repo exists
@@ -293,7 +291,6 @@ manage_repo (){
     success_or_fail $action_status "$action" "$(printf "$repo_status repo %b$local_repo%b" $green $rc)"
     return $?
 }
-
 
 manage_remote_repo (){
 
@@ -434,6 +431,34 @@ manage_remote_repo (){
 
 }
 
+
+init_local_repo (){
+    local repo="$1"
+    local local_repo="$(repo_dir "$repo")"
+    local github_repo="https://github.com/$repo"
+    local OWD="$PWD"
+
+    confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo"
+    if ! [ $? -eq 0 ]; then exit; fi
+
+    cd "$local_repo"
+
+    result="$(git init 2>&1)"
+    success_or_error $? "" "$(indent_lines "$result")"
+
+    result="$(git remote add origin "$github_repo" 2>&1)"
+    success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
+
+    #git remote -v
+    checkout_branch "$repo" "$branch"
+
+    result="$(git branch --set-upstream-to origin/$branch 2>&1)"
+    success_or_fail $? "" "$(indent_lines "$result")"
+
+    cd "$OWD"
+}
+
+
 init_remote_repo () {
     local repo="$1"
     local local_repo="$(repo_dir "$repo")"
@@ -458,32 +483,6 @@ init_remote_repo () {
                     "$(msg "$spacer However, The local repo is ready for topics...")"
 
 
-
-    cd "$OWD"
-}
-
-init_local_repo (){
-    local repo="$1"
-    local local_repo="$(repo_dir "$repo")"
-    local github_repo="https://github.com/$repo"
-    local OWD="$PWD"
-
-    confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo"
-    if ! [ $? -eq 0 ]; then exit; fi
-
-    cd "$local_repo"
-
-    result="$(git init 2>&1)"
-    success_or_error $? "" "$(indent_lines "$result")"
-
-    result="$(git remote add origin "$github_repo" 2>&1)"
-    success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
-
-    #git remote -v
-    checkout_branch "$repo" "$branch"
-
-    result="$(git branch --set-upstream-to origin/$branch 2>&1)"
-    success_or_fail $? "" "$(indent_lines "$result")"
 
     cd "$OWD"
 }
@@ -529,9 +528,31 @@ clone_remote_repo () {
 
 }
 
-git con
 
-#TODO: test on windows
+install_required_repo_files () {
+    local repo="$1"
+    local local_repo="$(repo_dir "$repo")"
+    local OWD="$PWD"
+
+    cd "$local_repo"
+
+    # add a .dotsys.cfg
+    if ! [ -f ".dotsys.cfg" ]; then
+        touch .dotsys.cfg
+        echo "repo:${repo}" >> ".dotsys.cfg"
+    fi
+
+    # gitignore *.stub files
+    if ! grep -q '\*\.stub' ".gitignore" >/dev/null 2>&1; then
+        debug "adding *.stub to gitignore"
+        touch .gitignore
+        echo "*.stub" >> ".gitignore"
+        echo "*.private" >> ".gitignore"
+    fi
+
+    cd "$OWD"
+}
+
 setup_git_config () {
     local repo="$1"
     local template="$(builtin_topic_dir "git")/gitconfig.template"

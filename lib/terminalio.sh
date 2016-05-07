@@ -132,15 +132,15 @@ msg_invalid_input (){
 
 # debug debug
 debug () {
-    #return
-    printf "%b$1 %b\n" $dark_gray $rc
-
+    if [ "$DEBUG" = true ]; then
+        printf "%b$1 %b\n" $dark_gray $rc
+    fi
 }
 
 not_implimented () {
-    #return
-    printf "$spacer NOT IMPLEMENTED: %b$1 %b\n" $gray $rc
-
+    if [ "$DEBUG" = true ]; then
+        printf "$spacer NOT IMPLEMENTED: %b$1 %b\n" $gray $rc
+    fi
 }
 
 cap_first () {
@@ -362,10 +362,10 @@ confirm_task () {
   confirmed="${confirmed:-$TOPIC_CONFIRMED}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(printf "%sing %s %s %b%s%b%s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $blue "$extra_lines")"
+    task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $blue "$extra_lines")"
     return 0
   else
-    task "$(printf "You skipped %s %s %b%s%b%s" "$action" "$prefix" $green "$topic" $blue "$extra_lines")"
+    task "$(printf "You skipped %s for %s %b%s%b %s" "$action" "$prefix" $green "$topic" $blue "$extra_lines")"
     return 1
   fi
 }
