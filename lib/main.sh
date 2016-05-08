@@ -339,15 +339,17 @@ dotsys () {
 
     # SET CONFIRMATIONS
 
-    # bypass confirmations when topics provided
-    if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
-        debug "main -> Set GLOBAL_CONFIRMED = backup (Topics specified or not install/uninstall)"
-        GLOBAL_CONFIRMED="backup"
-    fi
+    if ! [ "$recursive" ]; then
+        # Set global if topics provided by user or not install/uninstall
+        if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
+            debug "main -> Set GLOBAL_CONFIRMED = backup (Topics specified or not install/uninstall)"
+            GLOBAL_CONFIRMED="backup"
+        fi
 
-    # override for dryrun option
-    if dry_run; then
-        GLOBAL_CONFIRMED="skip"
+        # override for dryrun option
+        if dry_run; then
+            GLOBAL_CONFIRMED="skip"
+        fi
     fi
 
 

@@ -319,13 +319,12 @@ confirm_task () {
   shift; shift; shift
   local confirmed=
 
-  #TODO: CONFIRMED_VAR to help compartmentalize confirmations
   local CONFIRMED_VAR="TOPIC_CONFIRMED"
 
   while [[ $# > 0 ]]; do
     case "$1" in
       -c | --confirmed )        confirmed="true";   shift ;;# alternate options line
-      -v | --confvar )          CONFIRMED_VAR="$1"; shift ;;# alternate options line
+      -v | --confvar )          CONFIRMED_VAR="$2"; shift ;;# alternate options line
       * ) extra_lines+=("$1") ;;
     esac
     shift
@@ -337,7 +336,10 @@ confirm_task () {
     lines+="\n$spacer $line"
   done
 
-  if ! [ "${TOPIC_CONFIRMED}" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
+  debug "CONFIRMED_VAR=${CONFIRMED_VAR}"
+  debug "CONFIRMED_VAR value=${!CONFIRMED_VAR}"
+
+  if ! [ "${!CONFIRMED_VAR}" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
 
       local text="$(printf "Would you like to %b%s%b %s %b%s%b %s?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
@@ -364,11 +366,11 @@ confirm_task () {
               break
               ;;
             Y )
-              TOPIC_CONFIRMED="true"
+              eval "${CONFIRMED_VAR}=true"
               break
               ;;
             N )
-              TOPIC_CONFIRMED="false"
+              eval "${CONFIRMED_VAR}=false"
               break
               ;;
             "" )
@@ -384,7 +386,9 @@ confirm_task () {
 
   fi
 
-  confirmed="${confirmed:-$TOPIC_CONFIRMED}"
+  debug "CONFIRMED_VAR value=${!CONFIRMED_VAR}"
+
+  confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 
   if [ "$confirmed" != "false" ]; then
     task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $blue "$extra_lines")"

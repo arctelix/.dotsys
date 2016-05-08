@@ -110,9 +110,15 @@ install_dependencies () {
 
   info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
   local dep
-  for dep in ${deps[@]}; do
+
+  local done=()
+  for dep in "${deps[@]}"; do
+    # TODO: fix duplicates from user topic and builtin topic configs
+    # filter duplicates from user topic and builtin topics
+    if [[ "${done[@]}" == *"$dep"* ]];then continue;fi
+    debug "installing $topic dep $dep"
     # Check if dep is installed
-    if ! cmd_exists "$dep";then
+    if ! is_installed "dotsys" "$dep" --silent;then
       dotsys "install" "$dep" from "$ACTIVE_REPO" --recursive
     else
       success "$(printf "Already installed dependency %s%b%s%b" "$DRY_RUN" $green "$dep" $rc)"
@@ -120,6 +126,8 @@ install_dependencies () {
   done
 
 }
+
+
 
 get_package_list () {
   local manager="$1"
@@ -180,6 +188,8 @@ manage_packages () {
        manage_packages <action> brew file
     "
 
+    local PACKAGES_CONF
+
     # todo: add / remove itemized packages to package file
 
     while [[ $# > 0 ]]; do
@@ -208,8 +218,14 @@ manage_packages () {
 
     debug "   manage_packages final packages: $packages"
 
-    task "$(printf "${action}ing %s%b$manager's%b packages" "$DRY_RUN" $green $rc)"
-    run_manager_task "$manager" "$action" $packages "$force"
+    task "$(printf "${action}ing $DRY_RUN %b$manager's%b packages" $green $rc)"
+
+    local p
+    for p in $packages; do
+        confirm_task "$action" "${manager}'s package" "$p" --confvar "PACKAGES_CONF"
+        if ! [ $? -eq 0 ]; then continue;fi
+        run_manager_task "$manager" "$action" $p "$force"
+    done
 
 }
 

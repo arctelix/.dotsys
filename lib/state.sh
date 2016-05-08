@@ -79,14 +79,14 @@ is_installed () {
     # test if in specified state file
     in_state "$state" "$key" "$val"
     installed=$?
-    debug "   - is_installed in $state: $installed"
+    debug "   - is_installed in state file:$state -> $installed"
 
     # Check if installed by manager ( packages installed via package.yaml file )
     if [ "$state" = "dotsys" ] && ! [ "$installed" -eq 0 ]; then
         local manager="$(get_topic_manager "$key")"
         in_state "$manager" "$key" "$val"
         installed=$?
-        debug "   - is_installed in ${manager:-not managed}: $installed"
+        debug "   - is_installed in manager sate file:${manager:-not managed} -> $installed"
     fi
 
     # Check if installed on system, not managed by dotsys
@@ -103,10 +103,10 @@ is_installed () {
                 installed=0
             fi
         fi
-        debug "   - is_installed by other means: $installed"
+        debug "   - is_installed by other means -> $installed"
     fi
 
-    debug "   - is_installed $key:$val final: $installed"
+    debug "   - is_installed ($key:$val) final -> $installed"
 
     return $installed
 }

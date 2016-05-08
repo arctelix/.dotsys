@@ -35,7 +35,7 @@ run_topic_script () {
 
   # no script required for topic
   if [ $status -eq 10 ]; then
-     success "$(printf "No $action script supplied %s for %b$topic%b" "$DRY_RUN" $light_green $rc)"
+     success "$(printf "No $action script supplied $DRY_RUN for %b$topic%b" $green $rc)"
   fi
 
   # record success to state file (10 = not found, but not required)
@@ -88,7 +88,7 @@ run_script (){
       status=$?
     fi
 
-    success_or_fail $status "exicute" "$(printf "script %s%b%s%b on %b%s%b" "$DRY_RUN" $green "$script" $rc $green "$PLATFORM" $rc)"
+    success_or_fail $status "exicute" "$(printf "script $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
 
     # output to debug
     if [ $? -eq 0 ]; then
@@ -99,7 +99,7 @@ run_script (){
 
   # missing required
   elif [ "$required" ]; then
-    fail "$(printf "Script not found %s%b%s%b on %b%s%b" "$DRY_RUN" $green "$script" $rc $green "$PLATFORM" $rc)"
+    fail "$(printf "Script not found $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
     printf "missing: %s\n" "$script" >> $DEBUG_FILE
     status=11
 
@@ -150,8 +150,12 @@ run_script_func () {
   local status=0
 
   # execute built in function then user script function
+  local script_sources=(builtin $ACTIVE_REPO)
+  local script_src
   local script
+  local i=0
   for script in $scripts; do
+      script_src="${script_sources[$i]}"
       if script_func_exists "$script" "$action"; then
 
           debug "   running $script $action ${params[@]}"
@@ -162,7 +166,7 @@ run_script_func () {
             status=$?
           fi
 
-          local message="$(printf "%b%s%b %s%b%s%bwith %b%s%b" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$params " $rc $green "$script_name " $rc )"
+          local message="$(printf "%b%s%b $DRY_RUN %b%s%b with %b%s%b" $green "$(cap_first $topic)" $rc $green "${params:-\b}" $rc $green "$script_src $script_name" $rc )"
 
           # Required function success/fail
           if [ "$required" ]; then
@@ -175,12 +179,14 @@ run_script_func () {
 
       # Required script fail
       elif [ "$required" ]; then
-          fail "$(printf "%b%s%b's %s%b%s%b file does not define the required %b%s%b function" $green "$(cap_first $topic)" $rc "$DRY_RUN" $green "$script_name " $rc $green "$action" $rc )"
+          fail "$(printf "%b%s%b's $DRY_RUN %b%s%b file does not define the required %b%s%b function" $green "$(cap_first $topic)" $rc $green "$script_src $script_name" $rc $green "$action" $rc )"
           status=12
       # Silent fail when not required
       else
          status=10
       fi
+
+      i=$((i+1))
 
   done
 

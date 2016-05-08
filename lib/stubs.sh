@@ -122,8 +122,10 @@ create_topic_stubs () {
     local file
 
     local builtin_stubs="$(get_builtin_stub_files "$topic")"
+    if ! [ "$builtin_stubs" ]; then return; fi
     while IFS=$'\n' read -r file; do
         local stub_name="$(basename "${file%.*}")"
+        debug "STUBBING TOPIC: $topic file $stub_name"
         #confirm_task "create" "the stub file for" "${topic}'s $stub_name"
         create_user_stub "$topic" "$stub_name" "$force"
     done <<< "$builtin_stubs"
@@ -271,7 +273,7 @@ create_user_stub () {
 # this is for git, may be useful else where..
 get_credential_helper () {
     local helper='cache'
-    if [ "$PLATFORM" == "mac" ]; then
+    if [[ "$PLATFORM" == *"mac" ]]; then
         helper='osxkeychain'
     fi
     echo "$helper"
