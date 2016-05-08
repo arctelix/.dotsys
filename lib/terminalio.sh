@@ -61,7 +61,7 @@ msg () {
 }
 
 msg_help () {
-  printf  "\r%b$1. Use %babort%b to skip.%b\n" $dark_gray $blue $dark_gray $rc
+  printf  "\r%b$1%b\n" $dark_gray $rc
 
 }
 
@@ -149,6 +149,7 @@ cap_first () {
 
 clear_lines () {
     printf "$clear_line"
+    if ! [ "$1" ];then return;fi
     local lines=$(printf "$1" | wc -l)
     lines=$lines+1 #clears all lines
     local sub=${2:-0} # add (+#) or subtract (-#) lines to clear
@@ -160,16 +161,21 @@ get_user_input () {
 
     local usage="get_user_input [<action>]"
     local usage_full="
-    -o | --options )          alternate options line
+
+    -o | --options )    alternate options line
+                        or 'none' for no options
+    -e | --extra)       extra option
+    -h | --hint)        option line hint for no invalid input
     -c | --clear )      Number + extra/ - less lines to lear [0]
     -t | --true )       Text to print for 0 value
                         set to 'none' for required variable input
     -f | --false        Text to print for 1 value
-    -h | --help         Text to print for help
+                        or 'none' require input.
     -i | --invalid      Text to print on invalid selection
                         or 'none' noting is invalid
     -d | --default      Default value on enter key
-    -n | --noconfirm    Default value on enter key
+    -r | --required     Make confirmation required
+         --help         Text to print for help
       "
 
     local question=
@@ -180,23 +186,24 @@ get_user_input () {
     local options
     local clear="false"
     local invalid="invalid"
-    local confirm="true"
+    local confirmed="$TOPIC_CONFIRMED"
+    local hint="\b"
+    local extra=()
 
 
     while [[ $# > 0 ]]; do
     case "$1" in
-      -o | --options )  options=" $2"; shift ;;# alternate options line
-      -c | --clear )    clear="$2"; shift ;;   # Number + extra/ - less lines to lear [0]
-      -t | --true )     true="$2"; shift ;;    # Text to print for 0 value
-                                               # or "none" require input.
-      -f | --false )    false="$2"; shift ;;   # Text to print for 1 value
-                                               # or "none" require input.
-      -h | --help )     help="$2"; shift ;;    # Text to print for help
-      -i | --invalid )  invlaid="$2"; shift ;; # Text to print on invalid selection
-                                               # or "none" no invalid entry.
-      -d | --default )  default="$2"; shift ;;# Default value on enter key
-      -n | --noconfirm )  confirm="none" ;;  # Default value on enter key
-      * ) uncaught_case "$1" "question" "true" "none" "help" ;;
+      -o | --options )  options=" $2";shift;;
+      -e | --extra)     extra+=("$2");shift;;
+      -h | --hint)      hint="$2";shift;;
+      -c | --clear )    clear="$2";shift;;
+      -t | --true )     true="$2";shift;;
+      -f | --false )    false="$2";shift;;
+      -i | --invalid )  invalid="$2";shift;;
+      -d | --default )  default="$2";shift ;;
+      -r | --required ) confirmed= ;;
+           --help )     help="$2";shift ;;
+      * ) uncaught_case "$1" "question" "true" "false" "help" ;;
     esac
     shift
     done
@@ -204,36 +211,49 @@ get_user_input () {
     true="${true:-yes}"
     false="${false:-no}"
 
-    # any input is ok so just offer false option everything else is true
-    if [ "$options" != "none" ] && [ "$true" = "none" ]; then
-        options="$(printf "(%b${false:0:1}%b)%b${false:1}%b" \
-                    $yellow $rc $yellow $rc)"
-        confirm="true" # if no true option then input is required and must be confirmed
-
-    # any input is ok so just offer true option everything else is true
-    elif [ "$options" != "none" ] && [ "$false" = "none" ]; then
-        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b" \
-                    $yellow $rc $yellow $rc)"
-        confirm="true" # if no false option then input is required and must be confirmed
-
-    # use default options
-    elif ! [ "$options" ]; then
-        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
-                        $yellow $rc $yellow $rc $yellow $rc $yellow $rc)"
-
-    # no options input required
-    else
+    if [ "$options" = "none" ]; then
         true="none"
         false="none"
-        confirm="true" # if no true option then input is required and must be confirmed
+        confirmed= # if no true option then input is required and must be confirmed
+    # any input is ok so just offer false option everything else is true
+    elif [ "$true" = "none" ]; then
+        options="$(printf "(%b${false:0:1}%b)%b${false:1}%b" $yellow $rc $yellow $rc)"
+        confirmed= # if no true option then input is required and must be confirmed
+        invalid="none"
+
+    # any input is ok so just offer true option everything else is true
+    elif [ "$false" = "none" ]; then
+        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b" $green $rc $green $rc)"
+        confirmed= # if no false option then input is required and must be confirmed
+        invalid="none"
+
+    # use default options
+    else
+        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
+                        $green $rc $green $rc $yellow $rc $yellow $rc)"
     fi
 
-    default="${default:-$true}"
+    # put options on new line
+    if [ "$hint" ] || [ "${extra[0]}" ]; then
+       options="\n$spacer $options"
+    fi
 
-    question=$(printf "$question $options [%b${default}%b]" $dark_gray $rc)
+    # format extra options
+    local opt
+    for opt in "${extra[@]}"; do
+        opt="$(printf "(%b${opt:0:1}%b)%b${opt:1}%b" $yellow $rc $yellow $rc)"
+        options="$options $opt"
+    done
+
+
+    default="${default:-$true}"
+    question=$(printf "$question $options $hint [%b${default}%b]" $dark_gray $rc)
 
     user "${question} : "
-    if ! [ "$TOPIC_CONFIRMED" ] && [ "$confirm" != "false" ]; then
+
+    debug "-- get_user_input: confirm=$confirmed invalid=$invalid"
+
+    if ! [ "$confirmed" ]; then
         local state=0
         while true; do
             read user_input < /dev/tty
@@ -252,7 +272,8 @@ get_user_input () {
                 help )
                     msg_help "$(printf "$help")"
                     ;;
-                "") # blank value ok
+                "")
+                    # blank value ok
                     if [ "$true" = "none" ]; then
                         status=1
                         user_input=
@@ -266,7 +287,7 @@ get_user_input () {
                     ;;
                 * )
                     # any input is ok
-                    if [ "$invlaid" = "none" ]; then
+                    if [ "$invalid" = "none" ]; then
                         status=0
                         break
                     fi
@@ -298,9 +319,13 @@ confirm_task () {
   shift; shift; shift
   local confirmed=
 
+  #TODO: CONFIRMED_VAR to help compartmentalize confirmations
+  local CONFIRMED_VAR="TOPIC_CONFIRMED"
+
   while [[ $# > 0 ]]; do
     case "$1" in
-      -c | --confirmed )        confirmed="true"; shift ;;# alternate options line
+      -c | --confirmed )        confirmed="true";   shift ;;# alternate options line
+      -v | --confvar )          CONFIRMED_VAR="$1"; shift ;;# alternate options line
       * ) extra_lines+=("$1") ;;
     esac
     shift
@@ -312,7 +337,7 @@ confirm_task () {
     lines+="\n$spacer $line"
   done
 
-  if ! [ "$TOPIC_CONFIRMED" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
+  if ! [ "${TOPIC_CONFIRMED}" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
 
       local text="$(printf "Would you like to %b%s%b %s %b%s%b %s?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
@@ -453,27 +478,34 @@ required_vars () {
 # Displays error message and basic usage on fail
 # ex: uncaught_case "$1" "var_name" "var_name"
 uncaught_case (){
- local val="$1"
+ local uc_c_val="$1"
  shift
  local set_var
- local vars="$@"
- local p
- for p in $vars; do
-    if [[ "$val" == "-"* ]]; then
-        printf "Invalid parameter '$val'"
+ local uc_p_names="$@"
+ local us_p_name
+ for us_p_name in $uc_p_names; do
+    if [[ "$uc_c_val" == "-"* ]]; then
+        printf "Invalid parameter '$uc_c_val'"
         show_usage
     fi
     # if the supplied variable name is not set
-    if [ -z "${!p}" ]; then
-      local eval_exp="${p}=\"$val\""
+    if [ -z "${!us_p_name}" ]; then
+      local eval_exp="${us_p_name}=\"$uc_c_val\""
       eval "$eval_exp"
-      set_var="$p"
+      set_var="$us_p_name"
       break
     fi
  done
 
- if [ -z "$set_var" ] && [ "$val" ]; then
-   error "Too many params: ($vars) have all been set and got value: $val"
+ if [ -z "$set_var" ] && [ "$uc_c_val" ]; then
+   local uc_c_vals=""
+   for us_p_name in $uc_p_names;do
+        uc_c_vals+="${us_p_name}=${!us_p_name}\n"
+   done
+
+
+   error "Too many params:
+   \r${uc_c_vals}\rhave been set and got value: $uc_c_val"
    show_usage
  fi
 }

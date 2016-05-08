@@ -227,9 +227,10 @@ get_dir_list () {
     local force="$2"
     local list
     local t
-    if ! [ -d "$dir" ];then return 1;fi
 
+    if ! [ -d "$dir" ];then return 1;fi
     list="$(find "$dir" -mindepth 1 -maxdepth 1 -type d -not -name '\.*')"
+
     for t in ${list[@]}; do
         echo "$(basename "$t") "
     done
@@ -242,7 +243,7 @@ get_topic_list () {
     local topic
 
 
-    # only installed topics
+    # only installed topics when not installing unless forced
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read line; do
             topic=${line%:*}

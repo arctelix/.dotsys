@@ -89,8 +89,8 @@ symlink_topic () {
     local no_ext="${src%.*}"
     local stub="${no_ext}.stub"
 
-    debug "src: $src"
-    debug "stub   : $stub"
+    debug "src  : $src"
+    debug "stub : $stub"
 
     # No simlinks found
     if [[ -z "$src" ]]; then
@@ -115,6 +115,8 @@ symlink_topic () {
 
     # check for alternate dst in config  *.symlink -> path/name
     dst="$(get_symlink_dst "$src" "$dst_path")"
+
+    debug "$src -> $dst"
 
 
     if [ "$action" = "link" ] ; then
@@ -157,21 +159,23 @@ get_symlink_dst () {
     # create dst path+file name
     dst_file="$dst_path/.$base_name"
 
+    #debug "-- get_symlink_dst: $src_file -> $dst_file"
+
     # check topic config for symlink paths
-    while IFS=$'\n' read -r link; do
+    for link in $link_cfg; do
       src_name="$(basename "$src_file")"
       alt_name="${link%-\>*}"
-
+      #debug "(${src_name}=${alt_name})"
       # return config path if found
       if [ "$src_name" = "$alt_name" ]; then
          dst_file="${link#*-\>}"
+         #debug "  CONFIG DEST: ($dst_file)"
          mkdir -p "$(dirname "$dst_file")"
-         echo "$dst_file"
          break
       fi
-    done <<< "$link_cfg"
+    done
 
-    # return original if not found
+    # return original or new
     echo "$dst_file"
 }
 # Unlink a singe file or directory

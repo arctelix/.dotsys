@@ -52,7 +52,7 @@ iterate_topics (){
       task "$topic_name ($platform) $task_name"
 
       # check for topic platform exclusions
-      if platform_excluded "$topic" "$platform"; then
+      if topic_excluded "$topic" "$platform"; then
         success "$(printf "Excluded %b%s%b on %b%s%b" $green "$topic" $rc $green "$platform" $rc)"
         continue
       fi

@@ -28,7 +28,7 @@
 # OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
+#TODO: make sure config respects new platform names windows-babun linux-mac  linux: x should exclude all linux, mac: x only excludes mac
 #TODO: Append *.stub to git ignore for every repo
 #TODO: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
 #TODO: change .dotsys.cfg to dotsys.cfg so we can hide them with a .
@@ -350,7 +350,7 @@ dotsys () {
         GLOBAL_CONFIRMED="skip"
     fi
 
-    TOPIC_CONFIRMED="${TOPIC_CONFIRMED:-$GLOBAL_CONFIRMED}"
+
 
     # DIRECT MANGER PACKAGE MANAGEMENT
     # This allows dotsys to manage packages without a topic directory
@@ -434,10 +434,14 @@ dotsys () {
         local list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
-                msg "$( printf "\nThere are no topics in %b$ACTIVE_REPO_DIR%b" $green $yellow)"
+                msg "$( printf "\nThere are no topics in %b$ACTIVE_REPO_DIR\n%b" $green $yellow)"
             else
-                msg "$( printf "\nThere are no topics %binstalled by dotsys%b to $action" $green $yellow)"
+                msg "$( printf "\nThere are no topics %binstalled by dotsys%b to $action\n" $green $yellow)"
             fi
+            copy_topics_to_repo "$ACTIVE_REPO"
+            add_existing_dotfiles "$ACTIVE_REPO"
+            # Check for topics again
+            list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
         fi
         topics=("$list")
         debug "main -> topics list:\n\r$topics"
@@ -446,8 +450,8 @@ dotsys () {
 
     # We stub here rather then during symlink process
     # to get all user info up front for auto install
-    if [ "$action" = "install" ] || [ "$action" = "upgrade" ] && in_limits "repo" "dotsys"; then
-        manage_stubs $action "${topics[@]}"
+    if [ "$action" = "install" ] || [ "$action" = "upgrade" ] && in_limits "links" "dotsys"; then
+        manage_stubs "$action" "${topics[@]}" "$force"
     fi
 
     # Iterate topics
@@ -457,6 +461,8 @@ dotsys () {
     local topic
 
     for topic in ${topics[@]};do
+
+        TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
 
         # ABORT: NON EXISTANT TOPICS
         if ! topic_exists "$topic"; then
@@ -468,7 +474,7 @@ dotsys () {
         load_topic_config_vars "$topic"
 
         # ABORT: on platform exclude
-        if platform_excluded "$topic"; then
+        if topic_excluded "$topic"; then
             task "$(printf "Excluded %b${topic}%b on $PLATFORM" $green $blue)"
             continue
         fi

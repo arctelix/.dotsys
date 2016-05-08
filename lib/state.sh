@@ -57,7 +57,21 @@ grep_kv (){
 is_installed () {
     local state="$1"
     local key="$2"
-    local val="$3"
+    shift;shift
+    local val
+
+    usage="is_installed <state> <key> [<val>] [<option>]"
+    usage_full="
+        -s | --silent        Silence warnings
+    "
+    local silent
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -s | --silent )      silent="$1" ;;
+        *)  uncaught_case "$1" "state" "key" "val" ;;
+        esac
+        shift
+    done
 
     local installed=1
     local manager=
@@ -78,7 +92,7 @@ is_installed () {
     # Check if installed on system, not managed by dotsys
     if ! [ "$installed" -eq 0 ]; then
         local installed_test="$(get_topic_config_val "$key" "installed_test")"
-        if cmd_exists "${installed_test:-$key}"; then
+        if cmd_exists "${installed_test:-$key}" && ! [ "$silent" ]; then
             if [ "$action" = "uninstall" ]; then
                 warn "$(printf "Although %b$key is installed%b, it was not installed by dotsys.
                 $spacer You will have to %buninstall it by whatever means it was installed.%b" $green $rc $yellow $rc) "

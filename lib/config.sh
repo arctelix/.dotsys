@@ -55,14 +55,15 @@ load_config_vars (){
     else
         active_repo="$(get_active_repo)"
         config_file="$(get_config_file_from_repo "$active_repo")"
+        debug "existing user repo: $active_repo"
+        debug "existing user cfg: $config_file"
     fi
 
     if [ ! "$active_repo" ] ; then
         if is_new_user && [ "$action" != "uninstall" ]; then
             new_user_config "$repo"
         else
-            error "A repo must be specified!"
-            exit
+            prompt_config_or_repo "$action" "A repo must be specified!"
         fi
     # Show logo when more then one topic or no topics
     elif verbose_mode; then
@@ -72,8 +73,10 @@ load_config_vars (){
     # MANAGE REPO Make sure repo is installed updated
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
-        debug "   load_config_vars: call manage_repo"
-        if in_limits "repo" -r; then confirmed="--confirmed"; fi
+        debug "   load_config_vars -> call manage_repo"
+        if in_limits "repo" -r; then
+            confirmed="--confirmed"
+        fi
         manage_repo "$action" "$active_repo" "$force" "$confirmed"
         status=$?
     fi
@@ -157,6 +160,7 @@ validate_config_or_repo (){
 
 }
 
+CURRENT_LINES=
 prompt_config_or_repo () {
 
     local action="${1:-install}"
@@ -167,36 +171,40 @@ prompt_config_or_repo () {
     #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name '.dotsys.cfg -exec dirname {}')"
     #echo "found files: $config_files"
 
-    local default=
-    if [ "$active_repo" ]; then default=" [$active_repo]"
-    elif [ "$config_file" ]; then default=" [$config_file]"
+    local default
+    if ! [ "$error" ]; then
+        if [ "$active_repo" ]; then default=" [$active_repo]"
+        elif [ "$config_file" ]; then default=" [$config_file]"
+        fi
     fi
 
-    local q_repo="Enter a repo or config file to ${action}${default}"
-    if ! [ "$active_repo" ]; then
-          q_repo+="$(printf "\n%brepo example: github_user/repo_name%b" $dark_gray $rc)"
-    fi
+
+    local help="$(msg_help "$(printf "Use can type %bhelp%b for more info or %babort%b to exit" $blue $dark_gray $blue $dark_gray)")"
+    local question="Enter a repo or config file to ${action}${default}"
+    local prompt="$(printf "${help}\n${question}")"
+
 
     if [ "$error" ]; then
-        clear_lines "$q_repo"
-        msg "$(printf "%bERROR: ${error}, try again%b" $red $rc)"
-        printf "$q_repo : "
-    else
-        printf "$q_repo : "
+        clear_lines "$CURRENT_LINES"
+        error="$(printf "%bERROR: ${error}, try again%b" $red $rc)"
+        prompt="$(printf "${error}\n${prompt}")"
     fi
 
-    while true; do
-        # Read from tty, needed because we read in outer loop.
-        read user_input < /dev/tty
+    CURRENT_LINES="$prompt"
 
-        local repo="$(dotfiles_dir)$user_input"
+    while true; do
+
+        # Read from tty, needed because we read in outer loop.
+        read -p "$prompt : " user_input < /dev/tty
 
         if [ "$user_input" = "abort" ]; then
            exit
         elif [ "$user_input" = "help" ]; then
 
-            clear_lines "$q_repo"
-            local h_repo="$(printf "%bSETUP HELP:%b
+            clear_lines "$CURRENT_LINES"
+
+            local help="$(printf "%b
+                   \rSETUP HELP:
 
                    \rOPTION 1 (repo):
 
@@ -217,20 +225,19 @@ prompt_config_or_repo () {
                    \r  Provide a full path to a %b.dotsys.cfg%b file and we'll take
                    \r  it form there.
 
-                   \rEASY!%b" \ $yellow $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $rc)"
+                   \rEASY!%b" \ $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $rc)"
 
-            printf "\r$h_repo \n\n"
+            printf "\r$help \n\n"
 
-            printf "$q_repo : "
         elif [ "$user_input" ]; then
             break
 
-        elif [ "$active_repo" ]; then
-            user_input="$active_repo"
+        elif [ "$default" ]; then
+            user_input="$default"
             break
         else
-            clear_lines "$q_repo"
-            printf "$q_repo : "
+            clear_lines "$CURRENT_LINES"
+            error=
         fi
     done
 
@@ -242,7 +249,7 @@ prompt_config_or_repo () {
 # USER CONFIG
 
 is_new_user () {
-    ! [ "$(state_primary_repo)" ]
+    ! [ -s "$(state_file "user")" ]
 
     return $?
 }
@@ -255,7 +262,6 @@ new_user_config () {
     msg "$(printf "A multiform package manger with dotfile integration!")"
     printf "\n"
     msg "$(printf "Before getting started we have a few questions.")"
-    msg_help "$(printf "Use can type %bhelp%b for more info" $blue $dark_gray)"
     printf "\n"
 
     prompt_config_or_repo "$action"
@@ -264,8 +270,11 @@ new_user_config () {
         set_user_vars "$active_repo"
     fi
 
-    user_toggle_logo
-    user_toggle_stats
+    user_config_logo
+
+    user_config_stats
+
+    user_config_stubs
 
     msg "\nCongratulations ${USER_NAME}, your preferences are set!\n"
     msg "Now were going to configure your repo.\n"
@@ -279,6 +288,7 @@ set_user_vars () {
 }
 
 get_config_file_from_repo () {
+  if ! [ "$1" ]; then return 1;fi
   echo "$(repo_dir "$1")/.dotsys.cfg"
 }
 
@@ -303,19 +313,19 @@ freeze() {
     done
 }
 
-user_toggle_logo () {
+user_config_logo () {
     get_user_input "Would you like to see the dotsys logo when
             $spacer working on multiple topics (it's helpful)?"
     set_state_value "show_logo" $? "user"
 }
 
-user_toggle_stats () {
+user_config_stats () {
     get_user_input "Would you like to see the dotsys stats when
             $spacer working on multiple topics (it's helpful)?"
     set_state_value "show_stats" $? "user"
 }
 
-user_toggle_stubs () {
+user_config_stubs () {
     info "The stub file process allows topics to collect user specific
   $spacer information and sources topic related files from other topics
   $spacer such as *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"
@@ -398,57 +408,52 @@ load_topic_config_vars () {
 
 # PRIMARY METHOD FOR GETTING CONFIGS
 get_topic_config_val () {
-  # Returns the prevailing value for a given config
-  local topic="$1"
-  shift
+    # Returns the prevailing value for a given config
+    local topic="$1"
+    shift
 
-  # can't call load_topic_config_vars here because it's called in sub shell!! :(
+    local splat="$(specific_platform)"
+    local gplat="$(generic_platform)"
+    local cfg_vars=()
+    local val
+    local var
 
-  local user_topic_plat_cfg="$(get_config_val "_$topic" "$PLATFORM" "$@")"
-  local user_topic_cfg="$(get_config_val "_$topic" "$@")"
-  local topic_plat_cfg="$(get_config_val "$topic" "$PLATFORM" "$@")"
-  local topic_cfg="$(get_config_val "$topic" "$@")"
-  local user_gen_plat_config="$(get_config_val "_$PLATFORM" "$@")"
-  local user_gen_config="$(get_config_val "_" "$@")"
-  local def_plat_config="$(get_config_val "__$PLATFORM" "$@")"
-  local def_config="$(get_config_val "__" "$@")"
-  local val=
+    # configs are sourced from specific to general
+    # repo configs supered topic configs
+    # user configs supered default configs
 
+    # user repo (topic platform & topic root)
 
-  # use user topic if defined config
-  if [ "$user_topic_plat_cfg" ];then
-    val="$user_topic_plat_cfg"
-  # use user topic platform config
-  elif [ "$user_topic_cfg" ];then
-    val="$user_topic_cfg"
+    cfg_vars+=("_$topic $splat $@")
+    cfg_vars+=("_$topic $gplat $@")
+    cfg_vars+=("_$topic $@")
 
-  # use topic platform config
-  elif [ "$topic_plat_cfg" ];then
-    val="$topic_plat_cfg"
-  # use topic config
-  elif [ "$topic_cfg" ];then
-    val="$topic_cfg"
+    # topic (platform & root)
 
-  # use root user platform
-  elif [ "$user_gen_plat_config" ];then
-    val="$user_gen_plat_config"
-  # use root user
-  elif [ "$user_gen_config" ];then
-    val="$user_gen_config"
+    cfg_vars+=("$topic $splat $@")
+    cfg_vars+=("$topic $gplat $@")
+    cfg_vars+=("$topic $@")
 
-  # use default platform
-  elif [ "$def_plat_config" ];then
-    val="$def_plat_config"
-  # use default
-  elif [ "$def_config" ];then
-    val="$def_config"
-  fi
+    # user repo (root platform & root)
 
-  if [ "$val" = "$topic" ];then
-    val=""
-  fi
+    cfg_vars+=("_$splat $@")
+    cfg_vars+=("_$gplat $@")
+    cfg_vars+=("_ $@")
 
-  echo "${val[@]}"
+    # default repo (root platform & root)
+
+    cfg_vars+=("__$splat $@")
+    cfg_vars+=("__$gplat $@")
+    cfg_vars+=("__ $@")
+
+    for var in "${cfg_vars[@]}";do
+        val="$(get_config_val $var)"
+        if [ "$val" ] && [ "$val" != "$topic" ];then
+            echo "$val"
+            return 0
+        fi
+    done
+    return 1
 }
 
 

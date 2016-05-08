@@ -44,12 +44,11 @@ manage_repo (){
 
     debug "   manage_repo: final ->  a:$action r:$repo lr:$local_repo b:$branch $force"
 
+
     # make sure git is installed
     if ! cmd_exists git;then
-        dotsys install git --recursive
+        dotsys install cmd git --recursive
     fi
-
-    checkout_branch "$repo" "$branch"
 
     local installed=
     local repo_status=
@@ -59,16 +58,18 @@ manage_repo (){
         installed="true"
         if [ -d "$local_repo" ]; then
             repo_status="installed"
+            checkout_branch "$repo" "$branch"
         else
             repo_status="missing"
         fi
     # existing uninstalled local repo
     elif [ -d "$local_repo" ]; then
-        info "Found uninstalled existing directory: $local_repo"
-        repo_status="existing"
+        info "Found a local directory: $local_repo"
+        repo_status="local directory"
     else
         # check for remote
-        info "Checking for specified remote 1 $github_repo"
+        debug "   check for remote #1"
+        info "Checking for specified remote $github_repo"
         # remote repo found
         if has_remote_repo "$repo"; then
             info "Found uninstalled remote repo: $github_repo"
@@ -180,17 +181,12 @@ manage_repo (){
     # ACTION INSTALL
     if [ "$action" = "install" ]; then
 
-        # make sure git is installed
-        if ! cmd_exists git;then
-            dotsys install cmd git --recursive
-        fi
-
         # REMOTE: Clone existing repo
         if [ "$repo_status" = "remote" ];then
             clone_remote_repo "$repo"
 
         # create full repo directory (after remote or clone will fail)
-        elif [ "$repo_status" != "existing" ];then
+        elif [ "$repo_status" != "local directory" ];then
             mkdir -p "$local_repo"
             if ! [ $? -eq 0 ]; then error "Local repo $local_repo could not be created"; exit; fi
         fi
@@ -200,16 +196,16 @@ manage_repo (){
 
         # make sure repo is git!
         if ! is_git; then
-            inint_local_repo "$repo"
+            init_local_repo "$repo"
+            if ! [ $? -eq 0 ]; then exit; fi
         fi
 
         # EXISTING/INSTALLED check for remote
-        if [ "$repo_status" = "existing" ] || [ "$repo_status" = "installed" ];then
+        if [ "$repo_status" = "local directory" ] || [ "$repo_status" = "installed" ];then
+            debug "   check for remote local directory/installed #2"
             if has_remote_repo "$repo"; then
                 manage_remote_repo "$repo" auto
-                if ! [ $? -eq 0 ]; then
-                    exit
-                fi
+                if ! [ $? -eq 0 ]; then exit; fi
             else
                 repo_status="new"
             fi
@@ -220,15 +216,9 @@ manage_repo (){
 
         # NEW: initialize remote repo
         if [ "$repo_status" = "new" ];then
-
             init_remote_repo "$repo"
-
             msg "$spacer Don't forget to add topics to your new repo..."
-            copy_topics_to_repo "$repo"
         fi
-
-        state_install "dotsys" "$state_key" "$repo"
-        action_status=$?
 
         # Moved to main
         #create_all_req_stubs
@@ -246,7 +236,8 @@ manage_repo (){
             msg "$spacer HINT: Freeze any time with 'dotsys freeze user/repo_name'"
         fi
 
-        if [ "$action" != "install" ]; then return; fi
+        state_install "dotsys" "$state_key" "$repo"
+        action_status=$?
 
     elif [ "$action" = "update" ];then
         # this should pull if required but not push!
@@ -275,11 +266,12 @@ manage_repo (){
         state_uninstall "dotsys" "$state_key" "$repo"
         action_status=$?
         # confirm delete if repo exists
-        if [ -d "$local_repo" ]; then
+        if [ -d "$local_repo" ] && has_remote_repo "$repo"; then
             manage_remote_repo "$repo" push
+
             # delete local repo (only if remote is pushed)
             if [ $? -eq 0 ]; then
-                get_user_input "Would you like to delete local repo $repo?"
+                get_user_input "Would you like to delete local repo $repo?" -r
                 if [ $? -eq 0 ]; then
                     rm -rf "$local_repo"
                 fi
@@ -404,7 +396,7 @@ manage_remote_repo (){
             if [ ! "$message" ]; then
                 local user_input
                 message="dotsys $action ${limits[0]} ${topics[@]:-\b}"
-                get_user_input "Would you like to add a custom commit message?\n$spacer" --invalid none --default "$message"
+                get_user_input "Would you like to add a custom commit message?\n$spacer" --invalid none --default "$message" -r
                 if [ $? -eq 0 ]; then message="$user_input"; fi
             fi
             git add .
@@ -449,9 +441,6 @@ init_local_repo (){
     result="$(git remote add origin "$github_repo" 2>&1)"
     success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
 
-    #git remote -v
-    checkout_branch "$repo" "$branch"
-
     result="$(git branch --set-upstream-to origin/$branch 2>&1)"
     success_or_fail $? "" "$(indent_lines "$result")"
 
@@ -471,7 +460,7 @@ init_remote_repo () {
     cd "$local_repo"
 
     git add .
-    git commit -m "initialized by dotsys"
+    git commit -a -m "initialized by dotsys"
 
     # Git hub will prompt for the user password
     local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
@@ -490,16 +479,18 @@ init_remote_repo () {
 checkout_branch (){
     local repo="$1"
     local branch="${2:-$branch}"
+    local local_repo="$(repo_dir "$repo")"
+    local OWD="$PWD"
 
     debug "   checkout_branch: r:$repo b:$branch"
     if is_git "$repo"; then
         cd "$local_repo"
-        local current="$(git rev-parse --abbrev-ref HEAD)"
+        # Get current branch or no branch exists
+        current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+        if ! [ $? -eq 0 ]; then cd "$OWD"; return; fi
+        debug "   checkout_branch current=$current"
         # change branch if branch != current branch
         if [ "${branch:-$current}" != "$current" ]; then
-            local local_repo="$(repo_dir "$repo")"
-            local OWD="$PWD"
-            cd "$local_repo"
             local result="$(git checkout "$branch")"
             success_or_error $? "set" "$(indent_lines "$result")"
         fi
@@ -576,8 +567,8 @@ setup_git_config () {
         fi
 
         # check for global as local default
-        local global_authorname="$(git config --global user.name || "none")"
-        local global_authoremail="$(git config --global user.email || "none")"
+        local global_authorname="$(git config --global user.name || echo "none")"
+        local global_authoremail="$(git config --global user.email || echo "none")"
 
         # check live config & state for value
         local authorname="$(git config --$cfg user.name || get_state_value "${state_prefix}_user_name" "user" )"
@@ -616,8 +607,9 @@ setup_git_config () {
         # global config & create stub
         if [ "$cfg" = "global" ]; then
             repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
-            git config "--$cfg" credential.helper "$(get_credential_helper)"
-            success "$(printf "git %b$cfg credential%b set to: %b$git_credential%b" $green $rc $green $rc)"
+            local cred="$(get_credential_helper)"
+            git config "--$cfg" credential.helper "$cred"
+            success "$(printf "git %b$cfg credential%b set to: %b$cred%b" $green $rc $green $rc)"
 
         # local config
         elif [ "$cfg" = "local" ]; then
@@ -633,7 +625,7 @@ setup_git_config () {
 
             set_state_value "${state_prefix}_user_name" "$authorname" "user"
             git config "--$cfg" user.name "$authorname"
-            success "$(printf "git %b$cfg author%b set to:  %b$authorname%b" $green $rc $green $rc)"
+            success "$(printf "git %b$cfg author%b set to: %b$authorname%b" $green $rc $green $rc)"
 
             set_state_value "${state_prefix}_user_email" "$authoremail" "user"
             git config "--$cfg" user.email "$authoremail"
@@ -669,16 +661,20 @@ is_git (){
     local repo="${1:-$repo}"
     local repo_dir="$(repo_dir "$repo")"
     local OWD="$PWD"
+    local state=1
+    if ! [ -d "$repo_dir" ] || ! [ -d "${repo_dir}/.git" ]; then return 1;fi
     cd "$repo_dir"
-    [ -d .git ] || git rev-parse --git-dir > /dev/null 2>&1
+    git rev-parse --git-dir > /dev/null 2>&1
+    local state=$?
     cd "$OWD"
+    return $state
 }
 
 
 copy_topics_to_repo () {
 
     local repo="$1"
-    local dir="$(dotfiles_dir)"
+    local root_dir="$(dotfiles_dir)"
     local repo_dir="$(repo_dir "$repo")"
     local confirmed
     local mode
@@ -687,57 +683,76 @@ copy_topics_to_repo () {
     local question="$(printf "Would you like to %badd%b existing topics from %b%s%b
                     $spacer %b(You will be asked to confirm each topic before import)%b" \
                     $green $rc \
-                    $green "$dir" $rc \
+                    $green "$root_dir" $rc \
                     $dark_gray $rc )"
-    local options="$(printf "\n$spacer %b(y)es%b, %b(n)o%b, or %bpath/to/directory%b" \
-                    $yellow $rc \
-                    $yellow $rc \
-                    $yellow $rc)"
 
+    local hint="$(printf "\b, or %bpath/to/directory%b" $yellow $rc)"
+
+    local error
     while true; do
         local user_input=
-        get_user_input "${question}?" -t "yes" -f "no" -o "$options" -i "false" -c
+        get_user_input "${question}?" -h "$hint${error}" -i "none" -c
         case "$user_input" in
             yes ) break ;;
             no  ) return ;;
-            *   ) if [ -d "$user_input" ] ; then dir="$user_input"; break; fi
+            *   ) if [ -d "$user_input" ]; then
+                    root_dir="$user_input"
+                    break
+                  else
+                    error=" Directory not found, try again"
+                  fi
         esac
     done
 
-    local found_dirs=($(get_dir_list "$dir"))
+    local found_dirs=($(get_dir_list "$root_dir"))
 
-    # list found topics
+    # filter and list found topics
     if [ "$found_dirs" ]; then
-        task "$(printf "Import topics found in %b$dir%b:" $green $rc)"
+        task "$(printf "Import topics found in %b$root_dir%b:" $green $rc)"
         local i
         for i in "${!found_dirs[@]}"; do
             local topic="${found_dirs[$i]}"
-            local files="$(find "$dir/$topic" -maxdepth 1 -type f)"
-            local is_repo="$(find "$dir/$topic" -maxdepth 2 -type f -name dotsys*)"
+            local files="$(find "$root_dir/$topic" -maxdepth 1 -type f)"
+            #local is_repo="$(find "$dir/$topic" -maxdepth 3 -type f -name "*dotsys.cfg")"
 
-            # a topic must not be a repo or match current $repo user
-            # and must contain at lest one recognised file type in topic root
-            if [ "$files" ] && ! [ "$is_repo" ] && ! [ "$topic" = "${repo%/*}" ]; then
-                local f
-                for f in $files; do
-                    if ! [[ "$f" =~ (*.symlink|*.sh|*.zsh) ]]; then
-                        unset found_dirs[$i]
-                        continue
-                    fi
-                done
+            debug "$topic=${repo%/*}"
+
+            # not $repo user and must have files
+            if [ "$topic" = "${repo%/*}" ] || ! [ "$files" ]; then
+                unset found_dirs[$i]
+                continue
             fi
+
+            # and must contain at lest one recognised file type in topic root
+            local f
+            local found_file
+            for f in $files; do
+                debug "file = $f"
+                if [[ "$f" =~ (.*\.symlink|.*\.sh|.*\.zsh) ]]; then
+                    debug "found = $f"
+                    found_file="true"
+                    break
+                fi
+            done
+
+            if ! [ "$found_file" ]; then
+                unset found_dirs[$i]
+                continue
+            fi
+            # list topic
             msg "$spacer - $topic"
         done
 
     # noting to import
     else
-       task "$(printf "Import topics not found in %b$dir%b:" $green $rc)"
+       task "$(printf "Import topics not found in %b$root_dir%b:" $green $rc)"
        return
     fi
 
-    question="$(printf "Would you like to %b(c)bopy%b, %b(m)ove%b, or %b(a)bort%b all topics" $yellow $rc $yellow $rc $yellow $rc)"
+    question="$(printf "The above possible topics were found. How would
+                $spacer you like the topics you select imported" $yellow $rc $yellow $rc $yellow $rc)"
 
-    get_user_input "${question}?" -t move -f copy -o "" -c
+    get_user_input "${question}?" -t move -f copy -f copy -c
     if [ $? -eq 0 ]; then mode=move; else mode=copy; fi
 
 
@@ -745,19 +760,19 @@ copy_topics_to_repo () {
     # Confirm each file to move/copy
     local topic
     for topic in ${found_dirs[@]}; do
-        confirm_task "$mode" "" "$topic" $(printf "%bfrom:%b $dir \n$spacer %bto:%b $repo_dir" $green rc $green $rc)
+        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:%b $root_dir \n$spacer %bto:%b $repo_dir" $green $rc $green $rc)"
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
             #local topic="${t##*/}"
             printf "$dark_gray"
             if [ "$mode" = "copy" ]; then
-                cp -LRai "${dir}/$topic" "${repo_dir}/$topic"
+                cp -LRai "${root_dir}/$topic" "${repo_dir}/$topic"
             elif [ "$mode" = "move" ]; then
-                mv -i "${dir}/$topic" "${repo_dir}/$topic"
+                mv -i "${root_dir}/$topic" "${repo_dir}/$topic"
             fi
             printf "$rc"
 
-            success_or_fail $? "$mode" "$(printf "$(cap_first $mode) %b$topic%b: %b$repo_dir%b" $green $rc $green $rc)"
+            success_or_fail $? "$mode" "$(printf "%b$topic%b -> %b$repo_dir%b" $green $rc $green $rc)"
 
         else
           clear_lines "" 2 # clear two lines of

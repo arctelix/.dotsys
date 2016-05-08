@@ -22,41 +22,60 @@
 # Checks user's system for existing configs and move to repo
 # Make sure this only happens for new user install process
 # or those configs will not get loaded
-add_existing_conf_files () {
+add_existing_dotfiles () {
+    local repo="${repo:-$ACTIVE_REPO}"
     local topic
     local topic_stubs
 
-    confirm_task "add" "existing config files to" "dotsys" \
+    confirm_task "add" "any existing original dotfiles from your system to" "dotsys" \
          "(we'll confirm each file before moving it)"
     if ! [ $? -eq 0 ]; then return;fi
 
     # iterate builtin topics
-    for topic in "$(get_dir_list "$(dotsys_dir)/builtins")"; do
-        local topic_dir="$(topic_dir "$topic")"
-
-        # skip if user already has topic in repo
-        if [ -d "$topic_dir" ]; then continue;fi
+    for topic in $(get_dir_list "$(dotsys_dir)/builtins"); do
 
         # iterate topic sub files
+        local topic_dir="$(repo_dir "$repo")/$topic"
         local stub_files="$(get_builtin_stub_files "$topic")"
         local stub_dst
-        local topic_dst
+        local stub_target
         local builtin_stub_src
         while IFS=$'\n' read -r builtin_stub_src; do
-
+            debug "src = $builtin_stub_src"
             stub_dst="$(get_symlink_dst "$builtin_stub_src")"
+            stub_target="$(get_topic_stub_target "$topic" "$builtin_stub_src")"
 
-            # Check for existing original file (symlinks will be taken care of during stub process)
+            # Check for existing original file only (symlinks will be taken care of during stub process)
             if ! [ -L "$stub_dst" ] && [ -f "$stub_dst" ]; then
-                confirm_task "move" "existing config file for" "$topic" \
-                   "$(printf "%bfrom:%b $$stub_dst \n$spacer %bto:%b $$ACTIVE_REPO" $green rc $green $rc)"
+                if [ -f "$stub_target" ]; then
+                    get_user_input "$(printf "You have two versions of %b$(basename "$stub_dst")%b:
+                            $spacer system version: %b$stub_dst%b
+                            $spacer dotsys version: %b$stub_target%b
+                            $spacer Which version would you like to use with dotsys
+                            $spacer (Don't stress, we'll backup the other one)?" $green $rc $green $rc $green $rc)" \
+                            --true "system" --false "dotsys"
+
+                    # keep system version: backup dotsys version before move
+                    if [ $? -eq 0 ]; then
+                        cp "$stub_target" "${stub_target}.bak"
+                    # keep dotsys version: delete and backup system version
+                    # symlink/stub process will take care of rest
+                    else
+                        mv "$stub_dst" "${stub_dst}.bak"
+                        continue
+                    fi
+
+                else
+                    confirm_task "move" "existing config file for" "$topic" \
+                       "$(printf "%bfrom:%b $stub_dst \n$spacer %bto:%b $stub_target" $green $rc $green $rc)"
+                fi
+
                 if ! [ $? -eq 0 ]; then continue;fi
 
-                # backup and move file
-                topic_dst="$topic_dir/$(basename "${stub_dst#.}")"
-                cp "$stub_dst" "${stub_dst}.dsbak"
-                mkdir -p "$(dirname "$topic_dst")"
-                mv "$stub_dst" "$topic_dst"
+                # backup and move system version to dotsys
+                cp "$stub_dst" "${stub_dst}.bak"
+                mkdir -p "$(dirname "$stub_target")"
+                mv "$stub_dst" "$stub_target"
 
             fi
         done <<< "$stub_files"
@@ -69,11 +88,16 @@ add_existing_conf_files () {
 manage_stubs () {
     local action="$1"
     local topics=("$2")
+    local force="$3"
     local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
     local topic
 
+    debug "-- manage_stubs: $action $topics $force"
+
     # check if user accepted subs
-    if ! get_state_value "use_stub_files" "user"; then return;fi
+    if ! get_state_value "use_stub_files" "user" || ! [ "${topics[0]}" ]; then
+        return
+    fi
 
     if [ "${#topics[@]}" -gt 1 ]; then
         confirm_task "create" "stub files for" "${topics[@]}"
@@ -81,12 +105,12 @@ manage_stubs () {
 
     for topic in $builtins; do
         debug "-- create_all_req_stubs for: $topic"
-        # always stub shell (it's required by dotsys)!
+        # always install shell stub (it's required by dotsys)!
         if ! [ "$topic" = "shell" ];then
             # abort if no user topic directory or if topic is not in current scope
             if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
         fi
-        create_topic_stubs "$topic" "$action"
+        create_topic_stubs "$topic" "$action" "$force"
     done
 }
 
@@ -94,19 +118,21 @@ manage_stubs () {
 create_topic_stubs () {
     local topic="$1"
     local action="$2"
+    local force="$3"
     local file
 
     local builtin_stubs="$(get_builtin_stub_files "$topic")"
     while IFS=$'\n' read -r file; do
         local stub_name="$(basename "${file%.*}")"
         #confirm_task "create" "the stub file for" "${topic}'s $stub_name"
-        create_user_stub "$topic" "$stub_name"
+        create_user_stub "$topic" "$stub_name" "$force"
     done <<< "$builtin_stubs"
 }
 
 get_builtin_stub_files(){
     local topic="$1"
-    echo "$(find "$(builtin_topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
+    local dir="$(builtin_topic_dir "$topic")"
+    echo "$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
 }
 
 # returns the stub file symlink target
@@ -125,6 +151,7 @@ create_user_stub () {
 
     local topic="$1"
     local stub_name="$2"
+    local force="$3"
     local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
     local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
 
@@ -138,6 +165,9 @@ create_user_stub () {
     local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
     local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
     shift; shift
+
+    # abort if stub exists unless forced
+    if [ -f "$stub_dst" ] && ! [ "$force" ]; then return;fi
 
     debug "-- create_user_stub: $stub_src
                      -> $stub_dst"
@@ -220,7 +250,7 @@ create_user_stub () {
             set_state_value "${topic}_state_key" "$val" "user"
         fi
 
-        # modify the variable
+        # modify the stub variable
         sed -e "s|{$var}|$val|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
 
@@ -230,7 +260,7 @@ create_user_stub () {
     mkdir -p "$(dirname "$stub_dst")"
     mv -f "$stub_out" "$stub_dst"
 
-    if ! is_installed "dotsys" "$topic"; then
+    if ! is_installed "dotsys" "$topic" --silent; then
         success_or_fail $? "create" "$(printf "stub file for %b$topic $stub_name%b:
             $spacer ->%b$stub_dst%b" $green $rc $green $rc)"
     fi

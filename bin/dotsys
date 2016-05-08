@@ -40,6 +40,7 @@ DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 # allows testing for all dotsys funcs
 if [ "$1" = "ds_test" ]; then
   source "$DOTSYS_LIBRARY/main.sh"
+  DEBUG=true
   shift
   echo
   warn "You have entered dotsys test mode by using the key word 'ds_test'!"
