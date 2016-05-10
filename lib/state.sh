@@ -74,39 +74,53 @@ is_installed () {
     done
 
     local installed=1
-    local manager=
+    local manager="$(get_topic_manager "$key")"
+    local system_ok
+
+    debug "-- is_installed initial state=$state"
+
+    if [ "$state" = "system" ]; then
+        state="dotsys"
+        system_ok="true"
+    elif [ "$manager" ]; then
+        state="$manager"
+    fi
 
     # test if in specified state file
     in_state "$state" "$key" "$val"
     installed=$?
-    debug "   - is_installed in state file:$state -> $installed"
+    debug "   is_installed in: $state -> $installed"
 
     # Check if installed by manager ( packages installed via package.yaml file )
-    if [ "$state" = "dotsys" ] && ! [ "$installed" -eq 0 ]; then
-        local manager="$(get_topic_manager "$key")"
-        in_state "$manager" "$key" "$val"
-        installed=$?
-        debug "   - is_installed in manager sate file:${manager:-not managed} -> $installed"
-    fi
+#    if [ "$state" = "dotsys" ] && ! [ "$installed" -eq 0 ]; then
+#        local manager="$(get_topic_manager "$key")"
+#        in_state "$manager" "$key" "$val"
+#        installed=$?
+#        debug "   - is_installed by manager: ${manager:-not managed} -> $installed"
+#    fi
 
     # Check if installed on system, not managed by dotsys
     if ! [ "$installed" -eq 0 ]; then
         local installed_test="$(get_topic_config_val "$key" "installed_test")"
-        if cmd_exists "${installed_test:-$key}" && ! [ "$silent" ]; then
-            if [ "$action" = "uninstall" ]; then
-                warn "$(printf "Although %b$key is installed%b, it was not installed by dotsys.
-                $spacer You will have to %buninstall it by whatever means it was installed.%b" $green $rc $yellow $rc) "
-                installed=1
-            elif ! [ "$force" ]; then
-                warn "$(printf "Although %b$key is installed%b, it is not managed by dotsys.
-                $spacer Use %bdotsys install $key --force%b to allow dotsys to manage it." $green $rc $yellow $rc)"
+        if cmd_exists "${installed_test:-$key}"; then
+            if [ "$system_ok" ]; then
                 installed=0
+            elif ! [ "$silent" ]; then
+                if [ "$action" = "uninstall" ]; then
+                    warn "$(printf "Although %b$key is installed%b, it was not installed by dotsys.
+                    $spacer You will have to %buninstall it by whatever means it was installed.%b" $green $rc $yellow $rc) "
+                    installed=1
+                elif ! [ "$force" ]; then
+                    warn "$(printf "Although %b$key%b is installed, it is %bnot managed by dotsys%b.
+                    $spacer Use %bdotsys install $key --force%b to allow dotsys to manage it." $green $rc $red $rc $yellow $rc)"
+                    installed=0
+                fi
             fi
         fi
-        debug "   - is_installed by other means -> $installed"
+        debug "   is_installed by other means -> $installed"
     fi
 
-    debug "   - is_installed ($key:$val) final -> $installed"
+    debug "   is_installed ($key:$val) final -> $installed"
 
     return $installed
 }
@@ -123,13 +137,13 @@ in_state () {
   local results
   local not
   local r
-
   if [[ "$key" == "!"* ]]; then
       not="${key#!}"
       key=""
-      results="$(grep -q "$(grep_kv)" "$file")"
+      debug "   in_state grep: not '$(grep_kv)'"
+      results="$(grep "$(grep_kv)" "$file")"
       for r in $results; do
-        #debug "   - in_state: result for !$not ${key}:$value  = $r"
+        debug "   - in_state grep result: $r"
         if [ "$r" ] && ! [[ "$r" =~ ${not}.*:${value} ]]; then
             return 0
         fi
@@ -138,7 +152,7 @@ in_state () {
   fi
 
   # test if key and or value is in state file
-  debug "   in_state grep '$(grep_kv)' from file: $file"
+  debug "   in_state grep: '$(grep_kv)'"
   grep -q "$(grep_kv)" "$file"
 }
 
@@ -187,6 +201,36 @@ get_state_list () {
     local p
     for p in ${file_paths[@]}; do
         local file_name="$(basename "$p")"
-        echo "${file_name%.*} "
+        echo "${file_name%.state} "
     done
+}
+
+freeze_states() {
+
+    freeze_state "user"
+    freeze_state "dotsys"
+
+    #TODO: move installed repos into repo.state
+    freeze_state "repos"
+
+    local s
+    for s in $(get_state_list); do
+        if is_manager "$s"; then
+            freeze_state "$s"
+        fi
+    done
+}
+
+freeze_state() {
+    local state="$1"
+    local file="$(state_file "$state")"
+    if ! [ -s "$file" ]; then return;fi
+
+    task "Freezing" "$(printf "%b$state state%b:" $green $cyan)"
+    while IFS='' read -r line || [[ -n "$line" ]]; do
+        #echo " - $line"
+        freeze_msg "${line%:*}" "${line#*:}"
+
+    done < "$file"
+
 }

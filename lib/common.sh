@@ -5,28 +5,6 @@
 
 # PATHS
 
-#full_path () {
-#  local file="$1"
-#  printf "$(drealpath "$file")"
-#  return $?
-
-
-#  if [ "$PLATFORM" == 'freebsd' ]; then
-#    printf "$(realpath "$file")"
-#    return $?
-#
-#  elif [ "$PLATFORM" == 'mac' ]; then
-#    local fp=$(readlink "$file")
-#    if [ ! "$?" ] || [ ! "$fp" ]; then
-#      [[ "$file" = /* ]] && printf "$file" || printf "${PWD}/${file#./}"
-#    else
-#      printf "$fp"
-#    fi
-#    return $?
-#  fi
-#  printf "$(readlink --canonicalize-existing "$file")"
-#}
-
 drealpath(){
     sh "$DOTSYS_LIBRARY/drealpath" $@
 }
@@ -153,10 +131,8 @@ is_array() {
 
 
 in_limits () {
-    local option=
     local tests=$@
-    local found=1
-    local limits="${limits:-}"
+    local option
     tests=
     while [[ $# > 0 ]]; do
         case $1 in
@@ -166,17 +142,21 @@ in_limits () {
         shift
     done
 
+    # No limits = everything in limits unless required
     if [ "$option" != "required" ] && ! [ "$limits" ]; then
         return 0
     fi
 
     local t
     for t in $tests; do
+        debug "  - testing: $t"
         if [[ ${limits[@]} =~ "$t" ]]; then
+            debug "   - in limits: $t"
             return 0
         fi
     done
-    return $found
+    debug "   - not in limits: $tests"
+    return 1
 }
 
 topic_is_repo () {
@@ -272,6 +252,16 @@ get_installed_topic_paths () {
     done < "$(state_file "dotsys")"
 }
 
+rename_all() {
+    local files="$(find "$1" -type f -name "$2")"
+    local file
+    local new
+    while IFS=$'\n' read -r file; do
+        new="$(dirname "$file")/$3"
+        get_user_input "rename $file -> $new"
+        mv "$file" "$new"
+    done <<< "$files"
+}
 
 
 

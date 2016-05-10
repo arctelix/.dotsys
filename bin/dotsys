@@ -39,9 +39,9 @@ DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
 # allows testing for all dotsys funcs
 if [ "$1" = "ds_test" ]; then
+  shift
   source "$DOTSYS_LIBRARY/main.sh"
   DEBUG=true
-  shift
   echo
   warn "You have entered dotsys test mode by using the key word 'ds_test'!"
   echo
@@ -49,10 +49,10 @@ if [ "$1" = "ds_test" ]; then
 
 # allows access to all common.sh funcs
 # (not sure yet if this will be needed)
-elif [ "$1" = "ds_common" ]; then
-  source "$DOTSYS_LIBRARY/drealpath"
+elif [ "$1" = "ds_utils" ]; then
   shift
-  sh "$DOTSYS_LIBRARY/common.sh" $@
+  source "$DOTSYS_LIBRARY/utils.sh"
+  $@
 
 # Sources all files related to topic
 # (only works for shell scripts only)
@@ -63,7 +63,7 @@ elif [ "$1" = "source_topic_files" ]; then
 # call main dotsys func
 else
   source "$DOTSYS_LIBRARY/main.sh"
-  dotsys $@
+  dotsys "$@"
   echo
 fi
 

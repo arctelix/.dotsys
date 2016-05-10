@@ -7,21 +7,32 @@
 
 red="\e[0;31m"
 dark_red="\e[01;31m"
+
 green="\e[0;32m"
 dark_green="\e[01;32m"
+
 yellow="\e[0;33m"
 dark_yellow="\e[01;33m"
+
 blue="\e[0;34m"
 dark_blue="\e[01;34m"
+
+magenta="\e[0;35m"
+dark_magenta="\e[01;35m"
+
+cyan="\e[0;36m"
+dark_cyan="\e[01;36m"
+
 gray="\e[0;37m"
 dark_gray="\e[0;90m"
-rc="\e[0m"
+
+rc="\e[0m" #reset color
+
 clear_line="\r\e[K"
 clear_line_above="\e[1A\r\e[K"
-spacer="\r\e[K        "
-save_cp="\e[s"
-restore_cp="\e[u"
-indent="        "
+
+spacer="\r\e[K        " # indent from screen edge
+indent="        " # indent from current position
 
 # OUTPUT
 
@@ -46,11 +57,11 @@ success () {
 
 fail () {
   printf  "\r%b[%b FAIL %b] %b\n" $clear_line $dark_red $rc "$1"
-  #exit 1
+  debug_log_msg "fail" "$1"
 }
 
 task() {
-  printf  "\r%b[%b TASK %b] %b$1%b %b\n" $clear_line $dark_blue $rc $blue $rc "$2"
+  printf  "\r%b[%b TASK %b] %b$1%b %b\n" $clear_line $dark_cyan $rc $cyan $rc "$2"
 }
 
 # messages
@@ -67,15 +78,44 @@ msg_help () {
 
 error () {
   printf  "\r\n%b%bERROR:  %b ${1}%b\n\n" $clear_line $dark_red $red $rc
+  debug_log_msg "error" "$1"
 
+}
+
+pass (){
+    return $?
+}
+
+freeze_msg () {
+    local task="$1"
+    local desc="$2"
+    local items="$3"
+
+    printf  "$spacer %b$task%b : $desc\n" $green $rc
+
+    if ! [ "$items" ]; then return;fi
+
+    while IFS=$'\n' read -r item; do
+        printf  "$spacer - %b$item%b\n" $green $rc
+    done <<< "$items"
+}
+
+debug_log_msg () {
+    local status="$1"
+    local item="$2"
+    printf "$status: $item \n" >> "$DOTSYS_REPOSITORY/debug.log"
 }
 
 success_or_fail () {
-    func_or_func_msg success fail $1 "$2" "$3"
+    func_or_func_msg success fail $1 "$2" "${3:-$?}"
 }
 
 success_or_error () {
-    func_or_func_msg success error $1 "$2" "$3"
+    func_or_func_msg success error $1 "$2" "${3:-$?}"
+}
+
+success_or_none () {
+    func_or_func_msg success pass $1 "$2" "${3:-$?}"
 }
 
 func_or_func_msg () {
@@ -181,7 +221,7 @@ get_user_input () {
     local question=
     local true=
     local false=
-    local help
+    local help="no help available"
     local default
     local options
     local clear="false"
@@ -211,20 +251,22 @@ get_user_input () {
     true="${true:-yes}"
     false="${false:-no}"
 
+    debug "-- get_user_input: TOPIC_CONFIRMED=$TOPIC_CONFIRMED sets confirm=$confirmed "
+
     if [ "$options" = "none" ]; then
         true="none"
         false="none"
-        confirmed= # if no true option then input is required and must be confirmed
-    # any input is ok so just offer false option everything else is true
+        confirmed=""
+    # just offer false option everything else is true
     elif [ "$true" = "none" ]; then
         options="$(printf "(%b${false:0:1}%b)%b${false:1}%b" $yellow $rc $yellow $rc)"
-        confirmed= # if no true option then input is required and must be confirmed
+        confirmed=""
         invalid="none"
 
-    # any input is ok so just offer true option everything else is true
+    # just offer true option everything is true
     elif [ "$false" = "none" ]; then
         options="$(printf "(%b${true:0:1}%b)%b${true:1}%b" $green $rc $green $rc)"
-        confirmed= # if no false option then input is required and must be confirmed
+        confirmed=""
         invalid="none"
 
     # use default options
@@ -240,10 +282,17 @@ get_user_input () {
 
     # format extra options
     local opt
+    local extra_regex
     for opt in "${extra[@]}"; do
+        if [ "$extra_regex" ]; then extra_regex="${extra_regex}|";fi
+        #TODO the extra_regex does not pickup on pipes
+        extra_regex="${extra_regex}${opt}|${opt:0:1}"
         opt="$(printf "(%b${opt:0:1}%b)%b${opt:1}%b" $yellow $rc $yellow $rc)"
         options="$options $opt"
     done
+
+    extra_regex="${extra_regex:-All the things that make architects go mad!}"
+    debug "extra_regex=$extra_regex"
 
 
     default="${default:-$true}"
@@ -251,7 +300,7 @@ get_user_input () {
 
     user "${question} : "
 
-    debug "-- get_user_input: confirm=$confirmed invalid=$invalid"
+    debug "-- get_user_input: confirm=$confirmed invalid=$invalid TOPIC_CONFIRMED=$TOPIC_CONFIRMED"
 
     if ! [ "$confirmed" ]; then
         local state=0
@@ -271,6 +320,10 @@ get_user_input () {
                     ;;
                 help )
                     msg_help "$(printf "$help")"
+                    ;;
+                ${extra_regex} )
+                    state=1
+                    break
                     ;;
                 "")
                     # blank value ok
@@ -391,10 +444,10 @@ confirm_task () {
   confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $blue "$extra_lines")"
+    task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $cyan "$extra_lines")"
     return 0
   else
-    task "$(printf "You skipped %s for %s %b%s%b %s" "$action" "$prefix" $green "$topic" $blue "$extra_lines")"
+    task "$(printf "You skipped %s for %s %b%s%b %s" "$action" "$prefix" $green "$topic" $cyan "$extra_lines")"
     return 1
   fi
 }

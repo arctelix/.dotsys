@@ -28,14 +28,13 @@ parse_yaml() {
 
 
 # CREATE CONFIG YAML FILE
-_last_node=""
-FREEZE_MODES="user topic default full"
+_cfg_yaml_last_node=""
+CFG_MODES="user topic default full"
 # Output topic config to yaml file
 create_config_yaml() {
     local repo="$1"
     local level="$2"
-    local freeze_mode=
-    # freeze_mode=$3 (see below)
+    local cfg_mode="$3"
     # "user"    : prints only user settings
     # "topic"   : prints topic $ user settings
     # "default" : prints all non blank keys (user, topic, default)
@@ -43,28 +42,26 @@ create_config_yaml() {
 
     local repo_d="$(repo_dir "$repo")"
 
-
     NODES=("$repo_d"/*)
 
     # FIRST CALL ONLY (non recursive)
-    if ! [ "$_last_node" ];then
+    if ! [ "$_cfg_yaml_last_node" ];then
         # main takes care of loading config now
         #load_config_vars "$repo" "freeze"
 
-        _last_node="${NODES[${#NODES[@]}-1]}"
+        debug "-- create_config_yaml r:$repo l:$level m:$cfg_mode"
 
-        freeze_mode="${3:-default}"
-        if ! [[ "$FREEZE_MODES" =~ "$freeze_mode" ]];then
+        _cfg_yaml_last_node="${NODES[${#NODES[@]}-1]}"
+
+        cfg_mode="${3:-default}"
+        if ! [[ "$CFG_MODES" =~ "$cfg_mode" ]];then
            error "$(printf "Not a valid freeze mode '${mode}'.
            $spacer try: user, topic, default, full")"
            exit
         fi
 
         # init file and root config
-        local yaml_file="${repo_d}/.dotsys-${freeze_mode}.cfg"
-
-        task "$(printf "Saving a %b$freeze_mode config%b file to
-                $spacer -> %b$yaml_file%b" $green $rc $green $rc)"
+        local yaml_file="${repo_d}/.dotsys-${cfg_mode}.cfg"
 
         # root level config
         echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > $yaml_file
@@ -100,9 +97,10 @@ create_config_yaml() {
         fi
 
         # last node
-        if [ "$i" = "$_last_node" ]; then
-            success "$(printf "Freeze $freeze_mode config for %b${repo}%b to\n$spacer -> %b$yaml_file%b" $green $rc $green $rc)"
-            _last_node=""
+        if [ "$i" = "$_cfg_yaml_last_node" ]; then
+            success "$(printf "Saved $cfg_mode config file for %b${repo}%b to
+                       $spacer -> %b$yaml_file%b" $green $rc $green $rc)"
+            _cfg_yaml_last_node=""
         fi
 
     done

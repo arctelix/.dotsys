@@ -28,10 +28,14 @@
 # OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-#TODO: make sure config respects new platform names windows-babun linux-mac  linux: x should exclude all linux, mac: x only excludes mac
+
+#TODO: Brew got uninstalled before cask which left stuff
+#TODO: Freeze just needs to dump state files, that's it, easy! look at existing freeze and yaml stuff
+
+
+#DONE: make sure config respects new platform names windows-babun linux-mac  linux: x should exclude all linux, mac: x only excludes mac
 #TODO: Append *.stub to git ignore for every repo
 #TODO: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
-#TODO: change .dotsys.cfg to dotsys.cfg so we can hide them with a .
 
 #TODO: handle .settings files
 #TODO: FOR NEW Installs prompt for --force & --confirm options
@@ -68,10 +72,9 @@ fi
 
 #echo "main DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 . "$DOTSYS_LIBRARY/common.sh"
-. "$DOTSYS_LIBRARY/yaml.sh"
+. "$DOTSYS_LIBRARY/configio.sh"
 . "$DOTSYS_LIBRARY/terminalio.sh"
 . "$DOTSYS_LIBRARY/state.sh"
-. "$DOTSYS_LIBRARY/iterators.sh"
 . "$DOTSYS_LIBRARY/platforms.sh"
 . "$DOTSYS_LIBRARY/scripts.sh"
 . "$DOTSYS_LIBRARY/managers.sh"
@@ -91,15 +94,18 @@ ACTIVE_REPO=
 ACTIVE_REPO_DIR=
 
 # user info (set by set_user_vars)
-PRIMARY_REPO=
 USER_NAME=
-REPO_NAME=
 
 # persist state for topic actions & symlinks
 GLOBAL_CONFIRMED=
 
 # persist state for topic actions only
 TOPIC_CONFIRMED=
+
+# persist state for symlink actions only
+SYMLINK_CONFIRMED=
+
+
 
 # Default dry run state is off
 # use 'dry_run 0' to toggle on
@@ -123,9 +129,6 @@ PLATFORM="$(get_platform)"
 # path to platform's system user bin
 PLATFORM_USER_BIN="$(platform_user_bin)"
 
-# path to debug file
-DEBUG_FILE="$DOTSYS_REPOSITORY/debug.log"
-
 # Determines if logo,stats,and other verbose messages are shownm
 VERBOSE_MODE=
 
@@ -144,7 +147,8 @@ dotsys () {
                     and sync remote repos
     update          runs update scripts, update package managers
                     re-sources bin, re-sources stubs
-    freeze [<mode>] creates config file of current state, takes optional mode <default,user,topic,full>
+    freeze          Output installed state to terminal
+                    use --log option to freeze to file
 
     <topics> optional:
 
@@ -155,7 +159,9 @@ dotsys () {
 
     -d | dotsys             Limit action to dotsys (excludes package management)
     -r | repo [branch]      Limit action to primary repo management (not topics)
-    <user/repo[:branch]>    Same as 'repo' for specified repo
+                            replace 'repo' with 'user/repo[:branch]' for alternate
+                            freeze repo: Output repo config to file
+                                         use --cfg option to set mode
     -l | links              Limit action to symlinks
     -m | managers           Limit action to package managers
     -s | scripts            Limit action to scripts
@@ -168,12 +174,14 @@ dotsys () {
     --force             force action even if already completed
     --tlogo             Toggle logo for this run only
     --tstats            Toggle stats for this run only
-    --debug             Debug mode on
+    --debug             Turn on debug mode
     --dryrun            Runs through all tasks, but no changes are actually made (must confirm each task)
     --confirm           bypass topic confirmation and backup / restore backup for existing symlinks
     --confirm delete    bypass topic confirmation and delete existing symlinks on install & uninstall
     --confirm backup    bypass topic confirmation and backup existing symlinks on install & restore backups on uninstall
     --confirm dryrun    Same as dryrun option but bypasses confirmations
+    --log <file>        Print everything to output file (not implemented yet)
+    --cfg <mode>        Set mode for config output <default, user, topic, full>
 
 
     Example usage:
@@ -216,7 +224,7 @@ dotsys () {
       configs:          Configs are yaml like configuration files that tell
                         dotsys how to handle a repo and or topics.  You can
                         customize almost everything about a repo and topic
-                        behavior with .dotsys.cfg file.
+                        behavior with dotsys.cfg file.
                         repo/dotsys.cfg repo level config file
                         topic/dotsys.cfg topic level config file
 
@@ -235,6 +243,7 @@ dotsys () {
       topic/manager.sh  Designates a topic as a manager. Functions handle packages not the manager!
                         Required functions for installing packages: install, uninstall, upgrade
                         Not supported: update & freeze as these are in the manager topic.sh file.
+                        Also note: manager's topic.sh should allow upgrading of packages via upgrade.
 
       script functions: The rules below are important (please follow them strictly)
 
@@ -263,28 +272,25 @@ dotsys () {
     check_for_help "$1"
 
     local action=
-    local freeze_mode=
 
     case $1 in
         install )   action="install" ;;
         uninstall)  action="uninstall" ;;
         upgrade )   action="upgrade" ;;
         update )    action="update" ;;
-        freeze)     action="freeze"
-                    if [[ "$FREEZE_MODES" =~ "$2" ]];then
-                        freeze_mode="$2"
-                        shift
-                    fi ;;
-        * )  error "Invalid action: $1 %b"
+        freeze)     action="freeze" ;;
+        * )  error "Invalid action: $1"
            show_usage ;;
     esac
     shift
 
     local topics=()
     local limits=()
-    local force=
-    local from_repo=
-    local from_branch=
+    local force
+    local from_repo
+    local from_branch
+    local cfg_mode
+    local LOG_ALL
     # allow toggle on a per run basis
     # also used internally to limit to one showing
     # use user_toggle_logo to turn logo off permanently
@@ -296,7 +302,10 @@ dotsys () {
         # limits
         -d | dotsys )   limits+=("dotsys") ;;
         -r | repo)      limits+=("repo")    #no topics permitted (just branch)
-                        if [ "$2" ] && [[ "$2" != "-"* ]]; then from_branch="$2";shift ;fi ;;
+                        # not followed by option
+                        if [ "$2" ] && [[ "$2" != "-"* ]]; then
+                            from_branch="$2";shift
+                        fi ;;
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
         -s | scripts)   limits+=("scripts") ;;
@@ -312,17 +321,16 @@ dotsys () {
         --debug)        DEBUG="true" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       dry_run 0 ;;
-        --confirm)      if [[ "$2" =~ (delete|backup|skip) ]]; then
+        --confirm)      if [[ "$2" =~ (default|original|repo|skip) ]]; then
                             GLOBAL_CONFIRMED="$2"
                             if [ "$2" = "dryrun" ]; then
                                 dry_run 0
                                 GLOBAL_CONFIRMED="skip"
                             fi
                             shift
-                        # default val for confirm
-                        else
-                            GLOBAL_CONFIRMED="backup"
                         fi ;;
+        --log)          LOG_ALL="true";;
+        --cfg)          cfg_mode="$2";;
         --*)            invalid_option ;;
         -*)             invalid_limit ;;
         *)              topics+=("$1") ;;
@@ -334,16 +342,16 @@ dotsys () {
 
     debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo"
 
-    # SET VERBOSE_MODE
+    # SET VERBOSE_MODE based on topics received
     verbose_mode
 
     # SET CONFIRMATIONS
 
     if ! [ "$recursive" ]; then
-        # Set global if topics provided by user or not install/uninstall
+        # Set global if topics provided by user
         if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
             debug "main -> Set GLOBAL_CONFIRMED = backup (Topics specified or not install/uninstall)"
-            GLOBAL_CONFIRMED="backup"
+            GLOBAL_CONFIRMED="default"
         fi
 
         # override for dryrun option
@@ -397,6 +405,14 @@ dotsys () {
 
     fi
 
+    set_user_vars
+    print_logo
+
+    # freeze dotsys state files
+    if [ "$action" = "freeze" ] && in_limits "dotsys"; then
+        freeze_states "${limits[@]}"
+    fi
+
     # LOAD CONFIG VARS Parses from_repo, Loads config file, manages repo
     if ! [ "$recursive" ]; then
         debug "main -> load config vars"
@@ -406,17 +422,6 @@ dotsys () {
             debug "   new from_repo = $from_repo"
         fi
         load_config_vars "$from_repo" "$action"
-    fi
-
-    # FREEZE installed topics or create config yaml
-    if [ "$action" = "freeze" ] && in_limits "dotsys"; then
-        debug "main -> freeze_mode: $freeze_mode"
-        if in_limits -r "repo"; then
-            create_config_yaml "$ACTIVE_REPO" "${limits[@]}"
-            return
-        else
-            freeze "$ACTIVE_REPO" "${limits[@]}"
-        fi
     fi
 
     # END REPO LIMIT if repo in limits dotsys has ended
@@ -465,6 +470,7 @@ dotsys () {
     for topic in ${topics[@]};do
 
         TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
+        SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
 
         # ABORT: NON EXISTANT TOPICS
         if ! topic_exists "$topic"; then
@@ -477,7 +483,7 @@ dotsys () {
 
         # ABORT: on platform exclude
         if topic_excluded "$topic"; then
-            task "$(printf "Excluded %b${topic}%b on $PLATFORM" $green $blue)"
+            #task "$(printf "Excluded %b${topic}%b on $PLATFORM" $green $cyan)"
             continue
         fi
 

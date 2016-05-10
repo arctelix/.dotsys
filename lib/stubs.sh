@@ -1,24 +1,6 @@
 #!/bin/sh
 
 
-# CONCEPT NOTES:
-# stubs (file.stub) go into the builtins directory
-# or use file.stub.sh to collect custom user info
-# stub process copies file.stub to stub directory or runs file.stub.sh and saves to sub directory
-
-# If home directory has a file matching the stub and no topic/file.symlink exists move it there.
-#TODO: new symlink options & defaults
-# if topic/file.symlink already exists in topic add new symlink options:
-# A file named 'file name' was found, which version do you want to use?
-#  - (f)ound (keep found version, move to repo and backup repo version)
-#  - (r)epo (keep repo version, backup found, same as existing backup option)
-#  - (s)kip
-#  - (b)both (copy found version to topic and add to stub file, backup found in home)
-#  opt (b) only available with stubbed topics!!!
-#  Always backup .. I don't know what i was thinking making this optional.
-
-
-
 # Checks user's system for existing configs and move to repo
 # Make sure this only happens for new user install process
 # or those configs will not get loaded
@@ -49,19 +31,19 @@ add_existing_dotfiles () {
             if ! [ -L "$stub_dst" ] && [ -f "$stub_dst" ]; then
                 if [ -f "$stub_target" ]; then
                     get_user_input "$(printf "You have two versions of %b$(basename "$stub_dst")%b:
-                            $spacer system version: %b$stub_dst%b
+                            $spacer current version: %b$stub_dst%b
                             $spacer dotsys version: %b$stub_target%b
                             $spacer Which version would you like to use with dotsys
                             $spacer (Don't stress, we'll backup the other one)?" $green $rc $green $rc $green $rc)" \
-                            --true "system" --false "dotsys"
+                            --true "current" --false "dotsys"
 
                     # keep system version: backup dotsys version before move
                     if [ $? -eq 0 ]; then
-                        cp "$stub_target" "${stub_target}.bak"
+                        cp "$stub_target" "${stub_target}.dsbak"
                     # keep dotsys version: delete and backup system version
                     # symlink/stub process will take care of rest
                     else
-                        mv "$stub_dst" "${stub_dst}.bak"
+                        mv "$stub_dst" "${stub_dst}.dsbak"
                         continue
                     fi
 
@@ -73,7 +55,7 @@ add_existing_dotfiles () {
                 if ! [ $? -eq 0 ]; then continue;fi
 
                 # backup and move system version to dotsys
-                cp "$stub_dst" "${stub_dst}.bak"
+                cp "$stub_dst" "${stub_dst}.dsbak"
                 mkdir -p "$(dirname "$stub_target")"
                 mv "$stub_dst" "$stub_target"
 
@@ -323,7 +305,8 @@ link_topic_bin () {
             symlink "$file" "$user_bin"
 
         elif [ "$action" = "freeze" ]; then
-            not_implimented "link_topic_bin freeze"
+            freeze_msg "bin" "$file"
+            return
 
         elif [ "$action" = "install" ]; then
             symlink "$file" "$user_bin"

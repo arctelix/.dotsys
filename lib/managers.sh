@@ -56,9 +56,9 @@ run_manager_task () {
     return
   fi
 
-  # abort update actions (nothing to do)
-  if [ "$action" = "update" ]; then
-    debug "   run_manager_task: aborting run_manager_task UPDATE not used"
+  # abort update & freeze actions (nothing to do)
+  if [ "$action" = "update" ] || [ "$action" = "freeze" ]; then
+    debug "   run_manager_task: aborting run_manager_task UPDATE FREEZE not used"
     return
   fi
 
@@ -106,19 +106,26 @@ install_dependencies () {
   local topic="$1"
   local deps="$(get_topic_config_val $topic "deps")"
 
-  if ! [ "$deps" ]; then return 0; fi
-
-  info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
-  local dep
+  if ! [ "$deps" ]; then
+    debug "No DEPENDENCIES required for $topic"
+    return 0
+  fi
 
   local done=()
+  local dep
+  local task_shown
   for dep in "${deps[@]}"; do
     # TODO: fix duplicates from user topic and builtin topic configs
     # filter duplicates from user topic and builtin topics
     if [[ "${done[@]}" == *"$dep"* ]];then continue;fi
     debug "installing $topic dep $dep"
     # Check if dep is installed
-    if ! is_installed "dotsys" "$dep" --silent;then
+    if ! is_installed "system" "$dep" --silent;then
+      # only show the message if there are deps to install
+      if ! [ "$task_shown" ]; then
+          info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
+          task_shown="true"
+      fi
       dotsys "install" "$dep" from "$ACTIVE_REPO" --recursive
     else
       success "$(printf "Already installed dependency %s%b%s%b" "$DRY_RUN" $green "$dep" $rc)"
@@ -188,9 +195,14 @@ manage_packages () {
        manage_packages <action> brew file
     "
 
-    local PACKAGES_CONF
+    # Managers do not freeze or update their packages
+    # If the package has these features use a topic.sh function for the package
+    if [ "$action" = "freeze" ] || [ "$action" = "update" ]; then return;fi
 
-    # todo: add / remove itemized packages to package file
+    # Persist action confirmed for all packages
+    local PACKAGES_CONFIRMED
+
+    # todo: create method to add / remove packages in package file
 
     while [[ $# > 0 ]]; do
         case "$1" in
@@ -222,7 +234,7 @@ manage_packages () {
 
     local p
     for p in $packages; do
-        confirm_task "$action" "${manager}'s package" "$p" --confvar "PACKAGES_CONF"
+        confirm_task "$action" "${manager}'s package" "$p" --confvar "PACKAGES_CONFIRMED"
         if ! [ $? -eq 0 ]; then continue;fi
         run_manager_task "$manager" "$action" $p "$force"
     done

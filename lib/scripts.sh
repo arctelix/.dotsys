@@ -35,7 +35,8 @@ run_topic_script () {
 
   # no script required for topic
   if [ $status -eq 10 ]; then
-     success "$(printf "No $action script supplied $DRY_RUN for %b$topic%b" $green $rc)"
+     #success "$(printf "No $action script supplied $DRY_RUN for %b$topic%b" $green $rc)"
+     pass
   fi
 
   # record success to state file (10 = not found, but not required)
@@ -53,10 +54,9 @@ run_topic_script () {
       fi
   fi
 
-  #return $status
+  return $status
 }
 
-# runs a specified script, and displays status, and debugs
 # 0     = everything ok
 # 10   = script not found
 # 11   = missing required script
@@ -68,6 +68,7 @@ run_script (){
   local script="$(topic_dir "$topic")/${action}.sh"
   local params=()
   local required=
+  local result
 
   while [[ $# > 0 ]]; do
     case "$1" in
@@ -82,30 +83,29 @@ run_script (){
   local status=0
 
   if script_exists "$script"; then
+
     # run the script
     if ! dry_run;then
-      sh "$script" ${params[@]}
+      result="$(sh "$script" ${params[@]})"
       status=$?
+    fi
+
+    if [ "$action" = "freeze" ]; then
+      if [ "$result" ]; then
+        freeze_msg "script" "$script" "$result"
+      fi
+      return
     fi
 
     success_or_fail $status "exicute" "$(printf "script $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
 
-    # output to debug
-    if [ $? -eq 0 ]; then
-      printf "success: %s\n" "$script" >> $DEBUG_FILE
-    else
-      printf "failed: %s\n" "$script" >> $DEBUG_FILE
-    fi
-
   # missing required
   elif [ "$required" ]; then
     fail "$(printf "Script not found $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
-    printf "missing: %s\n" "$script" >> $DEBUG_FILE
     status=11
 
   # missing ok
   else
-    printf "na: %s\n" "$script" >> $DEBUG_FILE
     status=10
   fi
 
@@ -114,8 +114,8 @@ run_script (){
   return $status
 }
 
-# returns:
-# 0     = everything ok
+
+# 0    = everything ok
 # 10   = script not found
 # 11   = missing required script
 # 12   = missing required function
@@ -153,6 +153,8 @@ run_script_func () {
   local script_sources=(builtin $ACTIVE_REPO)
   local script_src
   local script
+  local result
+  local message
   local i=0
   for script in $scripts; do
       script_src="${script_sources[$i]}"
@@ -160,21 +162,36 @@ run_script_func () {
 
           debug "   running $script $action ${params[@]}"
 
-          # run action & handle fail
+          # run script action func
           if ! dry_run; then
-            $script $action ${params[@]}
+            result="$($script $action ${params[@]})"
             status=$?
           fi
 
-          local message="$(printf "%b%s%b $DRY_RUN %b%s%b with %b%s%b" $green "$(cap_first $topic)" $rc $green "${params:-\b}" $rc $green "$script_src $script_name" $rc )"
+          if [ "$action" = "freeze" ]; then
+              if [ "$result" ]; then
+                freeze_msg "script" "$script" "$result"
+              fi
+              return
+          fi
+
+          # manager message
+          if [ "$script_name" = "manager.sh" ]; then
+            message="$(printf "%b${params:-\b}%b $DRY_RUN with %b$topic%b's %b$script_src $script_name%b" $green $rc $green $rc $green $rc )"
+          # other message
+          else
+            message="$(printf "%b$topic%b $DRY_RUN %b${params:-\b}%b with %b$script_src $script_name%b" $green $rc $green $rc $green $rc )"
+          fi
 
           # Required function success/fail
           if [ "$required" ]; then
               success_or_fail $status "$action" "$message"
 
           # Only show success for not required
-          elif [ $status -eq 0 ]; then
-                success_or_fail $status "$action" "$message"
+          #elif [ $status -eq 0 ]; then
+          # On second thought, this is helpful
+          else
+              success_or_fail $status "$action" "$message"
           fi
 
       # Required script fail

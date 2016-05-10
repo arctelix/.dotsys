@@ -42,7 +42,7 @@ load_config_vars (){
     debug "   load_config_vars: loading default config"
 
     # load default cfg (prefix with ___)
-    local yaml="$(parse_yaml "$(dotsys_dir)/.dotsys.cfg" "___")"
+    local yaml="$(parse_yaml "$(dotsys_dir)/dotsys.cfg" "___")"
     #debug "$yaml"
     eval "$yaml" #set default config vars
 
@@ -65,26 +65,6 @@ load_config_vars (){
         else
             prompt_config_or_repo "$action" "A repo must be specified!"
         fi
-    # Show logo when more then one topic or no topics
-    elif verbose_mode; then
-        print_logo "$active_repo"
-    fi
-
-    # MANAGE REPO Make sure repo is installed updated
-    # Skip on uninstall, unless "repo" is in limits.
-    if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
-        debug "   load_config_vars -> call manage_repo"
-        if in_limits "repo" -r; then
-            confirmed="--confirmed"
-        fi
-        manage_repo "$action" "$active_repo" "$force" "$confirmed"
-        status=$?
-    fi
-
-    # ABORT HERE ON UNINSTALL REPO
-    if [ "$action" = "uninstall" ] && in_limits "repo" -r; then
-        debug "   load_config_vars: repo in limits ABORT"
-        return
     fi
 
     debug "   load_config_vars: load config file"
@@ -99,6 +79,25 @@ load_config_vars (){
     else
         warn "No config file was found"
     fi
+
+    # MANAGE REPO Make sure repo is installed updated
+    # Skip on uninstall, unless "repo" is in limits.
+    if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
+        # preconfirm when repo is in limits
+        if in_limits "repo" -r; then confirmed="--confirmed"; fi
+
+        if in_limits "repo"; then
+            debug "   load_config_vars -> call manage_repo"
+            manage_repo "$action" "$active_repo" "$force" "$confirmed"
+        fi
+        status=$?
+    fi
+
+    # ABORT HERE ON UNINSTALL REPO
+#    if [ "$action" = "uninstall" ] && in_limits "repo" -r; then
+#        debug "   load_config_vars: repo in limits ABORT"
+#        return
+#    fi
 
     # Not required when limited to repo
     debug "   load_config_vars: set ACTIVE_REPO vars"
@@ -168,7 +167,7 @@ prompt_config_or_repo () {
 
 
     # TODO: find existing repos and offer choices
-    #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name '.dotsys.cfg -exec dirname {}')"
+    #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name 'dotsys.cfg -exec dirname {}')"
     #echo "found files: $config_files"
 
     local default
@@ -222,7 +221,7 @@ prompt_config_or_repo () {
                    \rOPTION 2 (cofig file):
 
                    \r  A %bconfig file%b is a way to specify repos & topic configs.
-                   \r  Provide a full path to a %b.dotsys.cfg%b file and we'll take
+                   \r  Provide a full path to a %bdotsys.cfg%b file and we'll take
                    \r  it form there.
 
                    \rEASY!%b" \ $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $rc)"
@@ -249,8 +248,8 @@ prompt_config_or_repo () {
 # USER CONFIG
 
 is_new_user () {
+    # Empty user state file is new user
     ! [ -s "$(state_file "user")" ]
-
     return $?
 }
 
@@ -266,10 +265,6 @@ new_user_config () {
 
     prompt_config_or_repo "$action"
 
-    if [ "$repo" ]; then
-        set_user_vars "$active_repo"
-    fi
-
     user_config_logo
 
     user_config_stats
@@ -282,14 +277,12 @@ new_user_config () {
 
 set_user_vars () {
     local repo="$1"
-    PRIMARY_REPO="$repo"
     USER_NAME="$(cap_first "$(whoami)")" #"$cap_first ${repo%/*})"
-    REPO_NAME="${repo#*/}"
 }
 
 get_config_file_from_repo () {
   if ! [ "$1" ]; then return 1;fi
-  echo "$(repo_dir "$1")/.dotsys.cfg"
+  echo "$(repo_dir "$1")/dotsys.cfg"
 }
 
 get_repo_from_config_file () {
@@ -298,19 +291,6 @@ get_repo_from_config_file () {
         local line="$(grep "repo:*" "$file")"
         echo "${line#*: }"
     fi
-}
-
-freeze() {
-    local dir=$1
-    local topics=($(find $dir -maxdepth 1 -type d -not -name '\.*'))
-    local t
-    for t in ${topics[@]}
-    do
-        # remove leading ./
-        TS=${t:1}":yes"
-        echo $TS >> dotsys-freeze.txt
-        echo $TS
-    done
 }
 
 user_config_logo () {
@@ -349,11 +329,11 @@ user_config_stubs () {
 
 print_logo (){
 
-if ! get_state_value "show_logo" "user"; then return;fi
-if [ $show_logo -eq 1 ]; then return;fi
+if ! get_state_value "show_logo" "user"|| [ $show_logo -eq 1 ] || ! verbose_mode; then
+    return
+fi
 
-local repo="${1:-$(get_active_repo)}"
-set_user_vars "${1:-$(get_active_repo)}"
+
 local message=
 if [ "$USER_NAME" ]; then
     message="Welcome To Dotsys $USER_NAME"
@@ -377,8 +357,9 @@ show_logo=1
 }
 
 print_stats () {
-    if ! get_state_value "show_stats" "user"; then return;fi
-    if [ $show_stats -eq 1 ]; then return;fi
+    if ! get_state_value "show_stats" "user" || [ $show_stats -eq 1 ] || ! verbose_mode; then
+        return
+    fi
 
     info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
     info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
@@ -394,8 +375,8 @@ print_stats () {
 load_topic_config_vars () {
     local topic="$1"
     local loaded="_${topic}_config_loaded"
-    local file="$(topic_dir ${topic})/.dotsys.cfg"
-    local default_file="$(topic_dir ${topic})/.dotsys.cfg"
+    local file="$(topic_dir ${topic})/dotsys.cfg"
+    local default_file="$(topic_dir ${topic})/dotsys.cfg"
     # exit if config is loaded or does not exist
     if [ "${!loaded}" ] || ! [ -f "$file" ];then return; fi
     # Load default topic config

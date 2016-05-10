@@ -41,6 +41,7 @@ manage_repo (){
     local repo_user="$(cap_first ${repo%/*})"
     local repo_name="${repo#*/}"
     local state_key="installed_repo"
+    local state_file="dotsys"
 
     debug "   manage_repo: final ->  a:$action r:$repo lr:$local_repo b:$branch $force"
 
@@ -54,7 +55,7 @@ manage_repo (){
     local repo_status=
 
     # determine repo status
-    if is_installed "dotsys" "$state_key" "$repo"; then
+    if is_installed "$state_file" "$state_key" "$repo"; then
         installed="true"
         if [ -d "$local_repo" ]; then
             repo_status="installed"
@@ -84,7 +85,7 @@ manage_repo (){
     debug "   manage_repo status: $repo_status"
 
     # Check for action already complete (we do this first in case of status changes in checks)
-    # Force only works when repo in limits, otherwise just silently skip
+    # Always set complete when repo not in limits.  Check force when repo in limits.
     if ! in_limits "repo" -r || ! [ "$force" ]; then
         if [ "$action" = "install" ] && [ "$repo_status" = "installed" ]; then
             complete="true"
@@ -145,7 +146,7 @@ manage_repo (){
 
             # ok to remove unused repo without confirm
             else
-               task "$(printf "Uninstall $repo_status unused repo %b$repo%b" $green $blue)"
+               task "$(printf "Uninstall $repo_status unused repo %b$repo%b" $green $cyan)"
                confirmed="true"
             fi
 
@@ -162,16 +163,16 @@ manage_repo (){
 
     fi
 
-    # ABORT: ACTION ALREDY DONE (we do this after the checks to make sure status has not changed)
+    # ABORT: ACTION ALREADY DONE (we do this after the checks to make sure status has not changed)
     if [ "$complete" ]; then
-        # we don't want to see this message unless we are actually installing a repo
+        # Only show the complete message when we are installing a repo!
         if in_limits "repo" -r; then
-            task "$(printf "Already ${action%e}ed: %b$repo%b" $green $blue)"
+            task "$(printf "Already ${action%e}ed: %b$repo%b" $green $cyan)"
         fi
         return
     # CONFIRM
-    elif ! [ "$confirmed" ]; then
-        confirm_task "$action" "" "$repo_status repo:" "$local_repo"
+    else
+        confirm_task "$action" "" "$repo_status repo:" "$local_repo" --confvar "GLOBAL_CONFIRMED"
         if ! [ $? -eq 0 ]; then return; fi
     fi
 
@@ -236,7 +237,7 @@ manage_repo (){
             msg "$spacer HINT: Freeze any time with 'dotsys freeze user/repo_name'"
         fi
 
-        state_install "dotsys" "$state_key" "$repo"
+        state_install "state_file" "$state_key" "$repo"
         action_status=$?
 
     elif [ "$action" = "update" ];then
@@ -250,9 +251,8 @@ manage_repo (){
 
     elif [ "$action" = "freeze" ]; then
         # list installed repos
-        echo "repo $action not implemented"
-        action_status=$?
-
+        create_config_yaml "$repo"
+        return
     elif [ "$action" = "uninstall" ]; then
         if repo_in_use "$repo" && ! [ "$force" ]; then
             # in use uninstall not permitted
@@ -262,8 +262,8 @@ manage_repo (){
         fi
 
         # remove from state (check for installed and user default)
-        state_uninstall "user" "user_repo" "$repo"
-        state_uninstall "dotsys" "$state_key" "$repo"
+        #state_uninstall "user" "user_repo" "$repo"
+        #state_uninstall "state_file" "$state_key" "$repo"
         action_status=$?
         # confirm delete if repo exists
         if [ -d "$local_repo" ] && has_remote_repo "$repo"; then
@@ -527,10 +527,10 @@ install_required_repo_files () {
 
     cd "$local_repo"
 
-    # add a .dotsys.cfg
-    if ! [ -f ".dotsys.cfg" ]; then
-        touch .dotsys.cfg
-        echo "repo:${repo}" >> ".dotsys.cfg"
+    # add a dotsys.cfg
+    if ! [ -f "dotsys.cfg" ]; then
+        touch dotsys.cfg
+        echo "repo:${repo}" >> "dotsys.cfg"
     fi
 
     # gitignore *.stub files
@@ -809,6 +809,7 @@ get_active_repo () {
 # Determine if the repo is present in any state file
 repo_in_use () {
     local repo="$1"
+    debug "repo in use: $repo"
     local states="$(get_state_list)"
     local s
     for s in $states; do
