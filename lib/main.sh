@@ -27,25 +27,26 @@
 # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 # OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#TODO URGENT: link_topic_bin needs to be incorporated into main or symlink process? also needs freeze
+#TODO URGENT: shell topic is required for other shells to work and needs to be installed when dotsys is installed!
+#TODO URGENT: move installed_repo keys into repo.state (its better for freeze and other lookups)
+#TODO URGENT: Prevent uninstalling topics with deps before their dependants are uninstalled!
+#TODO URGENT: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
+#TODO URGENT: topic and builtin array type configs get duplicated (deps already done) need to filter symlinks.
+#TODO URGENT: When package added to manager via 'dotsys action cmd package' It should be added removed from repo package file!
 
+#TODO: When no primary repo find existing repos and offer choices, including builtin repo..
 
-#TODO: Brew got uninstalled before cask which left stuff
-#TODO: Freeze just needs to dump state files, that's it, easy! look at existing freeze and yaml stuff
+#TODO ROADMAP: handle .settings files
+#TODO ROADMAP: FOR NEW Installs prompt for --force & --confirm options
+#TODO ROADMAP: Finish implementing func_or_func_msg....
+#TODO ROADMAP: Detect platforms like babun and linux distros that give generic uname.
+#TODO ROADMAP: Option to delete unused topics from user's .dotfies .directory after install (NOT PRIMARY REPO)
+#TODO ROADMAP: Option to move topics from installed repos to primary repo, or create new repo from current config..
 
-
-#DONE: make sure config respects new platform names windows-babun linux-mac  linux: x should exclude all linux, mac: x only excludes mac
-#TODO: Append *.stub to git ignore for every repo
-#TODO: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
-
-#TODO: handle .settings files
-#TODO: FOR NEW Installs prompt for --force & --confirm options
-#TODO: Finish implementing func_or_func_msg....
-#TODO: Detect platforms like babun and mysys as separate configs, and allow user to specify system.
-#TODO: Create option to delete unused topics from non primary repos from user's .dotfies .directory after install
-
-#TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show git, show tmux?
-#TODO QUESTION: Symlink "(o)ption all" choices should apply to all topics? (currently just for current topic)?
-#TODO QUESTION: Hold manager's packages install to end of topic run?
+#TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show state, show managers?
+#TODO QUESTION: Symlink "(o)ption all" choices should apply to all topics (currently just for one topic at a time)?
+#TODO QUESTION: Hold manager's packages install to end of topic runs?
 #TODO QUESTION: Currently repo holds user files, maybe installed topics should be copied to internal user directory.
 # - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
 # - Currently if a repo is deleted the data is gone, the change would protect topics in use.
@@ -342,11 +343,7 @@ dotsys () {
 
     debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo"
 
-    # SET VERBOSE_MODE based on topics received
-    verbose_mode
-
     # SET CONFIRMATIONS
-
     if ! [ "$recursive" ]; then
         # Set global if topics provided by user
         if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
@@ -360,15 +357,13 @@ dotsys () {
         fi
     fi
 
-
-
     # DIRECT MANGER PACKAGE MANAGEMENT
     # This allows dotsys to manage packages without a topic directory
     # <manager> may be 'cmd' 'app' or specific manager name
     # for example: 'dotsys install <manager> packages <packages>'   # specified packages
     # for example: 'dotsys install <manager> packages file'         # all packages in package file
     # for example: 'dotsys install <manager> packages'              # all installed packages
-    # todo: Consider api format 'dotsys <manager> install <package>'
+    # TODO: Consider api format 'dotsys <manager> install <package>'
     if in_limits "packages" -r && is_manager "${topics[0]}" && [ ${#topics[@]} -gt 1 ] ; then
       local manager="$(get_default_manager "${topics[0]}")" # checks for app or cmd
       local i=0 # just to make my syntax checker not fail (weird)
@@ -405,7 +400,12 @@ dotsys () {
 
     fi
 
+    verbose_mode
     set_user_vars
+
+    debug "main final -> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo v:$VERBOSE_MODE"
+    if verbose_mode;then debug "main: is verbose mode";fi
+
     print_logo
 
     # freeze dotsys state files
@@ -674,11 +674,10 @@ dotsys_installer () {
             $spacer However, we need to do a few things.  You can always
             $spacer run '.dotsys/installer.sh uninstall' to uninstall it."
 
-    local current_shell="${SHELL##*/}"
-
-    #TODO: need to make sure stubs are installed for current sheell and sourced.
-
     local dotfiles_dir="$(dotfiles_dir)"
+
+    #TODO: need to make sure stubs are installed for current shell and sourced.
+    local current_shell="${SHELL##*/}"
 
     debug "$action dotsys DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
     debug "$action dotsys user_dotfiles: $dotfiles_dir"
@@ -686,7 +685,7 @@ dotsys_installer () {
     # make sure PLATFORM_USER_BIN is on path
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
         debug "adding /usr/local/bin to path"
-        #TODO: .profile persists user bin on path, should we add to path file?
+        #TODO: .profile persists user bin on path, should we just permanently add to path file?
         export PATH=$PATH:/usr/local/bin
     fi
 
@@ -698,6 +697,7 @@ dotsys_installer () {
         mkdir -p "$DOTSYS_REPOSITORY/state"
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
+        #touch "$DOTSYS_REPOSITORY/state/repo.state"
     fi
 
     # install/uninstall realpath

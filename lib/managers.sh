@@ -102,7 +102,6 @@ run_manager_task () {
 }
 
 install_dependencies () {
-  # TODO: test dependancy install
   local topic="$1"
   local deps="$(get_topic_config_val $topic "deps")"
 
@@ -115,7 +114,6 @@ install_dependencies () {
   local dep
   local task_shown
   for dep in "${deps[@]}"; do
-    # TODO: fix duplicates from user topic and builtin topic configs
     # filter duplicates from user topic and builtin topics
     if [[ "${done[@]}" == *"$dep"* ]];then continue;fi
     debug "installing $topic dep $dep"
@@ -201,8 +199,6 @@ manage_packages () {
 
     # Persist action confirmed for all packages
     local PACKAGES_CONFIRMED
-
-    # todo: create method to add / remove packages in package file
 
     while [[ $# > 0 ]]; do
         case "$1" in

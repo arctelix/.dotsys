@@ -165,8 +165,7 @@ prompt_config_or_repo () {
     local action="${1:-install}"
     local error="$2"
 
-
-    # TODO: find existing repos and offer choices
+    #find existing repos and offer choices
     #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name 'dotsys.cfg -exec dirname {}')"
     #echo "found files: $config_files"
 
@@ -332,7 +331,6 @@ print_logo (){
 if ! get_state_value "show_logo" "user"|| [ $show_logo -eq 1 ] || ! verbose_mode; then
     return
 fi
-
 
 local message=
 if [ "$USER_NAME" ]; then

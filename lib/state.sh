@@ -209,8 +209,6 @@ freeze_states() {
 
     freeze_state "user"
     freeze_state "dotsys"
-
-    #TODO: move installed repos into repo.state
     freeze_state "repos"
 
     local s

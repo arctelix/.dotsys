@@ -72,13 +72,15 @@ dotsys_user_bin () {
 # Test for VERBOSE_MODE
 verbose_mode (){
     if ! [ "$VERBOSE_MODE" ]; then
-        if ! in_limits "repo" -r && ! [ "${topics[0]}" ] || [ ${#topics[@]} -gt 1 ]; then
-            VERBOSE_MODE=0 # verbose on
+        if ! [ "$topics" ] || [ ${#topics[@]} -gt 1 ]; then
+            # verbose on
+            VERBOSE_MODE=0
         else
-            VERBOSE_MODE=1 # verbose of
+            # verbose off
+            VERBOSE_MODE=1
         fi
     fi
-    return "$VERBOSE_MODE"
+    return $VERBOSE_MODE
 }
 
 dry_run (){

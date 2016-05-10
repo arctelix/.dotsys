@@ -166,7 +166,7 @@ create_user_stub () {
 
     local variables="$(sed -n 's|.*[^\$]{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
 
-    # TODO (IF NEEDED): IF topic specific dynamic values become common
+    # FIXME (IF NEEDED): IF more topic specific variables become common implement topic/*.stub.vars scripts
     # implement topic/*.stub.vars script to provide custom values.
     # get_custom_stub_vars $topic
     # > returns a list of "VARIABLE=some value" pairs
@@ -262,7 +262,7 @@ get_credential_helper () {
 }
 
 
-#TODO: needs to be incorporated into main (probably simlink prcess?)
+#TODO: link_topic_bin needs to be incorporated into main or symlink process? also needs freeze
 link_topic_bin () {
 
     local topic="$1"

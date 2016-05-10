@@ -7,9 +7,7 @@
 # https://github.com/holman/dotfiles
 # https://github.com/webpro/dotfiles
 
-PLATFORMS="mac linux freebsd windows mysys"
-
-#TODO: implement tests for new platform platform names cygwin* *windows *bsd
+PLATFORMS="windows linux mac freebsd openbsd mysys cygwin"
 
 get_platform () {
   if [ -n "$PLATFORM" ]; then

@@ -5,18 +5,6 @@
 
 # All functions pertaining to symlinks
 
-
-#TODO: new symlink options & defaults
-# if topic/file.symlink already exists in topic add new symlink options:
-# A file named 'file name' was found, which version do you want to use?
-#  - (f)ound (keep found version, move to repo and backup repo version)
-#  - (r)epo (keep repo version, backup found, same as existing backup option)
-#  - (s)kip
-#  - (b)both (copy found version to topic and add to stub file, backup found in home)
-#  opt (b) only available with stubbed topics!!!
-#  Always backup .. I don't know what i was thinking making this optional.
-
-
 # Manage all topic symlinks
 # options:
 # --unlink | -u |  : (followed by unlink option)
@@ -81,12 +69,9 @@ symlink_topic () {
 
   # all other topics
   else
-     # Find *.symlink *.stub below each topic directory, exclude dot files.
      symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
-     #stubs="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -not -name '\.*')"
-     #TODO URGENT : do not link .symlink if .stub is found .symlink if .stub found
   fi
-  local last_stub
+  local last_stub # tracks last stub found
   local src
   while IFS=$'\n' read -r src; do
 
@@ -396,7 +381,7 @@ unlink(){
                       -e "Yall" -e "Nall" --required
               if [ $? -eq 0 ]; then action=repo ;fi
 
-#               #TODO: none action proved here will bypass other links that have backups
+#               #FIXME: none action proved here will bypass other links that have backups
 #               user "$(printf "No backup of $link_name was found,
 #                      $spacer keep a copy of the repo version?
 #                      $spacer (%by%b)es, (%bY%b)all, (%bn%b)o, (%bN%b)o all : " \
