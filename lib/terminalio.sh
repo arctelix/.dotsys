@@ -112,6 +112,8 @@ success_or_fail () {
 
 success_or_error () {
     func_or_func_msg success error $1 "$2" "${3:-$?}"
+    if [ $? -eq 0 ]; then exit; fi
+
 }
 
 success_or_none () {
@@ -142,7 +144,6 @@ func_or_func_msg () {
         fi
         # all additional params get executed here
         if [ $@ ]; then $@; fi
-        exit
     fi
     return $status
 }
@@ -151,14 +152,23 @@ func_or_func_msg () {
 # adds indent to all but first line
 indent_lines () {
   local first
-  while read -r line; do
+  local input="$1"
+  # Take input from pipe
+  if ! [ "$input" ]; then
+      while read data; do
+        input="$input$data"
+      done
+      first="true"
+  fi
+
+  while read -r line || [[ -n "$line" ]]; do
     if ! [ "$first" ];then
         first="true"
-        printf "$line\n"
+        printf "%b\n" "$line"
     else
-        printf "$indent $line\n"
+        printf "$indent %b\n" "$line"
     fi
-  done <<< "$1"
+  done <<< "$input"
 }
 
 

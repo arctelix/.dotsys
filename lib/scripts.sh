@@ -84,17 +84,16 @@ run_script (){
 
   if script_exists "$script"; then
 
-    # run the script
-    if ! dry_run;then
-      result="$(sh "$script" ${params[@]})"
-      status=$?
-    fi
-
     if [ "$action" = "freeze" ]; then
+      result="$(sh "$script" ${params[@]})"
       if [ "$result" ]; then
         freeze_msg "script" "$script" "$result"
       fi
       return
+    #run the script
+    elif ! dry_run;then
+      script -q /dev/null "$script" ${params[@]} | indent_lines
+      status=$?
     fi
 
     success_or_fail $status "exicute" "$(printf "script $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
@@ -162,17 +161,16 @@ run_script_func () {
 
           debug "   running $script $action ${params[@]}"
 
-          # run script action func
-          if ! dry_run; then
-            result="$($script $action ${params[@]})"
-            status=$?
-          fi
-
           if [ "$action" = "freeze" ]; then
+              result="$($script $action ${params[@]})"
               if [ "$result" ]; then
                 freeze_msg "script" "$script" "$result"
               fi
               return
+          # run script action func
+          elif ! dry_run; then
+            script -q /dev/null "$script" "$action" ${params[@]} 2>&1  | indent_lines
+            status=$?
           fi
 
           # manager message

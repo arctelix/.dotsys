@@ -304,3 +304,10 @@ na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
 na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
 error: Not a valid freeze mode ''.
            [K         try: user, topic, default, full 
+fail: Failed to install [0;32mbrew[0m  [0;32m[0m with [0;32mbuiltin topic.sh[0m 
+fail: Failed to install [0;32mbrew[0m  [0;32m[0m with [0;32mbuiltin topic.sh[0m 
+error: Invalid action: git 
+fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
+fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
+fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
+fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
