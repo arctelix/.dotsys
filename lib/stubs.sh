@@ -222,7 +222,7 @@ create_user_stub () {
             def="$(get_state_value "${g_state_key}" "user" || "non")"
 
             local user_input
-            get_user_input "What is your $topic $var_text for $stub_name?" --options "none" --default "$def"
+            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "$def"
 
             # abort stub process
             if ! [ $? -eq 0 ]; then return;fi
@@ -260,64 +260,6 @@ get_credential_helper () {
     fi
     echo "$helper"
 }
-
-
-#TODO: link_topic_bin needs to be incorporated into main or symlink process? also needs freeze
-link_topic_bin () {
-
-    local topic="$1"
-    local action="$2"
-    local topic_bin="$(topic_dir "$topic")/bin"
-    local user_bin="$(user_bin)"
-
-    if ! [ -d "$topic_bin" ]; then return;fi
-
-    usage="link_topic_bin [<option>]"
-    usage_full="
-    -s | --silent        Suppress command already exists warning
-    "
-    local silent
-
-    while [[ $# > 0 ]]; do
-        case "$1" in
-        -s | --silent )      silent="$1" ;;
-        *)  invalid_option ;;
-        esac
-        shift
-    done
-
-    # search for files in topic bin and link/unlink
-    local files=("$(find "$topic_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
-    local file
-    while IFS=$'\n' read -r file; do
-        local command="$(basename "$file")"
-        if ! [ "$silent" ] && cmd_exists $command; then
-            warn "The command '$command' already exists"
-            get_user_input "Are you sure you want to supersede it with
-                    $spacer $file?"
-            if ! [ $? -eq 0 ]; then return 0;fi
-        fi
-
-        if [ "$action" = "upgrade" ]; then
-            symlink "$file" "$user_bin"
-
-        elif [ "$action" = "update" ]; then
-            symlink "$file" "$user_bin"
-
-        elif [ "$action" = "freeze" ]; then
-            freeze_msg "bin" "$file"
-            return
-
-        elif [ "$action" = "install" ]; then
-            symlink "$file" "$user_bin"
-
-        elif [ "$action" = "uninstall" ]; then
-            unlink "$file"
-
-        fi
-    done <<< "$files"
-}
-
 
 # TODO: topic/stubfile.sh will likely be needed
 # this works for shell script config files

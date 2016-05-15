@@ -39,6 +39,11 @@ repo_dir () {
         return 1
     fi
 
+    # catch builtins
+#    if [ "$repo" = "dotsys/builtins" ]; then
+#        repo="$(dirname "$(builtin_topic_dir)")"
+#    fi
+
     _split_repo_branch
     # catch abs path
     if [[ "$repo" = /* ]]; then
@@ -263,6 +268,27 @@ rename_all() {
         get_user_input "rename $file -> $new"
         mv "$file" "$new"
     done <<< "$files"
+}
+
+#Reverse order of array
+#USAGE: reverse arrayname
+#TODO: IMPLIMENT REVERSE TOPICS FOR UNINSTALL
+reverse() {
+    local arrayname=${1:?Array name required}
+    local array
+    local revarray
+    local e
+
+    #Copy the array, $arrayname, to local array
+    eval "array=( \"\${$arrayname[@]}\" )"
+
+    #Copy elements to revarray in reverse order
+    for e in "${array[@]}"; do
+    revarray=( "$e" "${revarray[@]}" )
+    done
+
+    #Copy revarray back to $arrayname
+    eval "$arrayname=( \"\${revarray[@]}\" )"
 }
 
 

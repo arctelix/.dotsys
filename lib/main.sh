@@ -27,16 +27,20 @@
 # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 # OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#TODO URGENT: link_topic_bin needs to be incorporated into main or symlink process? also needs freeze
+# INSTALL FIXES:
+#TODO URGENT: manage_topic_bin needs to be incorporated into main or symlink process? also needs freeze
 #TODO URGENT: shell topic is required for other shells to work and needs to be installed when dotsys is installed!
-#TODO URGENT: move installed_repo keys into repo.state (its better for freeze and other lookups)
-#TODO URGENT: Prevent uninstalling topics with deps before their dependants are uninstalled!
+
+# GENERAL FIXES:
+#DONE URGENT: Prevent uninstalling topics with DEPS before their dependants are uninstalled!
+#DONE URGENT: move installed_repo keys into repo.state (its better for freeze and other lookups)
 #TODO URGENT: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
 #TODO URGENT: topic and builtin array type configs get duplicated (deps already done) need to filter symlinks.
-#TODO URGENT: When package added to manager via 'dotsys action cmd package' It should be added removed from repo package file!
+#TODO URGENT: Record to manager package file when packages added to manager via 'dotsys action cmd package'
 
-#TODO: When no primary repo find existing repos and offer choices, including builtin repo..
+#TODO: When no primary repo, find existing repos and offer choices, including builtin repo..
 
+# FUTURE FEATURES
 #TODO ROADMAP: handle .settings files
 #TODO ROADMAP: FOR NEW Installs prompt for --force & --confirm options
 #TODO ROADMAP: Finish implementing func_or_func_msg....
@@ -44,6 +48,7 @@
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies .directory after install (NOT PRIMARY REPO)
 #TODO ROADMAP: Option to move topics from installed repos to primary repo, or create new repo from current config..
 
+# QUESTIONS:
 #TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show state, show managers?
 #TODO QUESTION: Symlink "(o)ption all" choices should apply to all topics (currently just for one topic at a time)?
 #TODO QUESTION: Hold manager's packages install to end of topic runs?
@@ -117,6 +122,8 @@ DRY_RUN="\b"
 
 # track mangers actively used by topics or packages
 ACTIVE_MANAGERS=()
+# track topics actively used by other topics (dependencies)
+ACTIVE_TOPICS=()
 
 # track uninstalled topics (populated but not used)
 UNINSTALLED_TOPICS=()
@@ -177,9 +184,16 @@ dotsys () {
     --tstats            Toggle stats for this run only
     --debug             Turn on debug mode
     --dryrun            Runs through all tasks, but no changes are actually made (must confirm each task)
-    --confirm           bypass topic confirmation and backup / restore backup for existing symlinks
-    --confirm delete    bypass topic confirmation and delete existing symlinks on install & uninstall
-    --confirm backup    bypass topic confirmation and backup existing symlinks on install & restore backups on uninstall
+    --confirm           bypass topic confirmations and confirm symlinks for each topic
+    --confirm default   install: repo
+                        uninstall: original
+    --confirm repo      install: use repo's dotfile and backup original version
+                        uninstall: restore original or keep a copy of repo version
+    --confirm original  install: use original dotfile and backup repo version
+                        uninstall: restore original or none
+    --confirm none      install: skip, leave system as is
+                        uninstall: remove the symlink
+
     --confirm dryrun    Same as dryrun option but bypasses confirmations
     --log <file>        Print everything to output file (not implemented yet)
     --cfg <mode>        Set mode for config output <default, user, topic, full>
@@ -322,7 +336,7 @@ dotsys () {
         --debug)        DEBUG="true" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       dry_run 0 ;;
-        --confirm)      if [[ "$2" =~ (default|original|repo|skip) ]]; then
+        --confirm)      if [[ "$2" =~ (default|original|repo|none|skip) ]]; then
                             GLOBAL_CONFIRMED="$2"
                             if [ "$2" = "dryrun" ]; then
                                 dry_run 0
@@ -355,6 +369,9 @@ dotsys () {
         if dry_run; then
             GLOBAL_CONFIRMED="skip"
         fi
+
+        TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
+        SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
     fi
 
     # DIRECT MANGER PACKAGE MANAGEMENT
@@ -400,13 +417,12 @@ dotsys () {
 
     fi
 
-    verbose_mode
-    set_user_vars
-
-    debug "main final -> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo v:$VERBOSE_MODE"
-    if verbose_mode;then debug "main: is verbose mode";fi
-
-    print_logo
+    if ! [ "$recursive" ]; then
+        verbose_mode
+        set_user_vars
+        print_logo
+        debug "main final -> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo v:$VERBOSE_MODE"
+    fi
 
     # freeze dotsys state files
     if [ "$action" = "freeze" ] && in_limits "dotsys"; then
@@ -445,10 +461,12 @@ dotsys () {
             else
                 msg "$( printf "\nThere are no topics %binstalled by dotsys%b to $action\n" $green $yellow)"
             fi
-            copy_topics_to_repo "$ACTIVE_REPO"
-            add_existing_dotfiles "$ACTIVE_REPO"
-            # Check for topics again
-            list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
+            if [ "$action" = "install" ]; then
+                copy_topics_to_repo "$ACTIVE_REPO"
+                add_existing_dotfiles "$ACTIVE_REPO"
+                # Check for topics again
+                list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
+            fi
         fi
         topics=("$list")
         debug "main -> topics list:\n\r$topics"
@@ -468,9 +486,6 @@ dotsys () {
     local topic
 
     for topic in ${topics[@]};do
-
-        TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
-        SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
 
         # ABORT: NON EXISTANT TOPICS
         if ! topic_exists "$topic"; then
@@ -509,12 +524,6 @@ dotsys () {
 
                 # on uninstall we need to remove packages from package file first (or it will always be in use)
                 if manager_in_use && in_limits "packages"; then
-                    # TODO: URGENT all associated packages including topics are uninstalled
-                    # the change get_package_list may not be wise, upgrade, freeze, run twice
-                    # uninstall should be fine now since the topics are removed from state
-                    # RETHINK package list results! probable stupid since manager_in_use already checks state
-                    # no need for manage_packages to do it to, that will solve the problem!!!!!
-                    # this may not be desirable, work though scenarios for best behavior
                     debug "main -> UNINSTALL MANAGER PACKAGES FIRST: $topic"
                     manage_packages "$action" "$topic" file "$force"
                 fi
@@ -533,7 +542,7 @@ dotsys () {
                         rm "$sf"
                     fi
                     # remove from active managers
-                    ACTIVE_MANAGERS=( "${ACTIVE_MANAGERS[@]/$topic}" )
+                    ACTIVE_MANAGERS=("${ACTIVE_MANAGERS[@]/$topic}")
                 fi
             fi
 
@@ -567,8 +576,10 @@ dotsys () {
         # ALL CHECKS DONE START THE ACTION
 
         # 1) dependencies
-        if [ "$action" = "install" ] && in_limits "scripts" "dotsys"; then
-            install_dependencies "$topic"
+        if in_limits "scripts" "dotsys"; then
+            manage_dependencies "$action" "$topic"
+            # Topic is in use by other topics
+            if ! [ $? -eq 0 ]; then continue; fi
         fi
 
         # 2) managed topics
@@ -613,41 +624,52 @@ dotsys () {
 
     debug "main -> TOPIC LOOP END"
 
-    # Finally check for repos and managers that still need to be uninstalled
+    # Finally check for repos, managers, & topics that still need to be uninstalled
     if [ "$action" = "uninstall" ]; then
 
         # Check for inactive managers to uninstall
-        if in_limits "managers"; then
-            debug "main -> clean inactive managers"
-            local inactive_managers=()
-            local m
-            debug "main -> active_mangers: ${ACTIVE_MANAGERS[@]}"
-            debug "main -> topics: ${topics[@]}"
-
-            for m in ${ACTIVE_MANAGERS[@]}; do
-                [[ "${topics[@]}" =~ "$m" ]]
-                debug "main -> test for $m in topics = $?"
-                if ! manager_in_use "$m" && [[ "${topics[@]}" =~ "$m" ]]; then
-                    debug "main -> ADDING INACTIVE MANAGER $m"
-                    inactive_managers+=("$m");
-                fi
-            done
-            debug "main -> INACTIVE MANGERS: ${inactive_managers[@]}"
-            if [ "${inactive_managers[@]}" ]; then
-                debug "main -> uninstall inactive managers: $inactive_managers"
-                dotsys uninstall ${inactive_managers[@]} ${limits[@]} --recursive
-                return
-            fi
-        fi
+        uninstall_inactive "managers"
+        # Check for inactive topics uninstall
+        uninstall_inactive "topics"
 
         # Check if all repo topics are uninstalled & uninstall
         if in_limits "repo" && ! repo_in_use "$ACTIVE_REPO"; then
             debug "main -> REPO NO LONGER USED uninstalling"
             manage_repo "uninstall" "$ACTIVE_REPO" "$force"
+            debug "main -> FINISHED (repo uninstalled)"
+            exit
         fi
     fi
 
-    debug "main -> FINISHEÍD"
+    debug "main -> FINISHED"
+}
+
+uninstall_inactive () {
+
+    # Check for inactive topics to uninstall
+    local active="ACTIVE_$(echo "$1" | tr '[:lower:]' '[:upper:]' )"
+    local active_array
+    eval "active_array=( \"\${$active[@]}\" )"
+    local in_use="$(echo "${1%s}" | tr '[:upper:]' '[:lower:]')_in_use"
+    local inactive=()
+    local t
+    debug "main -> clean inactive:$1"
+    debug "main -> $active:\n${active_array[@]}"
+    debug "main -> topics:\n${topics[@]}"
+
+    for t in ${active_array[@]}; do
+        [[ "${topics[@]}" =~ "$t" ]]
+        debug "[[ $t in topics ]] = $?"
+        if ! $in_use "$t" && [[ "${topics[@]}" =~ "$t" ]]; then
+            debug "main -> ADDING INACTIVE $1: $t"
+            inactive+=("$t");
+        fi
+    done
+    debug "main -> INACTIVE $1: ${inactive[@]}"
+    if [ "$inactive" ]; then
+        debug "main -> uninstall inactive managers: $inactive"
+        dotsys uninstall ${inactive[@]} ${limits[@]} --recursive --force
+    fi
 }
 
 
@@ -670,17 +692,13 @@ dotsys_installer () {
 
     print_logo
 
-    get_user_input "The installation of dotsys is designed to be minimal.
-            $spacer However, we need to do a few things.  You can always
-            $spacer run '.dotsys/installer.sh uninstall' to uninstall it."
-
-    local dotfiles_dir="$(dotfiles_dir)"
+    confirm_task "$action" "" "dotsys"
 
     #TODO: need to make sure stubs are installed for current shell and sourced.
     local current_shell="${SHELL##*/}"
 
     debug "$action dotsys DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-    debug "$action dotsys user_dotfiles: $dotfiles_dir"
+    debug "$action dotsys user_dotfiles: "$(dotfiles_dir)""
 
     # make sure PLATFORM_USER_BIN is on path
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
@@ -689,27 +707,26 @@ dotsys_installer () {
         export PATH=$PATH:/usr/local/bin
     fi
 
-    #TODO: make sure all required dirs and files exist (ie state, user) then remove checks from funcs
     # create required directories
+
     if [ "$action" = "install" ]; then
-        mkdir -p "$dotfiles_dir"
+        task "Prepare required directories and files"
+        mkdir -p "$(dotfiles_dir)"
         mkdir -p "$DOTSYS_REPOSITORY/user/bin"
         mkdir -p "$DOTSYS_REPOSITORY/state"
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
-        #touch "$DOTSYS_REPOSITORY/state/repo.state"
+        touch "$DOTSYS_REPOSITORY/state/repo.state"
     fi
 
-    # install/uninstall realpath
-    run_script_func "realpath" "topic.sh"
+    # This is what makes dotsys command accessible
+    # can not move .dotsys directory after install
+    task "$action .dotsys/bin to $PLATFORM_USER_BIN"
+    manage_topic_bin "$action" dotsys
 
-    if cmd_exists realpath; then
-        printf "$(realpath "$file")"
-        return $?
-    fi
-
-    # symlink contents of .dotsys/bin
-    symlink_topic "$action" dotsys
+    # Handle dotsys topic requirements
+    # Using from dotsys/builtins will prevent repo uninstall issues
+    dotsys "$action" dotsys from dotsys/builtins
 
     # were going to have to do this
     #dotsys install shell bash zsh

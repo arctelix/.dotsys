@@ -36,11 +36,13 @@ run_manager_task () {
   local manager="$1"; shift
   local action="$1"; shift
   local topics=()
+  local packages # The topics are packages from package file
   local force
 
   while [[ $# > 0 ]]; do
     case $1 in
       --force)          force="--force";;
+      --packages)       packages="--force";;
       * )               topics+=("$1") ;;
     esac
     shift
@@ -50,7 +52,7 @@ run_manager_task () {
 
   debug "-- run_manager_task: m:$manager a:$action t:$topics f:$force"
 
-  # abort unmanned topics
+  # abort un-managed topics
   if ! [ "$manager" ]; then
     debug "   run_manager_task: aborting run_manager_task $topic not managed"
     return
@@ -61,6 +63,9 @@ run_manager_task () {
     debug "   run_manager_task: aborting run_manager_task UPDATE FREEZE not used"
     return
   fi
+
+  # Persist action confirmed for all packages
+  local PACKAGES_CONFIRMED
 
   # Install topics (packages)
   local topic
@@ -74,6 +79,12 @@ run_manager_task () {
      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic"; then
         success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
         continue
+     fi
+
+     # only confirm packages, actual topics will be confirmed by script_manager
+     if [ "$packages" ]; then
+        confirm_task "$action" "${manager}'s package" "$topic" #better without --confvar "PACKAGES_CONFIRMED"
+        if ! [ $? -eq 0 ]; then continue;fi
      fi
 
      # convert topic to package name
@@ -101,37 +112,78 @@ run_manager_task () {
 
 }
 
-install_dependencies () {
-  local topic="$1"
+manage_dependencies () {
+  local action="$1"
+  local topic="$2"
   local deps="$(get_topic_config_val $topic "deps")"
 
-  if ! [ "$deps" ]; then
-    debug "No DEPENDENCIES required for $topic"
+  debug "-- manage_dependencies: $action $topic deps: $deps"
+
+  # check if topic is in use by other topics
+  if [ "$action" = "uninstall" ]; then
+    if topic_in_use "$topic"; then
+        warn "$topic is in use and can not be uninstalled yet"
+        ACTIVE_TOPICS+=($topic)
+        debug "   manage_dependencies: $topic in use add to ACTIVE_TOPICS"
+        return 1
+    else
+        debug "   manage_dependencies: remove $topic from ACTIVE_TOPICs"
+        #remove topic from active
+        ACTIVE_TOPICS=(${ACTIVE_TOPICS[@]/$topic/})
+    fi
+  # Deps only need install / uninstall
+  elif [ "$action" != "install" ]; then
     return 0
   fi
+
+  # abort here if topic has no deps
+  if ! [ "$deps" ]; then
+    debug "   No DEPENDENCIES required for $topic"
+    return 0
+  fi
+
+  debug "   manage_dependencies: $action $topic has deps: $deps"
 
   local done=()
   local dep
   local task_shown
-  for dep in "${deps[@]}"; do
+  for dep in ${deps[@]}; do
     # filter duplicates from user topic and builtin topics
-    if [[ "${done[@]}" == *"$dep"* ]];then continue;fi
-    debug "installing $topic dep $dep"
-    # Check if dep is installed
-    if ! is_installed "system" "$dep" --silent;then
-      # only show the message if there are deps to install
-      if ! [ "$task_shown" ]; then
-          info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
-          task_shown="true"
-      fi
-      dotsys "install" "$dep" from "$ACTIVE_REPO" --recursive
+    if [[ "${done[@]}" == *"$dep"* ]];then
+        debug "   manage_dependencies: ABORT $dep already $action"
+        continue
+    fi
+    done+=("$dep")
+
+    if [ "$action" = "uninstall" ]; then
+        state_uninstall "deps" "$dep" "$topic"
+        debug "   manage_dependencies: removed $topic:$dep from state"
+
+    # handle install
     else
-      success "$(printf "Already installed dependency %s%b%s%b" "$DRY_RUN" $green "$dep" $rc)"
+        if ! is_installed "system" "$dep" --silent;then
+          # only show the message for first dependency
+          if ! [ "$task_shown" ]; then
+              info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
+              task_shown="true"
+          fi
+          dotsys "install" "$dep" from "$ACTIVE_REPO" --recursive
+          # Add dep to deps state
+          if [ $? -eq 0 ]; then
+            debug "state_install: deps $dep $topic"
+            state_install "deps" "$dep" "$topic"
+          fi
+        else
+          success "$(printf "Already installed dependency %s %b%s%b" "$DRY_RUN" $green "$dep" $rc)"
+        fi
     fi
   done
 
-}
+  if [ "$action" = "install" ]; then
+    info "$(printf "Dependencies ${action%e}ed, resuming %b$action $topic%b" $green $rc)"
+  fi
 
+}
 
 
 get_package_list () {
@@ -148,11 +200,11 @@ get_package_list () {
     * ) invalid_option ;;
   esac
 
-  # get packages from state for all other actions
+  # get packages from state
   if [ "$option" = "packages" ]; then
     package_file="$(state_file "$manager")"
 
-  # get packages from manager package file
+  # get packages from manager's package file
   elif [ "$option" = "file" ]; then
     package_file="$(topic_dir "$manager")/packages.yaml"
   else
@@ -197,8 +249,7 @@ manage_packages () {
     # If the package has these features use a topic.sh function for the package
     if [ "$action" = "freeze" ] || [ "$action" = "update" ]; then return;fi
 
-    # Persist action confirmed for all packages
-    local PACKAGES_CONFIRMED
+
 
     while [[ $# > 0 ]]; do
         case "$1" in
@@ -213,11 +264,7 @@ manage_packages () {
     debug "-- manage_packages: p:$packages o:$option f:$force"
 
     if ! [ "${packages[@]}" ]; then
-        # Noting to install without package name or file
-        if ! [ "$action" = "install" ]; then option="file";fi
-
         packages=$(get_package_list "$manager" "$option")
-        debug "   get_package_list: $packages"
     else
         packages="${packages[@]}"
     fi
@@ -228,13 +275,7 @@ manage_packages () {
 
     task "$(printf "${action}ing $DRY_RUN %b$manager's%b packages" $green $rc)"
 
-    local p
-    for p in $packages; do
-        confirm_task "$action" "${manager}'s package" "$p" --confvar "PACKAGES_CONFIRMED"
-        if ! [ $? -eq 0 ]; then continue;fi
-        run_manager_task "$manager" "$action" $p "$force"
-    done
-
+    run_manager_task "$manager" "$action" $packages "$force" --packages
 }
 
 # Checks for manager file
@@ -254,10 +295,19 @@ is_manager () {
 manager_in_use () {
     local manager="${1:-$topic}"
     if ! is_manager "$manager"; then return 1;fi
-
+    # if anything is in manager sate file it's in use
     in_state "$manager" ""
     local r=$?
     debug "   - manager_in_use: $manager = $r"
     return $r
 }
 
+topic_in_use () {
+    local topic="${1:-$topic}"
+    # If the topic is a key in deps.state then it can not be
+    # uninstalled until all it's dependant topics are uninstalled.
+    in_state "deps" "$topic"
+    local r=$?
+    debug "   - topic_in_use: $topic = $r"
+    return $r
+}

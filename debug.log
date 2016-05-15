@@ -1,313 +1,120 @@
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/im_a_topic/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/im_a_topic/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/im_a_topic/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/im_a_topic/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new2/im_a_topic/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new2/im_a_topic/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_fr_mac/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/bash/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/shell/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/topic1/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/topic2/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/topic3/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/topic1/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/topic2/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-new/topic3/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/install.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_bin/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_ismanaged/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_n_ismanaged/uninstall.sh
-success: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_scripts/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_settings/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_source_sh/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/bash/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/osx/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/shell/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/vim/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/tmux/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/uninstall.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/install.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/chrome/freeze.sh
-na: /Users/arctelix/.dotfiles/arctelix/dotsys-repo/git/freeze.sh
-error: Not a valid freeze mode ''.
-           [K         try: user, topic, default, full 
-fail: Failed to install [0;32mbrew[0m  [0;32m[0m with [0;32mbuiltin topic.sh[0m 
-fail: Failed to install [0;32mbrew[0m  [0;32m[0m with [0;32mbuiltin topic.sh[0m 
-error: Invalid action: git 
-fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
-fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
-fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
-fail: Failed to install [0;32mgit[0m  with [0;32mbrew[0m's [0;32mbuiltin manager.sh[0m 
+fail: Failed to install remote repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
+fail: The topic [0;32mtest_alt_symlink[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_alt_symlink[0m 
+fail: The topic [0;32mtest_bin[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_bin[0m 
+fail: The topic [0;32mtest_cfg_exclude_mac[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_cfg_exclude_mac[0m 
+fail: The topic [0;32mtest_exclude_platform[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_exclude_platform[0m 
+fail: The topic [0;32mtest_ismanaged[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_ismanaged[0m 
+fail: The topic [0;32mtest_manager[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_manager[0m 
+fail: The topic [0;32mtest_n_ismanaged[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_n_ismanaged[0m 
+fail: The topic [0;32mtest_scripts[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_scripts[0m 
+fail: The topic [0;32mtest_settings[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_settings[0m 
+fail: The topic [0;32mtest_source_sh[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_source_sh[0m 
+fail: The topic [0;32mtest_t_script[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_t_script[0m 
+fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
+fail: No remote configured for repo 
+fail: No remote configured for repo 
+fail: No remote configured for repo 
+fail: Failed to fatal: branch 'master' does not exist 
+fail: Failed to fatal: branch 'master' does not exist 
+fail: Failed to initialize [0;32minstalled[0m repo [0;32mhttps://github.com/arctelix/dotsys-repo-test[0m 
+fail: Failed to check remote repo 
+fail: Failed to remote repo:
+https://github.com/arctelix/dotsys-repo-test 0 
+fail: Failed to remote repo:
+https://github.com/arctelix/dotsys-repo-test 0 
+fail: Failed to fatal: branch 'master' does not exist 
+fail: Fetching origin From https://github.com/arctelix/dotsys-repo-test * [new branch] master -> origin/master 
+fail: Failed to fatal: branch 'master' does not exist 
+fail: Fetching origin From https://github.com/arctelix/dotsys-repo-test * [new branch] master -> origin/master 
+fail: Failed to fatal: branch 'master' does not exist 
+error: Could not resolve issues with your repo, please restore it manually 
+fail: Fetching origin From https://github.com/arctelix/dotsys-repo-test * [new branch] master -> origin/master 
+fail: Failed to fatal: branch 'master' does not exist 
+error: Could not resolve issues with your repo, please restore it manually 
+fail: Failed to fatal: branch 'master' does not exist 
+error: Could not resolve issues with your repo, please restore it manually 
+fail: Failed to fatal: branch 'master' does not exist 
+error: Could not resolve issues with your repo, please restore it manually 
+error: Invalid action: rename_all 
+error: Invalid action: repo 
+error: Invalid action: unisntall 
+fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
+fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
+error: The local directory repo .dotsys/builtins must be
+                    [K         installed before it can be uninstalled. 
+error: invalid option:  
+fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+fail: The topic [0;32mtest_idep_after[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_idep_after[0m 
+fail: The topic [0;32mtest_dep_before[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_dep_before[0m 
+fail: The topic [0;32mtest_idep_after[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_idep_after[0m 
+fail: The topic [0;32mtest_dep_before[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_dep_before[0m 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: Invalid action: isntall 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The repo arctelix/dotsys-repo-test
+                    [K         was not found and can not be updated.
+                    [K         Check the spelling and make sure it is located
+                    [K         in /Users/arctelix/.dotfiles. 
+fail: The topic [0;32mtest_alt_symlink[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_alt_symlink[0m 
+fail: The topic [0;32mtest_bin[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_bin[0m 
+fail: The topic [0;32mtest_cfg_exclude_mac[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_cfg_exclude_mac[0m 
+fail: The topic [0;32mtest_dep_before[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_dep_before[0m 
+fail: The topic [0;32mtest_exclude_platform[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_exclude_platform[0m 
+fail: The topic [0;32mtest_from_alt[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_from_alt[0m 
+fail: The topic [0;32mtest_has_deps[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_has_deps[0m 
+fail: The topic [0;32mtest_idep_after[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_idep_after[0m 
+fail: The topic [0;32mtest_ismanaged[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_ismanaged[0m 
+fail: The topic [0;32mtest_manager[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_manager[0m 
+fail: The topic [0;32mtest_n_ismanaged[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_n_ismanaged[0m 
+fail: The topic [0;32mtest_scripts[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_scripts[0m 
+fail: The topic [0;32mtest_settings[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_settings[0m 
+fail: The topic [0;32mtest_source_sh[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_source_sh[0m 
+fail: The topic [0;32mtest_t_script[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_t_script[0m 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 
+error: The local directory repo arctelix/dotsys-repo-test must be
+                    [K         installed before it can be uninstalled. 

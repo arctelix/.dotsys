@@ -112,7 +112,7 @@ success_or_fail () {
 
 success_or_error () {
     func_or_func_msg success error $1 "$2" "${3:-$?}"
-    if [ $? -eq 0 ]; then exit; fi
+    if ! [ $? -eq 0 ]; then exit; fi
 
 }
 
@@ -153,22 +153,24 @@ func_or_func_msg () {
 indent_lines () {
   local first
   local input="$1"
+  local line
   # Take input from pipe
   if ! [ "$input" ]; then
-      while read data; do
-        input="$input$data"
+      local line
+      while read -r line || [[ -n "$line" ]]; do
+        echo "$indent $(echo "$line" | sed "s/$(printf '\r')/$(printf '\r')$indent /g")"
       done
-      first="true"
+  # input from variable
+  else
+      while read -r line || [[ -n "$line" ]]; do
+        if ! [ "$first" ];then
+            first="true"
+            printf "%b\n" "$line"
+        else
+            printf "$indent %b\n" "$line"
+        fi
+      done <<< $input
   fi
-
-  while read -r line || [[ -n "$line" ]]; do
-    if ! [ "$first" ];then
-        first="true"
-        printf "%b\n" "$line"
-    else
-        printf "$indent %b\n" "$line"
-    fi
-  done <<< "$input"
 }
 
 
@@ -183,7 +185,7 @@ msg_invalid_input (){
 # debug debug
 debug () {
     if [ "$DEBUG" = true ]; then
-        printf "%b$1 %b\n" $dark_gray $rc
+        printf "%b%b%b\n" $dark_gray "$1" $rc
     fi
 }
 
@@ -213,16 +215,16 @@ get_user_input () {
     local usage_full="
 
     -o | --options )    alternate options line
-                        or 'none' for no options
+                        or 'omit' for no options
     -e | --extra)       extra option
     -h | --hint)        option line hint for no invalid input
     -c | --clear )      Number + extra/ - less lines to lear [0]
     -t | --true )       Text to print for 0 value
-                        set to 'none' for required variable input
+                        set to 'omit' for required variable input
     -f | --false        Text to print for 1 value
-                        or 'none' require input.
+                        or 'omit' require input.
     -i | --invalid      Text to print on invalid selection
-                        or 'none' noting is invalid
+                        or 'omit' noting is invalid
     -d | --default      Default value on enter key
     -r | --required     Make confirmation required
          --help         Text to print for help
@@ -236,9 +238,15 @@ get_user_input () {
     local options
     local clear="false"
     local invalid="invalid"
-    local confirmed="$TOPIC_CONFIRMED"
+    local true_all
+    local false_all
+
     local hint="\b"
     local extra=()
+    # default TOPIC_CONFIRMED allows bypass of yes no questions pertaining to topic
+    # non yes/no questions should be --required or there could be problems!
+    local CONFIRMED_VAR="TOPIC_CONFIRMED"
+    local required
 
 
     while [[ $# > 0 ]]; do
@@ -251,39 +259,64 @@ get_user_input () {
       -f | --false )    false="$2";shift;;
       -i | --invalid )  invalid="$2";shift;;
       -d | --default )  default="$2";shift ;;
-      -r | --required ) confirmed= ;;
+      -r | --required ) required="true" ;;
+      -v | --confvar )  CONFIRMED_VAR="$2"; shift ;;# alternate options line
            --help )     help="$2";shift ;;
       * ) uncaught_case "$1" "question" "true" "false" "help" ;;
     esac
     shift
     done
 
+    local confirmed="${!CONFIRMED_VAR}"
+    if [ "$required" ]; then confirmed=; fi
+
     true="${true:-yes}"
     false="${false:-no}"
 
-    debug "-- get_user_input: TOPIC_CONFIRMED=$TOPIC_CONFIRMED sets confirm=$confirmed "
+    # Add ALL options when confvar is supplied
+    if [ "$CONFIRMED_VAR" != "TOPIC_CONFIRMED" ]; then
+        true_all="$(cap_first "$true")"
+        false_all="$(cap_first "$false")"
+    fi
 
-    if [ "$options" = "none" ]; then
-        true="none"
-        false="none"
-        confirmed=""
-    # just offer false option everything else is true
-    elif [ "$true" = "none" ]; then
-        options="$(printf "(%b${false:0:1}%b)%b${false:1}%b" $yellow $rc $yellow $rc)"
-        confirmed=""
-        invalid="none"
+    debug "-- get_user_input: CONFIRMED_VAR($CONFIRMED_VAR)=${!CONFIRMED_VAR} sets confirm=$confirmed "
 
-    # just offer true option everything is true
-    elif [ "$false" = "none" ]; then
-        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b" $green $rc $green $rc)"
+    if [ "$options" = "omit" ]; then
+        true="omit"
+        false="omit"
+    fi
+
+    # add true
+    if [ "$true" != "omit" ]; then
+        options="$(printf "%b(%b${true:0:1}%b)%b${true:1}%b " \
+                            "$options" $green $rc $green $rc)"
+        if [ "$true_all" ]; then
+            options="$(printf "%b(%b${true_all:0:1}%b)%b${true_all:1}%b " \
+                            "$options" $green $rc $green $rc )"
+        fi
+    fi
+
+    # add false
+    if [ "$false" != "omit" ]; then
+        options="$(printf "%b(%b${false:0:1}%b)%b${false:1}%b " \
+                            "$options" $yellow $rc $yellow $rc)"
+        if [ "$false_all" ]; then
+            options="$(printf "%b(%b${false_all:0:1}%b)%b${false_all:1}%b " \
+                            "$options" $yellow $rc $yellow $rc)"
+        fi
+    fi
+
+    # When false or true omitted all input is valid and confirm required
+    if [ "$false" = "omit" ] || [ "$false" = "omit" ]; then
         confirmed=""
-        invalid="none"
+        invalid="omit"
+    fi
 
     # use default options
-    else
-        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
-                        $green $rc $green $rc $yellow $rc $yellow $rc)"
-    fi
+#    else
+#        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
+#                        $green $rc $green $rc $yellow $rc $yellow $rc)"
+#    fi
 
     # put options on new line
     if [ "$hint" ] || [ "${extra[0]}" ]; then
@@ -294,9 +327,8 @@ get_user_input () {
     local opt
     local extra_regex
     for opt in "${extra[@]}"; do
-        if [ "$extra_regex" ]; then extra_regex="${extra_regex}|";fi
-        #TODO the extra_regex does not pickup on pipes
-        extra_regex="${extra_regex}${opt}|${opt:0:1}"
+        if [ "$extra_regex" ]; then extra_regex="${extra_regex},";fi
+        extra_regex="${extra_regex}${opt},${opt:0:1}"
         opt="$(printf "(%b${opt:0:1}%b)%b${opt:1}%b" $yellow $rc $yellow $rc)"
         options="$options $opt"
     done
@@ -304,16 +336,17 @@ get_user_input () {
     extra_regex="${extra_regex:-All the things that make architects go mad!}"
     debug "extra_regex=$extra_regex"
 
-
+    # Get user input
     default="${default:-$true}"
     question=$(printf "$question $options $hint [%b${default}%b]" $dark_gray $rc)
 
-    user "${question} : "
+    user "${question}: "
 
     debug "-- get_user_input: confirm=$confirmed invalid=$invalid TOPIC_CONFIRMED=$TOPIC_CONFIRMED"
 
     if ! [ "$confirmed" ]; then
         local state=0
+        #shopt -s extglob
         while true; do
             read user_input < /dev/tty
             #user_input="$user_input"
@@ -328,16 +361,24 @@ get_user_input () {
                     user_input="${false}"
                     break
                     ;;
+                ${true_all}|${true_all:0:1})
+                    state=0
+                    user_input="${true_all}"
+                    eval "${CONFIRMED_VAR}=${true}"
+                    break
+                    ;;
+                ${false_all}|${false_all:0:1})
+                    state=1
+                    user_input="${false_all}"
+                    eval "${CONFIRMED_VAR}=${false}"
+                    break
+                    ;;
                 help )
                     msg_help "$(printf "$help")"
                     ;;
-                ${extra_regex} )
-                    state=1
-                    break
-                    ;;
                 "")
                     # blank value ok
-                    if [ "$true" = "none" ]; then
+                    if [ "$true" = "omit" ]; then
                         status=1
                         user_input=
                         break
@@ -348,9 +389,14 @@ get_user_input () {
                     state=$?
                     break
                     ;;
+                #TODO: TEST Putting this after blank we wont need the crazy string
+                [${extra_regex}] )
+                    state=1
+                    break
+                    ;;
                 * )
                     # any input is ok
-                    if [ "$invalid" = "none" ]; then
+                    if [ "$invalid" = "omit" ]; then
                         status=0
                         break
                     fi
@@ -388,7 +434,9 @@ confirm_task () {
     case "$1" in
       -c | --confirmed )        confirmed="true";   shift ;;# alternate options line
       -v | --confvar )          CONFIRMED_VAR="$2"; shift ;;# alternate options line
-      * ) extra_lines+=("$1") ;;
+      * ) if [ "$1" ];then
+            extra_lines+=("$1")
+          fi;;
     esac
     shift
   done
@@ -487,6 +535,7 @@ show_usage () {
 
 # Display invalid option message and exit
 invalid_option () {
+    if ! [ "$1" ]; then return;fi
     error "invalid option: $1"
     show_usage
     exit
@@ -550,6 +599,10 @@ uncaught_case (){
  local set_var
  local uc_p_names="$@"
  local us_p_name
+
+ # Skip blank values
+ if [ ! "$uc_c_val" ];then return;fi
+
  for us_p_name in $uc_p_names; do
     if [[ "$uc_c_val" == "-"* ]]; then
         printf "Invalid parameter '$uc_c_val'"

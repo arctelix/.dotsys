@@ -79,6 +79,8 @@ is_installed () {
 
     debug "-- is_installed initial state=$state"
 
+    # if state is "system" then a system install is acceptable
+    # so bypass warnings and just return 0
     if [ "$state" = "system" ]; then
         state="dotsys"
         system_ok="true"
@@ -230,5 +232,4 @@ freeze_state() {
         freeze_msg "${line%:*}" "${line#*:}"
 
     done < "$file"
-
 }

@@ -59,12 +59,31 @@ load_config_vars (){
         debug "existing user cfg: $config_file"
     fi
 
+    # Set active_repo & config_file for new user/repo
     if [ ! "$active_repo" ] ; then
         if is_new_user && [ "$action" != "uninstall" ]; then
             new_user_config "$repo"
         else
             prompt_config_or_repo "$action" "A repo must be specified!"
         fi
+    fi
+
+    # MANAGE REPO Make sure repo is installed updated
+    # Skip on uninstall, unless "repo" is in limits.
+    if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
+        # preconfirm when repo is in limits
+        if in_limits "repo" -r; then confirmed="--confirmed"; fi
+
+        if in_limits "repo"; then
+            debug "   load_config_vars -> call manage_repo"
+            manage_repo "$action" "$active_repo" "$force" "$confirmed"
+        fi
+        status=$?
+    fi
+
+    # make sure we get config file from a downloaded repo
+    if ! [ "$config_file" ]; then
+        config_file="$(get_config_file_from_repo "$active_repo")"
     fi
 
     debug "   load_config_vars: load config file"
@@ -80,18 +99,6 @@ load_config_vars (){
         warn "No config file was found"
     fi
 
-    # MANAGE REPO Make sure repo is installed updated
-    # Skip on uninstall, unless "repo" is in limits.
-    if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
-        # preconfirm when repo is in limits
-        if in_limits "repo" -r; then confirmed="--confirmed"; fi
-
-        if in_limits "repo"; then
-            debug "   load_config_vars -> call manage_repo"
-            manage_repo "$action" "$active_repo" "$force" "$confirmed"
-        fi
-        status=$?
-    fi
 
     # ABORT HERE ON UNINSTALL REPO
 #    if [ "$action" = "uninstall" ] && in_limits "repo" -r; then

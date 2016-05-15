@@ -53,7 +53,7 @@ symlink_topic () {
   done
 
   # Reset SYMLINK_CONFIRMED if not a valid symlink confirmation
-  if ! [[ "$SYMLINK_CONFIRMED"  =~ ^(repo|original|skip|default)$ ]]; then
+  if ! [[ "$SYMLINK_CONFIRMED"  =~ ^(default|original|repo|none|skip|dryrun)$ ]]; then
     SYMLINK_CONFIRMED=
   fi
 
@@ -133,7 +133,8 @@ symlink () {
     -d | default  Use default (repo)
     -o | original Use the original version found on system
     -r | repo     Use the repo version if original version is found
-    -s | skip
+    -s | skip     Report state and do nothing
+         dryrun   Report state and do nothing
   Example usage:
     # Link file and make backup of original if it exists
     symlink repo ~/path/file.sh"
@@ -152,6 +153,8 @@ symlink () {
       -o | original )   SYMLINK_CONFIRMED=original ;;
       -r | repo )       SYMLINK_CONFIRMED=repo ;;
       -s | skip )       SYMLINK_CONFIRMED=skip ;;
+      -n | none )       SYMLINK_CONFIRMED=skip ;;
+      dryrun )          SYMLINK_CONFIRMED=skip ;;
       * )  uncaught_case "$1" "src" "dst" ;;
     esac
     shift
@@ -174,6 +177,7 @@ symlink () {
   local message
 
   src="$(drealpath "$src")"
+  stub="$(drealpath "${src%.*}.stub")"
 
 
   # target path matches source (do nothing)
@@ -203,7 +207,7 @@ symlink () {
                             $spacer %b(Don't stress, we'll backup any original files)%b" $green $rc $green $rc $green $rc $gray $rc)"
 
      user "$(printf "$message
-             $spacer (%bd%b)otsys, (%bD%b)all, (%bc%b)urrent, (%bC%b)all (%bs%b)kip, (%bS%b)all: " \
+             $spacer (%br%b)repo, (%bR%b)all, (%bo%b)original, (%bO%b)all (%bs%b)kip, (%bS%b)all: " \
                $dark_yellow $rc \
                $dark_yellow $rc \
                $dark_yellow $rc \
@@ -216,10 +220,10 @@ symlink () {
       read user_input < /dev/tty
 
       case "$user_input" in
-        c )action=original; break;;
-        C )SYMLINK_CONFIRMED=original; break;;
-        d )action=repo; break;;
-        D )SYMLINK_CONFIRMED=repo; break;;
+        o )action=original; break;;
+        O )SYMLINK_CONFIRMED=original; break;;
+        r )action=repo; break;;
+        R )SYMLINK_CONFIRMED=repo; break;;
         s )action=skip; break;;
         S )SYMLINK_CONFIRMED=skip; break;;
         * )
@@ -246,9 +250,9 @@ symlink () {
       warn "$(printf "Symlinked $type : %b%s%b
                       $spacer currently linked to : %b%s%b
                       $spacer should be linked to : %b%s%b" $green "$dst" $rc $green "$dst_link_target" $rc $green "$src" $rc)"
-    # Original file not linked
+    # original file not linked
     elif [ "$exists" ] && [ "$dst_link_target" = "$dst" ]; then
-      warn "$(printf "Original $type : %b%s%b
+      warn "$(printf "original $type : %b%s%b
                       $spacer should be linked to : %b%s%b" $green "$dst" $rc $green "$src" $rc)"
 
     # dest not exist
@@ -314,8 +318,9 @@ unlink(){
     -d | default       Use default (original)
     -o | original      replace symlink with the original backup ;;
     -r | repo          replace symlink with a copy of the repo's version  ;;
-    -n | none          delete the symlink
-    -s | skip          Dent do anything just show the status (dry run)
+    -n | none          Just delete the symlink
+    -s | skip          Do nothing just show the status (dry run)
+         dryrun        Do nothing  just show the status (dry run)
   Example usage:
     # Unlink file and restore backup
     unlink original ~/path/file.sh"
@@ -328,10 +333,11 @@ unlink(){
   while [[ $# > 0 ]]; do
     case $1 in
       -d | default )    SYMLINK_CONFIRMED=original ;;
-      -r | repo )     SYMLINK_CONFIRMED=repo ;;
-      -n | none )     SYMLINK_CONFIRMED=none ;;
-      -o | original )  SYMLINK_CONFIRMED=original ;;
-      -s | skip )     SYMLINK_CONFIRMED=skip ;;
+      -r | repo )       SYMLINK_CONFIRMED=repo ;;
+      -n | none )       SYMLINK_CONFIRMED=none ;;
+      -o | original )   SYMLINK_CONFIRMED=original ;;
+      -s | skip )       SYMLINK_CONFIRMED=skip ;;
+           dryrun )     SYMLINK_CONFIRMED=skip ;;
       * ) uncaught_case "$1" "link_file" ;;
     esac
     shift
@@ -378,32 +384,8 @@ unlink(){
           if [ -f "$link_target" ]; then
               get_user_input "No backup of $link_name was found,
                       $spacer keep a copy of the repo version?" \
-                      -e "Yall" -e "Nall" --required
+                      --true "repo" --false "none" --confvar "SYMLINK_CONFIRMED" --required
               if [ $? -eq 0 ]; then action=repo ;fi
-
-#               #FIXME: none action proved here will bypass other links that have backups
-#               user "$(printf "No backup of $link_name was found,
-#                      $spacer keep a copy of the repo version?
-#                      $spacer (%by%b)es, (%bY%b)all, (%bn%b)o, (%bN%b)o all : " \
-#                      $green $rc \
-#                      $green $rc \
-#                      $green $rc $green $rc \
-#                      $yellow $rc $yellow $rc \
-#                      $blue $rc $blue $rc)"
-#
-#              while true; do
-#              # Read from tty, needed because we read in outer loop.
-#              read user_input < /dev/tty
-#              case "$user_input" in
-#                y )action=repo; break ;;
-#                Y )SYMLINK_CONFIRMED=repo; break ;;
-#                n )action=none;break ;;
-#                N )SYMLINK_CONFIRMED=none; break ;;
-#                * )
-#                  ;;
-#              esac
-#            done
-#            printf "$clear_line $clear_line_above $clear_line_above"
           fi
 
       # original file & repo file exist (not stub)
@@ -545,6 +527,76 @@ restore_backup_file(){
   fi
   return 1
 }
+
+
+#TODO: manage_topic_bin needs to be incorporated into main or symlink process? also needs freeze
+manage_topic_bin () {
+
+    local action="$1"
+    local topic="$2"
+
+    local src_bin
+    local dst_bin
+
+    if [ "$topic" = "dotsys" ]; then
+        src_bin="$(dotsys_dir)/bin}"
+        dst_bin="${PLATFORM_USER_BIN}/"
+
+    else
+        src_bin="$(topic_dir "$topic")/bin}"
+        dst_bin="$(dotsys_user_bin)}"
+    fi
+
+    if ! [ -d "$src_bin" ]; then return;fi
+
+    usage="link_topic_bin [<option>]"
+    usage_full="
+    -s | --silent        Suppress command already exists warning
+    "
+    local silent
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -s | --silent )      silent="$1" ;;
+        *)  invalid_option ;;
+        esac
+        shift
+    done
+
+    # search for files in topic bin and link/unlink
+    local files=("$(find "$src_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
+    local file
+    while IFS=$'\n' read -r file; do
+        local command="$(basename "$file")"
+        if ! [ "$silent" ] && cmd_exists $command; then
+            warn "The command '$command' already exists"
+            get_user_input "Are you sure you want to supersede it with
+                    $spacer $file?"
+            if ! [ $? -eq 0 ]; then return 0;fi
+        fi
+
+        if [ "$action" = "upgrade" ]; then
+            #symlink "$file" "$dst_bin"
+            pass
+
+        elif [ "$action" = "update" ]; then
+            #symlink "$file" "$dst_bin"
+            pass
+
+        elif [ "$action" = "freeze" ]; then
+            freeze_msg "bin" "$file"
+            return
+
+        elif [ "$action" = "install" ]; then
+            symlink "$file" "$dst_bin"
+
+        elif [ "$action" = "uninstall" ]; then
+            unlink "$file"
+
+        fi
+    done <<< "$files"
+}
+
 
 
 
