@@ -40,11 +40,12 @@ repo_dir () {
     fi
 
     # catch builtins
-#    if [ "$repo" = "dotsys/builtins" ]; then
-#        repo="$(dirname "$(builtin_topic_dir)")"
-#    fi
+    if [ "$repo" = "dotsys/builtins" ]; then
+        repo="$(dirname "$(builtin_topic_dir)")"
+    fi
 
     _split_repo_branch
+
     # catch abs path
     if [[ "$repo" = /* ]]; then
         echo "$repo"

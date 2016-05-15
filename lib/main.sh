@@ -195,26 +195,55 @@ dotsys () {
                         uninstall: remove the symlink
 
     --confirm dryrun    Same as dryrun option but bypasses confirmations
-    --log <file>        Print everything to output file (not implemented yet)
+    --log               Print everything to file located in .dotfiles/user/repo/<date>.dslog
     --cfg <mode>        Set mode for config output <default, user, topic, full>
 
+    Usage Examples:
 
-    Example usage:
+    - Perform action on all topics
+      $ dotsys <action>
 
-    - Install all topics
-      $ dotsys install
-    - Uninstall one or more topics
-      $ dotsys uninstall vim tmux
-    - Upgrade one or more topics and bypass confirmation (symlinks will need to be confirmed)
-      $ dotsys upgrade brew dotsys --confirm delete
-    - Upgrade one or more topics and bypass confirmation (symlinks will need to be confirmed)
-      $ dotsys upgrade brew dotsys --confirm backup
-    - Install a manager package without a topic
-      $ dotsys install brew packages google-chrome
-    - Install a command line util without a topic using default manager
-      $ dotsys install cmd git
-    - Install an os app without a topic using default manager
-      $ dotsys install app google-chrome
+    - Perform action on one or more topics
+      $ dotsys <action> vim tmux
+
+    - Perform action on all topics and bypass confirmations
+      $ dotsys <action> --confirm repo
+
+    - Limit actions to a specific catagory
+      $ dotsys <action> links
+
+    - Manage primary repo:
+      $ dotsys <action> repo
+
+    - Actions on topics from other repos
+      $ dotsys <action> <topics> from user/repo
+
+    - Log actions to a file
+      $ dotsys <action> --log mylog.txt
+
+    - Create a config file from a repo
+      $ dotsys freeze repo -cfg full
+
+    Package Management:
+
+    Packages do not require topics! The advantage managing packages
+    through dotsys insures that they will be added / remove from your
+    repo configuration the next time you install or uninstall with dotsys.
+
+    - Manage a command line utilities with default manager
+      $ dotsys <action> cmd vim tmux
+
+    - Manage an OS application with default manager
+      $ dotsys <action> app google-chrome lastpass
+
+    - Manage a specific manager's packages
+      $ dotsys install brew packages vim tmux
+
+    - Manage primary repository
+      $ dotsys <action> repo
+
+    - Manage a specific repository
+      $ dotsys <action> user/repo
 
 
     Organization:       NOTE: Any file or directory prefixed with a "." will be ignored by dotsys
@@ -305,7 +334,7 @@ dotsys () {
     local from_repo
     local from_branch
     local cfg_mode
-    local LOG_ALL
+    local LOG_FILE
     # allow toggle on a per run basis
     # also used internally to limit to one showing
     # use user_toggle_logo to turn logo off permanently
@@ -344,8 +373,8 @@ dotsys () {
                             fi
                             shift
                         fi ;;
-        --log)          LOG_ALL="true";;
-        --cfg)          cfg_mode="$2";;
+        --log)          LOG_FILE="true";;
+        --cfg)          cfg_mode="$2"; shift;;
         --*)            invalid_option ;;
         -*)             invalid_limit ;;
         *)              topics+=("$1") ;;
@@ -417,11 +446,19 @@ dotsys () {
 
     fi
 
+    # Verbose, logo, user
     if ! [ "$recursive" ]; then
         verbose_mode
         set_user_vars
         print_logo
         debug "main final -> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo v:$VERBOSE_MODE"
+    fi
+
+    # Use log file
+    if ! [ "$LOG_FILE" ]; then
+        LOG_FILE="$(repo_dir "$from_repo")/$(date '+%Y.%m%.d.%H.%M.%S').dslog"
+        info "LOGGING TO FILE: $LOG_FILE"
+        echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > LOG_FILE
     fi
 
     # freeze dotsys state files
@@ -649,6 +686,7 @@ uninstall_inactive () {
     # Check for inactive topics to uninstall
     local active="ACTIVE_$(echo "$1" | tr '[:lower:]' '[:upper:]' )"
     local active_array
+    # if your interpreter shows and error here igore it, its fine!
     eval "active_array=( \"\${$active[@]}\" )"
     local in_use="$(echo "${1%s}" | tr '[:upper:]' '[:lower:]')_in_use"
     local inactive=()

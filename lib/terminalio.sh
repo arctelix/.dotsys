@@ -34,56 +34,57 @@ clear_line_above="\e[1A\r\e[K"
 spacer="\r\e[K        " # indent from screen edge
 indent="        " # indent from current position
 
-# OUTPUT
-
-# feedback
+# BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE THESE METHODS )
 
 info () {
   printf   "\r%b[%b INFO %b] %b\n" $clear_line $dark_blue $rc "$1"
+  log "INFO" "$1"
 }
 
 warn () {
   printf   "\r%b[%b WARN %b] %b\n" $clear_line $dark_yellow $rc "$1"
+  log "WARN" "$1"
 }
 
 user () {
   printf   "\r%b[%b  ?   %b] %b" $clear_line $dark_yellow $rc "$1"
+  log "USER" "$1"
 }
 
 success () {
   printf "\r%b[%b  OK  %b] %b\n" $clear_line $dark_green $rc "$1"
+  log "SUCCESS" "$1"
 }
 
 
 fail () {
   printf  "\r%b[%b FAIL %b] %b\n" $clear_line $dark_red $rc "$1"
-  debug_log_msg "fail" "$1"
+  debug_log "FAIL" "$1"
 }
 
 task() {
   printf  "\r%b[%b TASK %b] %b$1%b %b\n" $clear_line $dark_cyan $rc $cyan $rc "$2"
+  log "TASK" "$1"
 }
 
 # messages
 
 msg () {
   printf  "\r%b%b$1%b\n" $clear_line $yellow $rc
+  log "MSG" "$1"
 
 }
 
 msg_help () {
   printf  "\r%b$1%b\n" $dark_gray $rc
-
+  log "HELP" "$1"
 }
 
 error () {
   printf  "\r\n%b%bERROR:  %b ${1}%b\n\n" $clear_line $dark_red $red $rc
-  debug_log_msg "error" "$1"
+  debug_log "ERROR" "$1"
+  log "ERROR" "$1"
 
-}
-
-pass (){
-    return $?
 }
 
 freeze_msg () {
@@ -92,18 +93,38 @@ freeze_msg () {
     local items="$3"
 
     printf  "$spacer %b$task%b : $desc\n" $green $rc
+    log "$indent $task" "$desc"
 
     if ! [ "$items" ]; then return;fi
 
     while IFS=$'\n' read -r item; do
         printf  "$spacer - %b$item%b\n" $green $rc
+        log "$indent - $item"
     done <<< "$items"
+}
+
+# END BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE ABOVE METHODS )
+
+pass (){
+    return $?
+}
+
+log () {
+    if ! [ "$LOG_FILE" ]; then return ;fi
+    local status="$1"
+    local item="$2"
+    if [ "$item" ]; then
+        echo "$status: $item" >> $LOG_FILE
+    else
+        echo "$status" >> $LOG_FILE
+    fi
 }
 
 debug_log_msg () {
     local status="$1"
     local item="$2"
-    printf "$status: $item \n" >> "$DOTSYS_REPOSITORY/debug.log"
+    printf "$status: $item" >> "$DOTSYS_REPOSITORY/debug.log"
+    log "$status" "$item"
 }
 
 success_or_fail () {
@@ -113,7 +134,6 @@ success_or_fail () {
 success_or_error () {
     func_or_func_msg success error $1 "$2" "${3:-$?}"
     if ! [ $? -eq 0 ]; then exit; fi
-
 }
 
 success_or_none () {
