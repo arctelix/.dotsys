@@ -1,120 +1,0 @@
-fail: Failed to install remote repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
-fail: The topic [0;32mtest_alt_symlink[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_alt_symlink[0m 
-fail: The topic [0;32mtest_bin[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_bin[0m 
-fail: The topic [0;32mtest_cfg_exclude_mac[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_cfg_exclude_mac[0m 
-fail: The topic [0;32mtest_exclude_platform[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_exclude_platform[0m 
-fail: The topic [0;32mtest_ismanaged[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_ismanaged[0m 
-fail: The topic [0;32mtest_manager[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_manager[0m 
-fail: The topic [0;32mtest_n_ismanaged[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_n_ismanaged[0m 
-fail: The topic [0;32mtest_scripts[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_scripts[0m 
-fail: The topic [0;32mtest_settings[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_settings[0m 
-fail: The topic [0;32mtest_source_sh[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_source_sh[0m 
-fail: The topic [0;32mtest_t_script[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_t_script[0m 
-fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
-fail: No remote configured for repo 
-fail: No remote configured for repo 
-fail: No remote configured for repo 
-fail: Failed to fatal: branch 'master' does not exist 
-fail: Failed to fatal: branch 'master' does not exist 
-fail: Failed to initialize [0;32minstalled[0m repo [0;32mhttps://github.com/arctelix/dotsys-repo-test[0m 
-fail: Failed to check remote repo 
-fail: Failed to remote repo:
-https://github.com/arctelix/dotsys-repo-test 0 
-fail: Failed to remote repo:
-https://github.com/arctelix/dotsys-repo-test 0 
-fail: Failed to fatal: branch 'master' does not exist 
-fail: Fetching origin From https://github.com/arctelix/dotsys-repo-test * [new branch] master -> origin/master 
-fail: Failed to fatal: branch 'master' does not exist 
-fail: Fetching origin From https://github.com/arctelix/dotsys-repo-test * [new branch] master -> origin/master 
-fail: Failed to fatal: branch 'master' does not exist 
-error: Could not resolve issues with your repo, please restore it manually 
-fail: Fetching origin From https://github.com/arctelix/dotsys-repo-test * [new branch] master -> origin/master 
-fail: Failed to fatal: branch 'master' does not exist 
-error: Could not resolve issues with your repo, please restore it manually 
-fail: Failed to fatal: branch 'master' does not exist 
-error: Could not resolve issues with your repo, please restore it manually 
-fail: Failed to fatal: branch 'master' does not exist 
-error: Could not resolve issues with your repo, please restore it manually 
-error: Invalid action: rename_all 
-error: Invalid action: repo 
-error: Invalid action: unisntall 
-fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
-fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
-error: The local directory repo .dotsys/builtins must be
-                    [K         installed before it can be uninstalled. 
-error: invalid option:  
-fail: Failed to uninstall installed repo [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test[0m 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-fail: The topic [0;32mtest_idep_after[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_idep_after[0m 
-fail: The topic [0;32mtest_dep_before[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_dep_before[0m 
-fail: The topic [0;32mtest_idep_after[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_idep_after[0m 
-fail: The topic [0;32mtest_dep_before[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo-test/test_dep_before[0m 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: Invalid action: isntall 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The repo arctelix/dotsys-repo-test
-                    [K         was not found and can not be updated.
-                    [K         Check the spelling and make sure it is located
-                    [K         in /Users/arctelix/.dotfiles. 
-fail: The topic [0;32mtest_alt_symlink[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_alt_symlink[0m 
-fail: The topic [0;32mtest_bin[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_bin[0m 
-fail: The topic [0;32mtest_cfg_exclude_mac[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_cfg_exclude_mac[0m 
-fail: The topic [0;32mtest_dep_before[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_dep_before[0m 
-fail: The topic [0;32mtest_exclude_platform[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_exclude_platform[0m 
-fail: The topic [0;32mtest_from_alt[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_from_alt[0m 
-fail: The topic [0;32mtest_has_deps[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_has_deps[0m 
-fail: The topic [0;32mtest_idep_after[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_idep_after[0m 
-fail: The topic [0;32mtest_ismanaged[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_ismanaged[0m 
-fail: The topic [0;32mtest_manager[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_manager[0m 
-fail: The topic [0;32mtest_n_ismanaged[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_n_ismanaged[0m 
-fail: The topic [0;32mtest_scripts[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_scripts[0m 
-fail: The topic [0;32mtest_settings[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_settings[0m 
-fail: The topic [0;32mtest_source_sh[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_source_sh[0m 
-fail: The topic [0;32mtest_t_script[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/.dotsys/builtins/test_t_script[0m 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 
-error: The local directory repo arctelix/dotsys-repo-test must be
-                    [K         installed before it can be uninstalled. 

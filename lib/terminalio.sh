@@ -120,10 +120,10 @@ log () {
     fi
 }
 
-debug_log_msg () {
+debug_log () {
     local status="$1"
     local item="$2"
-    printf "$status: $item" >> "$DOTSYS_REPOSITORY/debug.log"
+    printf "$status: $item" >> "$DOTSYS_REPOSITORY/debug.dslog"
     log "$status" "$item"
 }
 

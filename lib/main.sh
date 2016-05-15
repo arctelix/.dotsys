@@ -455,8 +455,8 @@ dotsys () {
     fi
 
     # Use log file
-    if ! [ "$LOG_FILE" ]; then
-        LOG_FILE="$(repo_dir "$from_repo")/$(date '+%Y.%m%.d.%H.%M.%S').dslog"
+    if [ "$LOG_FILE" ]; then
+        LOG_FILE="$(repo_dir "$from_repo")/$(date '+%Y-%m-%d-%H-%M-%S').dslog"
         info "LOGGING TO FILE: $LOG_FILE"
         echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > LOG_FILE
     fi
