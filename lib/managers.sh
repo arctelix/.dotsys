@@ -161,18 +161,20 @@ manage_dependencies () {
 
     # handle install
     else
+        # only show the message for first dependency
+        if ! [ "$task_shown" ]; then
+          info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
+          task_shown="true"
+        fi
+        # install
         if ! is_installed "system" "$dep" --silent;then
-          # only show the message for first dependency
-          if ! [ "$task_shown" ]; then
-              info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
-              task_shown="true"
-          fi
           dotsys "install" "$dep" from "$ACTIVE_REPO" --recursive
           # Add dep to deps state
           if [ $? -eq 0 ]; then
             debug "state_install: deps $dep $topic"
             state_install "deps" "$dep" "$topic"
           fi
+        # already installed
         else
           success "$(printf "Already installed dependency %s %b%s%b" "$DRY_RUN" $green "$dep" $rc)"
         fi

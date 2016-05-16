@@ -9,10 +9,7 @@ if ! [ "$DOTSYS_LIBRARY" ];then
     DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 fi
 
-echo "- install DOTSYS_LIBRARY: $DOTSYS_REPOSITORY"
-
 . "$DOTSYS_LIBRARY/main.sh"
-
 
 dotsys_installer "${1:-install}"
 

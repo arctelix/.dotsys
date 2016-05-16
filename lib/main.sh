@@ -111,8 +111,6 @@ TOPIC_CONFIRMED=
 # persist state for symlink actions only
 SYMLINK_CONFIRMED=
 
-
-
 # Default dry run state is off
 # use 'dry_run 0' to toggle on
 # use 'if dry_run' to test for state
@@ -140,6 +138,10 @@ PLATFORM_USER_BIN="$(platform_user_bin)"
 # Determines if logo,stats,and other verbose messages are shownm
 VERBOSE_MODE=
 
+# tracks if shown
+SHOW_LOGO=0
+SHOW_STATS=0
+
 #debug "DOTFILES_ROOT: $(dotfiles_dir)"
 
 dotsys () {
@@ -166,14 +168,15 @@ dotsys () {
     <limits> optional:
 
     -d | dotsys             Limit action to dotsys (excludes package management)
-    -r | repo [branch]      Limit action to primary repo management (not topics)
+    -r | repo [branch]      Limit action to primary repo management defaults (not topics)
                             replace 'repo' with 'user/repo[:branch]' for alternate
                             freeze repo: Output repo config to file
                                          use --cfg option to set mode
     -l | links              Limit action to symlinks
     -m | managers           Limit action to package managers
     -s | scripts            Limit action to scripts
-    -f | from <user/repo>   Apply action to topics from specified repo
+    -f | from <user/repo>   Apply action to topics from specified repo master branch
+                            optional alternate branch: <user/repo:branch>
     -p | packages           Limit action to package manager's packages
     -c | cmd                Limit action to cmd manager's packages
     -a | app                Limit action to app manager's packages
@@ -191,8 +194,8 @@ dotsys () {
                         uninstall: restore original or keep a copy of repo version
     --confirm original  install: use original dotfile and backup repo version
                         uninstall: restore original or none
-    --confirm none      install: skip, leave system as is
-                        uninstall: remove the symlink
+    --confirm none      install: make the symlink, make no backup
+                        uninstall: remove the symlink, do not restore backup
 
     --confirm dryrun    Same as dryrun option but bypasses confirmations
     --log               Print everything to file located in .dotfiles/user/repo/<date>.dslog
@@ -335,18 +338,13 @@ dotsys () {
     local from_branch
     local cfg_mode
     local LOG_FILE
-    # allow toggle on a per run basis
-    # also used internally to limit to one showing
-    # use user_toggle_logo to turn logo off permanently
-    local show_logo=0
-    local show_stats=0
 
     while [[ $# > 0 ]]; do
     case $1 in
         # limits
         -d | dotsys )   limits+=("dotsys") ;;
         -r | repo)      limits+=("repo")    #no topics permitted (just branch)
-                        # not followed by option
+                        # repo not followed by option
                         if [ "$2" ] && [[ "$2" != "-"* ]]; then
                             from_branch="$2";shift
                         fi ;;
@@ -360,8 +358,8 @@ dotsys () {
 
         # options
         --force)        force="$1" ;;
-        --tlogo)        ! get_state_value "show_logo"; show_logo=$? ;;
-        --tstats)       ! get_state_value "show_stats"; show_stats=$? ;;
+        --tlogo)        ! get_state_value "SHOW_LOGO"; SHOW_LOGO=$? ;;
+        --tstats)       ! get_state_value "SHOW_STATS"; SHOW_STATS=$? ;;
         --debug)        DEBUG="true" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       dry_run 0 ;;
@@ -372,6 +370,8 @@ dotsys () {
                                 GLOBAL_CONFIRMED="skip"
                             fi
                             shift
+                        else
+                            GLOBAL_CONFIRMED=true
                         fi ;;
         --log)          LOG_FILE="true";;
         --cfg)          cfg_mode="$2"; shift;;
@@ -443,7 +443,31 @@ dotsys () {
             $spacer a repo must be explicitly specified"
             exit
         fi
+    fi
 
+    # LOGGING
+
+    if [ "$LOG_FILE" ]; then
+        LOG_FILE="$(repo_dir "$from_repo")/$(date '+%Y-%m-%d-%H-%M-%S').dslog"
+        info "LOGGING TO FILE: $LOG_FILE"
+        echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > LOG_FILE
+    fi
+
+    # HANDLE DOTSYS LIMIT
+
+    # sets repo to $DOTSYS_REPOSITORY
+    # Runs builtin dotsys topic only
+    if in_limits "dotsys" -r; then
+        # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
+        if [ "$action" = "uninstall" ] && dotsys_in_use; then
+                error "Dotsys can not be uninstalled until all t
+              $sdpacer topics, packages, & repos are uninstalled"
+                continue
+        fi
+        debug "DOTSYS IN LIMITS"
+        topics=("dotsys")
+        #limits=("${limits[@]/dotsys}")
+        from_repo="dotsys/dotsys"
     fi
 
     # Verbose, logo, user
@@ -451,15 +475,11 @@ dotsys () {
         verbose_mode
         set_user_vars
         print_logo
-        debug "main final -> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo v:$VERBOSE_MODE"
     fi
 
-    # Use log file
-    if [ "$LOG_FILE" ]; then
-        LOG_FILE="$(repo_dir "$from_repo")/$(date '+%Y-%m-%d-%H-%M-%S').dslog"
-        info "LOGGING TO FILE: $LOG_FILE"
-        echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > LOG_FILE
-    fi
+    debug "main final -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
+    debug "main final -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
+
 
     # freeze dotsys state files
     if [ "$action" = "freeze" ] && in_limits "dotsys"; then
@@ -524,16 +544,18 @@ dotsys () {
 
     for topic in ${topics[@]};do
 
+        debug "main -> Handling topic: $topic"
+
         # ABORT: NON EXISTANT TOPICS
         if ! topic_exists "$topic"; then
             # error message supplied by topic_exits
             continue
         fi
 
-        # LOAD TOPIC CONFIG (must be first and not in $(subshell) !)
+        # LOAD TOPIC CONFIG (must be HERE)
         load_topic_config_vars "$topic"
 
-        # ABORT: on platform exclude
+        # ABORT: on platform exclude (after config loaded)
         if topic_excluded "$topic"; then
             #task "$(printf "Excluded %b${topic}%b on $PLATFORM" $green $cyan)"
             continue
@@ -585,7 +607,6 @@ dotsys () {
 
         # ABORT: Non manager topics when limited to managers
         else
-            debug "main -> Handling topic: $topic"
             if in_limits "managers" -r; then
                 debug "main -> ABORT: manager in limits and $topic is not a manger"
                 continue
@@ -594,7 +615,7 @@ dotsys () {
 
 
         # ABORT: on install if already installed (override --force)
-        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" && ! [ "$force" ]; then
+        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$ACTIVE_REPO" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         # ABORT: on uninstall if not installed (override --force)
@@ -648,7 +669,7 @@ dotsys () {
         fi
 
         # 5) packages
-        if [ "$action" != "uninstall" ] && is_manager && in_limits "packages"; then
+        if is_manager  && [ "$action" != "uninstall" ] && in_limits "packages"; then
             debug "main -> call manage_packages"
             manage_packages "$action" "$topic" file "$force"
         fi
@@ -669,7 +690,7 @@ dotsys () {
         # Check for inactive topics uninstall
         uninstall_inactive "topics"
 
-        # Check if all repo topics are uninstalled & uninstall
+        # Check if all repo topics are uninstalled
         if in_limits "repo" && ! repo_in_use "$ACTIVE_REPO"; then
             debug "main -> REPO NO LONGER USED uninstalling"
             manage_repo "uninstall" "$ACTIVE_REPO" "$force"
@@ -710,33 +731,55 @@ uninstall_inactive () {
     fi
 }
 
+dotsys_in_use () {
+    # if anything is in dotsys state file it's in use
+    in_state "dotsys" ""
+    local r=$?
+    debug "   - dotsys_in_use = $r"
+    return $r
+}
 
 dotsys_installer () {
 
     local usage="dotsys_installer <action>"
     local usage_full="Installs and uninstalls dotsys.
-    1) Put
-    -i | install        install dotsys
-    -x | uninstall      install dotsys
+    1) Extract the .dotsys directory to the location you want to install it and run this script.
+    install        install dotsys
+    uninstall      uninstall dotsys
+    --debug        turn on debug mode
     "
 
-    local action=
-    case "$1" in
-    -i | install )    action="$1" ;;
-    -x | uninstall )  action="$1" ;;
-    * )  error "Not a valid action: $1"
-         show_usage ;;
-    esac
+    local current_shell="${SHELL##*/}"
+    local action
 
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        install )    action="$1" ;;
+        uninstall )  action="$1" ;;
+        -d | --debug )  DEBUG="true" ;;
+        * )  error "Not a valid action: $1"
+             show_usage ;;
+        esac
+        shift
+    done
+
+    action="${action:-install}"
+
+    set_user_vars
     print_logo
 
-    confirm_task "$action" "" "dotsys"
-
-    #TODO: need to make sure stubs are installed for current shell and sourced.
-    local current_shell="${SHELL##*/}"
-
-    debug "$action dotsys DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+    debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+    debug "current_shell: $current_shell"
     debug "$action dotsys user_dotfiles: "$(dotfiles_dir)""
+
+    msg "Please make sure the .dotsys directory is located where you
+       \rwant to keep it. If you need to move it in the future, run
+       \rthis script again.
+
+       \rIf you want to uninstall dotsys you can run this script with
+       \rthe uninstall parameter '.dotsys/instller.sh uninstall'"
+
+    confirm_task "$action" "" "dotsys"
 
     # make sure PLATFORM_USER_BIN is on path
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
@@ -758,13 +801,7 @@ dotsys_installer () {
     fi
 
     # This is what makes dotsys command accessible
-    # can not move .dotsys directory after install
-    task "$action .dotsys/bin to $PLATFORM_USER_BIN"
-    manage_topic_bin "$action" dotsys
-
-    # Handle dotsys topic requirements
-    # Using from dotsys/builtins will prevent repo uninstall issues
-    dotsys "$action" dotsys from dotsys/builtins
+    dotsys "$action" dotsys --force --confirm none
 
     # were going to have to do this
     #dotsys install shell bash zsh

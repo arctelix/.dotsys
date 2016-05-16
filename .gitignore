@@ -2,4 +2,5 @@ state/*
 user/*
 *.private
 .DS_Store
-.dslog
+.dslog*.stub
+*.private

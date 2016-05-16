@@ -299,7 +299,7 @@ get_user_input () {
         false_all="$(cap_first "$false")"
     fi
 
-    debug "-- get_user_input: CONFIRMED_VAR($CONFIRMED_VAR)=${!CONFIRMED_VAR} sets confirm=$confirmed "
+    debug "   -- get_user_input: CONFIRMED_VAR($CONFIRMED_VAR)=${!CONFIRMED_VAR} sets confirm=$confirmed "
 
     if [ "$options" = "omit" ]; then
         true="omit"
@@ -354,7 +354,7 @@ get_user_input () {
     done
 
     extra_regex="${extra_regex:-All the things that make architects go mad!}"
-    debug "extra_regex=$extra_regex"
+    debug "      get_user_input: extra_regex=$extra_regex"
 
     # Get user input
     default="${default:-$true}"
@@ -362,7 +362,7 @@ get_user_input () {
 
     user "${question}: "
 
-    debug "-- get_user_input: confirm=$confirmed invalid=$invalid TOPIC_CONFIRMED=$TOPIC_CONFIRMED"
+    debug "      get_user_input: confirm=$confirmed invalid=$invalid TOPIC_CONFIRMED=$TOPIC_CONFIRMED"
 
     if ! [ "$confirmed" ]; then
         local state=0
@@ -439,7 +439,7 @@ get_user_input () {
 
 confirm_task () {
 
-  local usage="confirm_task <action> <topic> <limits>..."
+  local usage="-- confirm_task <action> <topic> <limits>..."
 
   local action="${1-$action}"
   local prefix="${2:-\b}"
@@ -467,8 +467,8 @@ confirm_task () {
     lines+="\n$spacer $line"
   done
 
-  debug "CONFIRMED_VAR=${CONFIRMED_VAR}"
-  debug "CONFIRMED_VAR value=${!CONFIRMED_VAR}"
+  debug "   CONFIRMED_VAR=${CONFIRMED_VAR}"
+  debug "   CONFIRMED_VAR value=${!CONFIRMED_VAR}"
 
   if ! [ "${!CONFIRMED_VAR}" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
 
@@ -514,10 +514,7 @@ confirm_task () {
           esac
       done
       clear_lines "$text"
-
   fi
-
-  debug "CONFIRMED_VAR value=${!CONFIRMED_VAR}"
 
   confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 

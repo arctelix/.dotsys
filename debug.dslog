@@ -1,0 +1,2 @@
+ERROR: Not a valid action: --debugERROR: Invalid action: ERROR: Invalid action: FAIL: Failed to add fatal: remote origin already exists.FAIL: Failed to link [0;32m/usr/local/bin/[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys[0mFAIL: Failed to add fatal: remote origin already exists.

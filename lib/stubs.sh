@@ -86,7 +86,6 @@ manage_stubs () {
     fi
 
     for topic in $builtins; do
-        debug "-- create_all_req_stubs for: $topic"
         # always install shell stub (it's required by dotsys)!
         if ! [ "$topic" = "shell" ];then
             # abort if no user topic directory or if topic is not in current scope

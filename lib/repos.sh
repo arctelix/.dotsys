@@ -28,16 +28,21 @@ manage_repo (){
 
     required_vars "action" "repo"
 
-    # separate branch from user/repo/branch
+    # separate repo & branch from repo:branch
     local branch="master"
     _split_repo_branch
 
     debug "-- manage_repo: received  a:$action r:$repo b:$branch $force"
 
-    local github_repo="https://github.com/$repo"
+    local github_repo
+    if [ "$repo" = "dotsys/dotsys" ];then
+        github_repo="https://github.com/arctelix/.dotsys"
+    else
+        github_repo="https://github.com/$repo"
+    fi
+
     local local_repo="$(repo_dir "$repo")"
     local OWD="$PWD"
-
     local repo_user="$(cap_first ${repo%/*})"
     local repo_name="${repo#*/}"
     local state_key="installed_repo"
@@ -744,11 +749,11 @@ setup_git_config () {
 
 has_remote_repo (){
     local repo="${1:-$repo}"
-    local remote="https://github.com/$repo"
+    local remote="https://github.com/$repo/.git"
     local silent="$2"
     local status
 
-    status="$(curl -s --head --silent "${remote}.git" | head -n 1 )"
+    status="$(curl -Ls --head --silent "${remote}.git" | head -n 1 )"
     #wget -q "${remote}.git" --no-check-certificate -O - > /dev/null
 
     local ret=1

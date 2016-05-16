@@ -19,10 +19,17 @@ dotsys_dir () {
 
 }
 
-# Gets full path to topic based on repo
+# Gets full path to topic based on active repo
 topic_dir () {
   local topic="${1:-$topic}"
   local repo=$(get_topic_config_val "$topic" "repo")
+
+  # catch dotsys as topic
+  if [ "$topic" = "dotsys" ]; then
+      echo "$(builtin_topic_dir "$topic")"
+      return
+  fi
+
   echo "$(repo_dir "$repo")/$topic"
 }
 
@@ -39,9 +46,9 @@ repo_dir () {
         return 1
     fi
 
-    # catch builtins
-    if [ "$repo" = "dotsys/builtins" ]; then
-        repo="$(dirname "$(builtin_topic_dir)")"
+    # catch dotsys repo
+    if [ "$repo" = "dotsys/dotsys" ]; then
+        repo="$(drealpath "$DOTSYS_REPOSITORY")"
     fi
 
     _split_repo_branch

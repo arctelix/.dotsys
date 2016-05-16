@@ -53,7 +53,7 @@ grep_kv (){
 
 
 # test if key and or value exists in state
-# if key is a topic run installed_test to see if exits on system
+# if no value is supplied also checks if installed on system
 is_installed () {
     local state="$1"
     local key="$2"
@@ -102,7 +102,7 @@ is_installed () {
 #    fi
 
     # Check if installed on system, not managed by dotsys
-    if ! [ "$installed" -eq 0 ]; then
+    if ! [ "$installed" -eq 0 ] && ! [ "$val" ]; then
         local installed_test="$(get_topic_config_val "$key" "installed_test")"
         if cmd_exists "${installed_test:-$key}"; then
             if [ "$system_ok" ]; then

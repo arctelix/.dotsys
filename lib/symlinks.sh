@@ -62,38 +62,47 @@ symlink_topic () {
   local symlinks
   local dst_path
 
-  # handle dotsys topic
-  if [ "$topic" = "dotsys" ]; then
-     symlinks=("$(find "${DOTSYS_REPOSITORY}/bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
-     dst_path="${PLATFORM_USER_BIN}/"
+  debug "-- symlink_topic $action $topic SYMLINK_CONFIRMED=$SYMLINK_CONFIRMED"
 
-  # all other topics
-  else
-     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
-  fi
+  # Symlink all files in topic/bin to dotsys/user/bin
+  local silent
+  if [ "$SYMLINK_CONFIRMED" ]; then silent="--silent";fi
+  manage_topic_bin "$action" "$topic" "$silent"
+
+#  # handle dotsys topic
+#  if [ "$topic" = "dotsys" ]; then
+#     symlinks=("$(find "${DOTSYS_REPOSITORY}/bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
+#     dst_path="${PLATFORM_USER_BIN}/"
+#  # all other topics
+#  else
+#     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
+#  fi
+
+  symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
+
   local last_stub # tracks last stub found
   local src
   while IFS=$'\n' read -r src; do
 
-    local filename_noext="${src%.*}"
-    local stub="${filename_noext}.stub"
+    local filename_no_ext="${src%.*}"
+    local stub="${filename_no_ext}.stub"
 
-    debug "src  : $src"
-    debug "stub : $stub"
+    debug "   symlink_topic src  : $src"
+    debug "   symlink_topic stub : $stub"
 
     # No simlinks found
     if [[ -z "$src" ]] && [ "$action" != "freeze" ]; then
-      success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
+      #success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
       continue
     fi
 
-    if [ "$last_stub" = "$filename_noext" ]; then
+    if [ "$last_stub" = "$filename_no_ext" ]; then
         debug "symlink_topic: already linked -> $src"
         continue
     fi
 
     if [ "$src" = "$stub" ]; then
-        last_stub="$filename_noext"
+        last_stub="$filename_no_ext"
         debug "symlink_topic: symlinking stub -> $src"
     fi
 
@@ -153,7 +162,7 @@ symlink () {
       -o | original )   SYMLINK_CONFIRMED=original ;;
       -r | repo )       SYMLINK_CONFIRMED=repo ;;
       -s | skip )       SYMLINK_CONFIRMED=skip ;;
-      -n | none )       SYMLINK_CONFIRMED=skip ;;
+      -n | none )       SYMLINK_CONFIRMED=none ;;
       dryrun )          SYMLINK_CONFIRMED=skip ;;
       * )  uncaught_case "$1" "src" "dst" ;;
     esac
@@ -178,7 +187,6 @@ symlink () {
 
   src="$(drealpath "$src")"
   stub="$(drealpath "${src%.*}.stub")"
-
 
   # target path matches source (do nothing)
   if [ "$dst_link_target" = "$src" ] && [ -L "$dst"  ]; then
@@ -235,6 +243,9 @@ symlink () {
   fi
 
   action=${action:-$SYMLINK_CONFIRMED}
+
+  debug "-- symlink confirmed action: $action
+       \r   $src -> $dst"
 
   local message=
   local skip_reason="skipped "
@@ -539,12 +550,12 @@ manage_topic_bin () {
     local dst_bin
 
     if [ "$topic" = "dotsys" ]; then
-        src_bin="$(dotsys_dir)/bin}"
-        dst_bin="${PLATFORM_USER_BIN}/"
+        src_bin="$(dotsys_dir)/bin"
+        dst_bin="${PLATFORM_USER_BIN}"
 
     else
-        src_bin="$(topic_dir "$topic")/bin}"
-        dst_bin="$(dotsys_user_bin)}"
+        src_bin="$(topic_dir "$topic")/bin"
+        dst_bin="$(dotsys_user_bin)"
     fi
 
     if ! [ -d "$src_bin" ]; then return;fi
@@ -557,40 +568,53 @@ manage_topic_bin () {
 
     while [[ $# > 0 ]]; do
         case "$1" in
-        -s | --silent )      silent="$1" ;;
+        -s | --silent )      silent="true" ;;
         *)  invalid_option ;;
         esac
         shift
     done
 
+    debug "-- manage_topic_bin: $action $topic $silent"
+    debug "   manage_topic_bin src_bin : $src_bin"
+    debug "   manage_topic_bin dst_bin : $dst_bin"
+
     # search for files in topic bin and link/unlink
     local files=("$(find "$src_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
     local file
     while IFS=$'\n' read -r file; do
+
+        # test for exitsing command
         local command="$(basename "$file")"
         if ! [ "$silent" ] && cmd_exists $command; then
-            warn "The command '$command' already exists"
+            warn "The command '$command' already exists on the system path"
             get_user_input "Are you sure you want to supersede it with
-                    $spacer $file?"
+                    $spacer $file?" --required
             if ! [ $? -eq 0 ]; then return 0;fi
         fi
 
+        local dst_file="${dst_bin}/$(basename "$file")"
+
+        debug "   - manage_topic_bin: $action $topic file: $file
+             \r     -> $dst_file"
+
         if [ "$action" = "upgrade" ]; then
             #symlink "$file" "$dst_bin"
+            # currently not required since all symlinks
             pass
 
         elif [ "$action" = "update" ]; then
             #symlink "$file" "$dst_bin"
+            # currently not required since all symlinks
             pass
 
         elif [ "$action" = "freeze" ]; then
             freeze_msg "bin" "$file"
             return
 
-        elif [ "$action" = "install" ]; then
-            symlink "$file" "$dst_bin"
+        elif [ "$action" = "link" ]; then
+            symlink "$file" "$dst_file"
 
-        elif [ "$action" = "uninstall" ]; then
+        elif [ "$action" = "unlink" ]; then
             unlink "$file"
 
         fi

@@ -74,7 +74,7 @@ load_config_vars (){
         # preconfirm when repo is in limits
         if in_limits "repo" -r; then confirmed="--confirmed"; fi
 
-        if in_limits "repo"; then
+        if in_limits "repo" "dotsys"; then
             debug "   load_config_vars -> call manage_repo"
             manage_repo "$action" "$active_repo" "$force" "$confirmed"
         fi
@@ -131,7 +131,7 @@ validate_config_or_repo (){
     local status=0
 
     # FILE: anything with . must be a file
-    if [[ "$input" =~ ^.*\..*$ ]]; then
+    if [[ "$input" =~ ^[^/]*\.cfg$ ]]; then
         config_file="$input"
         active_repo="$(get_repo_from_config_file "$config_file")"
 
@@ -283,7 +283,7 @@ new_user_config () {
 
 set_user_vars () {
     local repo="$1"
-    USER_NAME="$(cap_first "$(whoami)")" #"$cap_first ${repo%/*})"
+    USER_NAME="$(cap_first "$(whoami)")"
 }
 
 get_config_file_from_repo () {
@@ -302,13 +302,13 @@ get_repo_from_config_file () {
 user_config_logo () {
     get_user_input "Would you like to see the dotsys logo when
             $spacer working on multiple topics (it's helpful)?"
-    set_state_value "show_logo" $? "user"
+    set_state_value "SHOW_LOGO" $? "user"
 }
 
 user_config_stats () {
     get_user_input "Would you like to see the dotsys stats when
             $spacer working on multiple topics (it's helpful)?"
-    set_state_value "show_stats" $? "user"
+    set_state_value "SHOW_STATS" $? "user"
 }
 
 user_config_stubs () {
@@ -334,8 +334,7 @@ user_config_stubs () {
 }
 
 print_logo (){
-
-if ! get_state_value "show_logo" "user"|| [ $show_logo -eq 1 ] || ! verbose_mode; then
+if ! get_state_value "SHOW_LOGO" "user" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
     return
 fi
 
@@ -358,11 +357,11 @@ printf "%b
 
 $message%b\n\n" $dark_red $rc
 # make sure it's only seen once
-show_logo=1
+SHOW_LOGO=1
 }
 
 print_stats () {
-    if ! get_state_value "show_stats" "user" || [ $show_stats -eq 1 ] || ! verbose_mode; then
+    if ! get_state_value "SHOW_STATS" "user" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
         return
     fi
 
@@ -371,7 +370,7 @@ print_stats () {
     info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
     info "$(printf "There are %b${#topics[@]} topics to $action%b" $green $rc)"
     # make sure it's only seen once
-    show_stats=1
+    SHOW_STATS=1
 }
 
 # TOPIC CONFIG
