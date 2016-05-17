@@ -3,6 +3,7 @@
 #
 # SOURCED BY ALL BORNE SHELLS (ALWAYS)
 # -------------------------------------
+if [ "$dotsysrc" = "loaded" ]; then return; fi
 export dotsysrc="loaded"
 
 # TESTING

@@ -84,7 +84,7 @@ dotsys_installer () {
 
     if [ "$action" = "uninstall" ]; then
         # remove the remaining dependencies
-        dotsys "$action" --force --recursive --confirm default
+        #dotsys "$action" from "dotsys/dotsys" --recursive --confirm default
         msg "\nDotsys has been uninstalled. You can now safely delete
              \rthe flowing directories to remove all traces:
              \r- $DOTSYS_REPOSITORY

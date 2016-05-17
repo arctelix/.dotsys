@@ -3,9 +3,14 @@
 #
 # SOURCED BY ALL BORNE SHELLS (ALWAYS)
 # -------------------------------------
+if [ "$shellrc" = "loaded" ]; then return; fi
+export shellrc="loaded"
 
 # FOR TESTING
 echo "dotsys stub: shellrc loaded"
+
+# LOAD: .dotsysrc if it exists
+test -f "$HOME/.dotsysrc" && source "$HOME/.dotsysrc"
 
 # LOAD TOPIC SYMLINK: CUSTOMIZE THE FILE NAMED BELOW
 stub_target="{STUB_TARGET}"

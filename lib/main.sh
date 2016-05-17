@@ -452,37 +452,37 @@ dotsys () {
 
     # HANDLE DOTSYS LIMIT
 
-    # sets repo to $DOTSYS_REPOSITORY
-    # Runs builtin dotsys topic only
     if in_limits "dotsys" -r; then
-        # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
-        if [ "$action" = "uninstall" ] && dotsys_in_use; then
-            warn "Dotsys is still in use and cannot be uninstalled until
-          $spacer all topics, packages, & repos are uninstalled\n"
-
-            get_user_input "Would you like to uninstall everything now?" -r
-            if [ $? -eq 0 ]; then
-                dotsys uninstall
-            fi
-            exit
-        fi
         debug "main -> DOTSYS IN LIMITS"
         topics=("dotsys")
-        limits=("${limits[@]/dotsys}")
         from_repo="dotsys/dotsys"
+        limits=("${limits[@]/dotsys}")
+
+        if [ "$action" = "uninstall" ]; then
+            # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
+            if dotsys_in_use; then
+                warn "Dotsys is still in use and cannot be uninstalled until
+              $spacer all topics, packages, & repos are uninstalled\n"
+                get_user_input "Would you like to uninstall everything now?" -r
+                if [ $? -eq 0 ]; then
+                    dotsys uninstall
+                else
+                    exit
+                fi
+            # Clear topics so that all installed from dotsys/dotsys get removed
+            else
+                topics=
+            fi
+        fi
     fi
-    debug "1"
+
     # Verbose, logo, user
     if ! [ "$recursive" ]; then
-        debug "2"
         verbose_mode
-        debug "3"
         set_user_vars
-        debug "4"
         print_logo
-        debug "5"
     fi
-    debug "6"
+
     debug "main final -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
     debug "main final -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
 
@@ -718,22 +718,21 @@ uninstall_inactive () {
     local in_use="$(echo "${1%s}" | tr '[:upper:]' '[:lower:]')_in_use"
     local inactive=()
     local t
-    debug "main -> clean inactive:$1"
-    debug "main -> $active:\n${active_array[@]}"
-    debug "main -> topics:\n${topics[@]}"
+
+    debug "-- uninstall_inactive $1"
 
     for t in ${active_array[@]}; do
         [[ "${topics[@]}" =~ "$t" ]]
-        debug "[[ $t in topics ]] = $?"
+        debug "   [[ $t in topics ]] = $?"
         if ! $in_use "$t" && [[ "${topics[@]}" =~ "$t" ]]; then
-            debug "main -> ADDING INACTIVE $1: $t"
+            debug "   uninstall_inactive found INACTIVE $1: $t"
             inactive+=("$t");
         fi
     done
-    debug "main -> INACTIVE $1: ${inactive[@]}"
-    if [ "$inactive" ]; then
-        debug "main -> uninstall inactive managers: $inactive"
-        dotsys uninstall ${inactive[@]} ${limits[@]} --recursive --force
+
+    if [ "${inactive[@]}" ]; then
+        debug "   uninstall_inactive -> dotsys uninstall ${inactive[@]} ${limits[@]} --recursive"
+        dotsys uninstall ${inactive[@]} ${limits[@]} --recursive
     fi
 }
 

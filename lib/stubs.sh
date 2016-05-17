@@ -148,9 +148,12 @@ create_user_stub () {
     #local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
     local stub_dst="$(dotsys_user_stubs)/${stub_name}.${topic}.stub"
 
+    # abort if stub dst exists & is newer then source, unless forced
+    if [ -f "$stub_dst" ] && [ "$stub_dst" -nt "$stub_src" ] && ! [ "$force" ]; then return;fi
+
     debug "-- create_user_stub stub_src : $stub_src"
     debug "   create_user_stub stub_dst : $stub_dst"
-    debug "-- create_user_stub stub_target : $stub_target"
+    debug "   create_user_stub stub_target : $stub_target"
 
 
     # catch dotsys stubs (should not be required but keeping for now)
@@ -161,12 +164,6 @@ create_user_stub () {
 #        debug "   create_user_stub: SOURCE AND DST ARE THE SAME"
 #        debug "   create_user_stub new stub_dst    : $stub_dst"
 #    fi
-
-    # abort if stub exists unless forced
-    if [ -f "$stub_dst" ] && ! [ "$force" ]; then return;fi
-
-    debug "-- create_user_stub: $stub_src
-            \r-> $stub_dst"
 
     # create temp files
     local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
