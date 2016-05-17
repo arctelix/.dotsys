@@ -18,6 +18,7 @@ export PATH={DOTSYS_BIN}:$PATH
 # LOAD: .shellrc if it exists
 test -f $HOME/.shellrc && source "$HOME/.shellrc"
 
+echo "- sourcing shell files"
 # SOURCE TOPIC FILES: .shell
 dotsys source_topic_files shell
 

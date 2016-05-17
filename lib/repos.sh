@@ -526,8 +526,8 @@ git_commit () {
                 $spacer Would you like to commit the changes?" \
                 --invalid omit --default "$default" --true omit --hint "or enter a commit message\n$spacer" -r
         if ! [ $? -eq 0 ];then
-            printf "$spacer %bcommit aborted%b\n" $red $rc
-            return 1
+            printf "$spacer %bcommit aborted by user%b\n" $yellow $rc
+            return 0
             cd "$OWD"
         fi
     fi

@@ -74,8 +74,6 @@ manage_stubs () {
     local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
     local topic
 
-    debug "-- manage_stubs: $action ${topics[@]} $force"
-
     if [ "$action" = "uninstall" ] || [ "$action" = "freeze" ]; then return;fi
 
     # check if user accepted subs and at least one topic
@@ -83,14 +81,14 @@ manage_stubs () {
         return
     fi
 
+    # Add dotsys deps to topics when topic is dotsys
     if [[ "${topics[@]}" =~ "dotsys" ]]; then
-#        load_topic_config_vars "dotsys"
-#        local deps="$(get_topic_config_val "dotsys" "deps")"
-#        debug "   manage_stubs dotsys deps: $deps"
-#        debug "   manage_stubs dotsys deps[@]: ${deps[@]}"
-#        topics+=($deps)
-         pass
+        load_topic_config_vars "dotsys"
+        local deps="$(get_topic_config_val "dotsys" "deps")"
+        topics+=($deps)
     fi
+
+    debug "-- manage_stubs: $action ${topics[@]} $force"
 
     if verbose_mode; then
         confirm_task "create" "stub files for" "${topics[@]}"
@@ -98,7 +96,6 @@ manage_stubs () {
 
     for topic in $builtins; do
         # abort if no user topic directory or if topic is not in current scope
-        debug "   manage_stubs topics = ${topics[@]}"
         if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
         create_topic_stubs "$topic" "$action" "$force"
     done
@@ -125,7 +122,8 @@ get_topic_stub_files(){
     #TODO: TEST stub files from repos (need to prevent duplicates in stub process)
     local repo_dir="$(topic_dir "$topic")"
     local builtin_dir="$(builtin_topic_dir "$topic")"
-    echo "$(find "$repo_dir" "$builtin_dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
+    local result="$(find "$repo_dir" "$builtin_dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
+    echo "$(remove_duplicates "$result")"
 }
 
 # returns the stub file symlink target
