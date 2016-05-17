@@ -84,7 +84,7 @@ manage_stubs () {
     fi
 
     if [[ "${topics[@]}" =~ "dotsys" ]]; then
-        topics+=($(get_topic_cofig_val "dotsys" "deps"))
+        topics+=( $(get_topic_config_val "dotsys" "deps") )
         debug "   manage_stubs added dotsys deps: ${topics[@]}"
     fi
 
