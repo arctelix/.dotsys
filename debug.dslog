@@ -9,4 +9,4 @@ ERROR: Not a valid action: --debugERROR: Invalid action: ERROR: Invalid action: 
             [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
             [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
             [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
-            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mERROR: Invalid action: 

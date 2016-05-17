@@ -43,9 +43,9 @@ if [ "$1" = "ds_test" ]; then
   source "$DOTSYS_LIBRARY/main.sh"
   DEBUG=true
   echo
-  warn "You have entered dotsys test mode by using the key word 'ds_test'!"
+  warn "You have entered dotsys test mode!"
   echo
-  $@
+  "$@"
 
 # allows access to all common.sh funcs
 # (not sure yet if this will be needed)

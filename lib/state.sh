@@ -128,9 +128,8 @@ is_installed () {
 }
 
 # Test if key and or value exists in state file
-# use "!$key" to negate values with keys that contain "$key"
-# use "!$val" to negate values with keys that contain "$key"
-# Only one ! is allowed key or value
+# use "!$key" to negate keys containing "$key"
+# use "!$val" to negate values containing "$val"
 # ie: key="!repo" will not match keys "user_repo:" or "repo:" etc..
 in_state () {
   local state="$1"
@@ -139,25 +138,40 @@ in_state () {
   local key="$2"
   local val="$3"
   local results
-  local not
+  local not_key="$key"
+  local not_val="$val"
   local r
+
+  debug "   in_state received '$key:$val'"
+
   if [[ "$key" == "!"* ]]; then
-      not="${key#!}"
-      key=""
-      debug "   in_state grep: not '$(grep_kv)'"
-      results="$(grep "$(grep_kv)" "$file")"
+    not_key="${key#!}.*"
+    key=""
+    not_search="true"
+  fi
+  if [[ "$val" == "!"* ]]; then
+    not_val=".*${val#!}"
+    val=""
+    not_search="true"
+  fi
+
+  results="$(grep "$(grep_kv)" "$file")"
+  local status=$?
+  debug "   in_state grep '$(grep_kv)' = $status"
+  debug "   in_state grep result:\n$(echo "$results" | indent_lines)"
+
+  if [ "$not_search" ]; then
       for r in $results; do
-        debug "   - in_state grep result: $r"
-        if [ "$r" ] && ! [[ "$r" =~ ${not}.*:${val} ]]; then
+        if [ "$r" ] && ! [[ "$r" =~ ${not_key}:${not_val} ]]; then
+            debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = 0"
             return 0
         fi
+        debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = 1"
       done
       return 1
   fi
 
-  # test if key and or value is in state file
-  debug "   in_state grep: '$(grep_kv)'"
-  grep -q "$(grep_kv)" "$file"
+  return $status
 }
 
 # gets value for unique key

@@ -736,7 +736,7 @@ uninstall_inactive () {
 
 dotsys_in_use () {
     # if anything is in dotsys state file it's in use
-    in_state "dotsys" "" "dotsys/dotsys"
+    in_state "dotsys" "" "!dotsys/dotsys"
     local r=$?
     debug "   - dotsys_in_use = $r"
     return $r
