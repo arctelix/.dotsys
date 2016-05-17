@@ -74,12 +74,14 @@ manage_stubs () {
     local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
     local topic
 
-    debug "-- manage_stubs: $action $topics $force"
+    if [ "$action" = "uninstall" ] || [ "$action" = "freeze" ]; then return;fi
 
-    # check if user accepted subs
+    # check if user accepted subs and at least one topic
     if ! get_state_value "use_stub_files" "user" || ! [ "${topics[0]}" ]; then
         return
     fi
+
+    debug "-- manage_stubs: $action $topics $force"
 
     if verbose_mode; then
         confirm_task "create" "stub files for" "${topics[@]}"
