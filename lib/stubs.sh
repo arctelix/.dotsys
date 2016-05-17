@@ -84,12 +84,12 @@ manage_stubs () {
     fi
 
     if [[ "${topics[@]}" =~ "dotsys" ]]; then
-        load_topic_config_vars "dotsys"
-        local deps="$(get_topic_config_val "dotsys" "deps")"
-        debug "   manage_stubs dotsys deps: $deps"
-        debug "   manage_stubs dotsys deps[@]: ${deps[@]}"
-        topics+=($deps)
-        debug "   manage_stubs dotsys topics = ${topics[@]}"
+#        load_topic_config_vars "dotsys"
+#        local deps="$(get_topic_config_val "dotsys" "deps")"
+#        debug "   manage_stubs dotsys deps: $deps"
+#        debug "   manage_stubs dotsys deps[@]: ${deps[@]}"
+#        topics+=($deps)
+         pass
     fi
 
     if verbose_mode; then
@@ -98,6 +98,7 @@ manage_stubs () {
 
     for topic in $builtins; do
         # abort if no user topic directory or if topic is not in current scope
+        debug "   manage_stubs topics = ${topics[@]}"
         if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
         create_topic_stubs "$topic" "$action" "$force"
     done

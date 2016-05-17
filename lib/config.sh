@@ -390,12 +390,12 @@ load_topic_config_vars () {
     if [ "${!loaded}" ]; then return; fi
     # Load default topic config
     if [ -f "$builtin_cfg" ];then
-        debug "*** loading $builtin_cfg"
+        debug "*** loading builtin cfg: $builtin_cfg"
         eval "$(parse_yaml "$builtin_cfg" "_${topic}_")"
     fi
     # overwrite default with repo topic config
-    if [ -f "*** $topic_cfg" ];then
-        debug "loading $topic_cfg"
+    if [ "$builtin_cfg" != "$topic_cfg" ] && [ -f "$topic_cfg" ];then
+        debug "*** loading topic cgf: $topic_cfg"
         eval "$(parse_yaml "$topic_cfg" "_${topic}_")"
     fi
     eval "${loaded}=true"
