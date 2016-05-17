@@ -129,6 +129,8 @@ is_installed () {
 
 # Test if key and or value exists in state file
 # use "!$key" to negate values with keys that contain "$key"
+# use "!$val" to negate values with keys that contain "$key"
+# Only one ! is allowed key or value
 # ie: key="!repo" will not match keys "user_repo:" or "repo:" etc..
 in_state () {
   local state="$1"
@@ -146,7 +148,7 @@ in_state () {
       results="$(grep "$(grep_kv)" "$file")"
       for r in $results; do
         debug "   - in_state grep result: $r"
-        if [ "$r" ] && ! [[ "$r" =~ ${not}.*:${value} ]]; then
+        if [ "$r" ] && ! [[ "$r" =~ ${not}.*:${val} ]]; then
             return 0
         fi
       done

@@ -19,12 +19,17 @@ dotsys_dir () {
 
 }
 
-# Gets full path to topic based on active repo
+# Gets full path to topic based on
+# repo config -> topic config -> active repo,
 topic_dir () {
   local topic="${1:-$topic}"
   local repo=$(get_topic_config_val "$topic" "repo")
 
-  # catch dotsys as topic
+  if [ "$repo" ]; then
+      repo="$(get_active_repo)"
+  fi
+
+  # catch dotsys repo or well get root not builtins
   if is_dotsys_repo; then
       echo "$(builtin_topic_dir "$topic")"
       return
@@ -48,6 +53,7 @@ repo_dir () {
 
     # catch dotsys repo
     if is_dotsys_repo; then
+        # Git is in root not builtins
         repo="$DOTSYS_REPOSITORY"
     fi
 
@@ -64,7 +70,10 @@ repo_dir () {
 
 # determines the active repo config -> state
 get_active_repo () {
-  if [ "$ACTIVE_REPO" ]; then echo "$ACTIVE_REPO"; fi
+  if [ "$ACTIVE_REPO" ]; then
+    echo "$ACTIVE_REPO"
+    return
+  fi
 
   # check for config file repo
   local repo="$(get_config_val "_repo")"

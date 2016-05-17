@@ -736,78 +736,8 @@ uninstall_inactive () {
 
 dotsys_in_use () {
     # if anything is in dotsys state file it's in use
-    in_state "dotsys" ""
+    in_state "dotsys" "" "dotsys/dotsys"
     local r=$?
     debug "   - dotsys_in_use = $r"
     return $r
 }
-
-dotsys_installer () {
-
-    local usage="dotsys_installer <action>"
-    local usage_full="Installs and uninstalls dotsys.
-    1) Extract the .dotsys directory to the location you want to install it and run this script.
-    install        install dotsys
-    uninstall      uninstall dotsys
-    --debug        turn on debug mode
-    "
-
-    local current_shell="${SHELL##*/}"
-    local action
-
-    while [[ $# > 0 ]]; do
-        case "$1" in
-        install )    action="$1" ;;
-        uninstall )  action="$1" ;;
-        -d | --debug )  DEBUG="true" ;;
-        * )  error "Not a valid action: $1"
-             show_usage ;;
-        esac
-        shift
-    done
-
-    action="${action:-install}"
-
-    set_user_vars
-    print_logo
-
-    debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-    debug "current_shell: $current_shell"
-    debug "$action dotsys user_dotfiles: "$(dotfiles_dir)""
-
-    msg "Please make sure the .dotsys directory is located where you
-       \rwant to keep it. If you need to move it in the future, run
-       \rthis script again.
-
-       \rIf you want to uninstall dotsys you can run this script with
-       \rthe uninstall parameter '.dotsys/instller.sh uninstall'"
-
-    confirm_task "$action" "" "dotsys"
-
-    # make sure PLATFORM_USER_BIN is on path
-    if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
-        debug "adding /usr/local/bin to path"
-        #TODO: .dotsysrc persists user bin on path, should we just permanently add to path file?
-        export PATH=$PATH:/usr/local/bin
-    fi
-
-    # create required directories
-    if [ "$action" = "install" ]; then
-        task "Prepare required directories and files"
-        mkdir -p "$(dotfiles_dir)"
-        mkdir -p "$DOTSYS_REPOSITORY/user/bin"
-        mkdir -p "$DOTSYS_REPOSITORY/user/stubs"
-        mkdir -p "$DOTSYS_REPOSITORY/state"
-        touch "$DOTSYS_REPOSITORY/state/dotsys.state"
-        touch "$DOTSYS_REPOSITORY/state/user.state"
-        touch "$DOTSYS_REPOSITORY/state/repo.state"
-    fi
-
-    dotsys "$action" dotsys --force --confirm none
-}
-
-
-
-
-
-

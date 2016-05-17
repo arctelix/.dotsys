@@ -44,12 +44,12 @@ run_topic_script () {
       # installed
       if [ "$action" = "install" ]; then
             # add to state file if not there
-            state_install "dotsys" "$topic" "$ACTIVE_REPO"
+            state_install "dotsys" "$topic" "$(get_active_repo)"
             INSTALLED+=($topic) # not used any more
       # uninstalled
       elif [ "$action" = "uninstall" ]; then
           # remove topic form state file
-          state_uninstall "dotsys" "$topic" "$ACTIVE_REPO"
+          state_uninstall "dotsys" "$topic" "$(get_active_repo)"
           INSTALLED=( "${INSTALLED[@]/$topic}" ) # not used any more
       fi
   fi

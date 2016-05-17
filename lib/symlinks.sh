@@ -78,8 +78,8 @@ symlink_topic () {
 #     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
 #  fi
 
-  # find stubs & symlinks (TODO:move generated stubs to dotsys_user_stubs)
-  symlinks="$(/usr/bin/find "$(dotsys_user_stubs)" "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
+  # find stubs & symlinks
+  symlinks="$(/usr/bin/find "$(dotsys_user_stubs)" "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name "*${topic}.stub" -o -name '*.symlink' -not -name '\.*')"
 
   local last_stub # tracks last stub found
   local linked=()

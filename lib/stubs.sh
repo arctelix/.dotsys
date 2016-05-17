@@ -18,7 +18,7 @@ add_existing_dotfiles () {
 
         # iterate topic sub files
         local topic_dir="$(repo_dir "$repo")/$topic"
-        local stub_files="$(get_builtin_stub_files "$topic")"
+        local stub_files="$(get_topic_stub_files "$topic")"
         local stub_dst
         local stub_target
         local builtin_stub_src
@@ -99,20 +99,21 @@ create_topic_stubs () {
     local force="$3"
     local file
 
-    local builtin_stubs="$(get_builtin_stub_files "$topic")"
-    if ! [ "$builtin_stubs" ]; then return; fi
+    local stub_files="$(get_topic_stub_files "$topic")"
+    if ! [ "$stub_files" ]; then return; fi
     while IFS=$'\n' read -r file; do
-        local stub_name="$(basename "${file%.*}")"
-        debug "STUBBING TOPIC: $topic file $stub_name"
-        #confirm_task "create" "the stub file for" "${topic}'s $stub_name"
-        create_user_stub "$topic" "$stub_name" "$force"
-    done <<< "$builtin_stubs"
+        debug "STUBBING TOPIC: $topic file = $file"
+        #confirm_task "create" "the stub file for" "${topic}'s $file"
+        create_user_stub "$topic" "$file" "$force"
+    done <<< "$stub_files"
 }
 
-get_builtin_stub_files(){
+get_topic_stub_files(){
     local topic="$1"
-    local dir="$(builtin_topic_dir "$topic")"
-    echo "$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
+    #TODO: TEST stub files from repos (need to prevent duplicates in stub process)
+    local repo_dir="$(topic_dir "$topic")"
+    local builtin_dir="$(builtin_topic_dir "$topic")"
+    echo "$(find "$repo_dir" "$builtin_dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
 }
 
 # returns the stub file symlink target
@@ -130,10 +131,12 @@ create_user_stub () {
     # ex: {USER_EMAIL} uses global user_email (does not check for topic specif value)
 
     local topic="$1"
-    local stub_name="$2"
+    local stub_src="$2"
+    local stub_name="$(basename "${stub_src%.*}")"
     shift; shift
     local force="$3"
-    local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
+
+    #local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
 
     # abort if there is no stub for topic
     if ! [ -f "$stub_src" ]; then
@@ -142,7 +145,8 @@ create_user_stub () {
     fi
 
     local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
-    local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
+    #local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
+    local stub_dst="$(dotsys_user_stubs)/${stub_name}.${topic}.stub"
 
     debug "-- create_user_stub stub_src : $stub_src"
     debug "   create_user_stub stub_dst : $stub_dst"
@@ -150,13 +154,13 @@ create_user_stub () {
 
 
     # catch dotsys stubs (should not be required but keeping for now)
-    local dotsys_stub
-    if [ "$stub_src" = "$stub_dst" ]; then
-        stub_dst="$(dotsys_user_stubs)/${stub_name}.stub"
-        dotsys_stub="true"
-        debug "   create_user_stub: SOURCE AND DST ARE THE SAME"
-        debug "   create_user_stub new stub_dst    : $stub_dst"
-    fi
+#    local dotsys_stub
+#    if [ "$stub_src" = "$stub_dst" ]; then
+#        stub_dst="$(dotsys_user_stubs)/${stub_name}.stub"
+#        dotsys_stub="true"
+#        debug "   create_user_stub: SOURCE AND DST ARE THE SAME"
+#        debug "   create_user_stub new stub_dst    : $stub_dst"
+#    fi
 
     # abort if stub exists unless forced
     if [ -f "$stub_dst" ] && ! [ "$force" ]; then return;fi
@@ -252,8 +256,8 @@ create_user_stub () {
 
     done
 
-    # move to user/repo/topic
-    mkdir -p "$(dirname "$stub_dst")"
+    # move to dotsys_user_stubs/stubname.topic.stub
+    #mkdir -p "$(dirname "$stub_dst")"
     mv -f "$stub_out" "$stub_dst"
 
     if ! is_installed "dotsys" "$topic" --silent; then
