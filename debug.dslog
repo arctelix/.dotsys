@@ -9,4 +9,11 @@ ERROR: Not a valid action: --debugERROR: Invalid action: ERROR: Invalid action: 
             [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
             [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
             [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
-            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mERROR: Invalid action: 
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mERROR: Invalid action: ERROR: Dotsys can not be uninstalled until all t
+               topics, packages, & repos are uninstalledFAIL:  file is not a symlink  [0m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys !ERROR: Dotsys can not be uninstalled until all topics
+               packages, & repos are uninstalledFAIL:  file is not a symlink  [0m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys !ERROR: Invalid action: FAIL:  file is not a symlink  [0m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys !FAIL:  file is not a symlink  [0m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys !FAIL:  file is not a symlink  [0m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys !FAIL:  file is not a symlink  [0m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys !FAIL: The topic [0;32mbin[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/bin[0mFAIL: The topic [0;32mbuiltins[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/builtins[0mFAIL: The topic [0;32mlib[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/lib[0mFAIL: The topic [0;32mstate[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/state[0mFAIL: The topic [0;32muser[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0m

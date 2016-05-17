@@ -185,7 +185,7 @@ get_state_value () {
   local val="${line#*:}"
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     status=$val
-  else
+  elif [ "$val" ]; then
     echo "$val"
   fi
   return $status

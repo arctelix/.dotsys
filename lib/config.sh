@@ -120,7 +120,7 @@ load_config_vars (){
     debug "   load_config_vars: set DEFAULT_CMD_MANAGER=$DEFAULT_CMD_MANAGER"
 
     # Show config info when more then one topic
-    if [ ${#topics[@]} -gt 1 ]; then print_stats; fi
+    if verbose_mode; then print_stats; fi
 }
 
 # sets config_file & config_file
@@ -338,7 +338,7 @@ user_config_stubs () {
 }
 
 print_logo (){
-if ! get_state_value "SHOW_LOGO" "user" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
+if ! get_state_value "show_logo" "user" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
     return
 fi
 
@@ -365,7 +365,7 @@ SHOW_LOGO=1
 }
 
 print_stats () {
-    if ! get_state_value "SHOW_STATS" "user" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
+    if ! get_state_value "show_stats" "user" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
         return
     fi
 

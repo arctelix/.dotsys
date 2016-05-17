@@ -515,6 +515,7 @@ get_symlink_dst () {
 
     #remove extensions
     base_name="${base_name%.symlink}"
+    base_name="${base_name%.${topic}.stub}"
     base_name="${base_name%.stub}"
 
     # create dst path+file name
@@ -553,7 +554,6 @@ restore_backup_file(){
 }
 
 
-#TODO: manage_topic_bin needs to be incorporated into main or symlink process? also needs freeze
 manage_topic_bin () {
 
     local action="$1"
@@ -628,7 +628,7 @@ manage_topic_bin () {
             symlink "$file" "$dst_file"
 
         elif [ "$action" = "unlink" ]; then
-            unlink "$file"
+            unlink "$dst_file"
 
         fi
     done <<< "$files"

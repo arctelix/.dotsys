@@ -9,7 +9,7 @@
 # https://github.com/holman/dotfiles
 # https://github.com/webpro/dotfiles
 #
-# Other useful reference
+# Other useful reference & rationale
 # http://superuser.com/questions/789448/choosing-between-bashrc-profile-bash-profile-etc
 #
 # Licence: The MIT License (MIT)
@@ -27,31 +27,25 @@
 # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 # OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-# INSTALL FIXES:
-#TODO URGENT: manage_topic_bin needs to be incorporated into main or symlink process? also needs freeze
-#TODO URGENT: shell topic is required for other shells to work and needs to be installed when dotsys is installed!
 
-# GENERAL FIXES:
-#DONE URGENT: Prevent uninstalling topics with DEPS before their dependants are uninstalled!
-#DONE URGENT: move installed_repo keys into repo.state (its better for freeze and other lookups)
-#TODO URGENT: TEST new repo branch syntax = "action user/repo:branch" or "action repo branch"
+#GENERAL FIXES:
+#TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
 #TODO URGENT: topic and builtin array type configs get duplicated (deps already done) need to filter symlinks.
-#TODO URGENT: Record to manager package file when packages added to manager via 'dotsys action cmd package'
+#TODO URGENT: Add to manager.state when packages added to manager via 'dotsys action cmd package'
 
-#TODO: When no primary repo, find existing repos and offer choices, including builtin repo..
 
-# FUTURE FEATURES
+
+#FUTURE FEATURES
+#TODO ROADMAP: When no primary repo, find existing repos and offer choices, including builtin repo..
 #TODO ROADMAP: handle .settings files
 #TODO ROADMAP: FOR NEW Installs prompt for --force & --confirm options
-#TODO ROADMAP: Finish implementing func_or_func_msg....
 #TODO ROADMAP: Detect platforms like babun and linux distros that give generic uname.
-#TODO ROADMAP: Option to delete unused topics from user's .dotfies .directory after install (NOT PRIMARY REPO)
-#TODO ROADMAP: Option to move topics from installed repos to primary repo, or create new repo from current config..
+#TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
+#TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..
 
-# QUESTIONS:
+#QUESTIONS:
 #TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show state, show managers?
-#TODO QUESTION: Symlink "(o)ption all" choices should apply to all topics (currently just for one topic at a time)?
-#TODO QUESTION: Hold manager's packages install to end of topic runs?
+#TODO QUESTION: Hold all manager's package file installs to end of topic runs?
 #TODO QUESTION: Currently repo holds user files, maybe installed topics should be copied to internal user directory.
 # - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
 # - Currently if a repo is deleted the data is gone, the change would protect topics in use.
@@ -463,23 +457,32 @@ dotsys () {
     if in_limits "dotsys" -r; then
         # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
         if [ "$action" = "uninstall" ] && dotsys_in_use; then
-                error "Dotsys can not be uninstalled until all t
-              $sdpacer topics, packages, & repos are uninstalled"
-                continue
+            warn "Dotsys is still in use and cannot be uninstalled until
+          $spacer all topics, packages, & repos are uninstalled\n"
+
+            get_user_input "Would you like to uninstall everything now?" -r
+            if [ $? -eq 0 ]; then
+                dotsys uninstall
+            fi
+            exit
         fi
-        debug "DOTSYS IN LIMITS"
+        debug "main -> DOTSYS IN LIMITS"
         topics=("dotsys")
-        #limits=("${limits[@]/dotsys}")
+        limits=("${limits[@]/dotsys}")
         from_repo="dotsys/dotsys"
     fi
-
+    debug "1"
     # Verbose, logo, user
     if ! [ "$recursive" ]; then
+        debug "2"
         verbose_mode
+        debug "3"
         set_user_vars
+        debug "4"
         print_logo
+        debug "5"
     fi
-
+    debug "6"
     debug "main final -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
     debug "main final -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
 

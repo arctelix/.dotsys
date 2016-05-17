@@ -3,6 +3,7 @@
 #
 # SOURCED BY ALL BORNE SHELLS (ALWAYS)
 # -------------------------------------
+export dotsysrc="loaded"
 
 # TESTING
 echo "dotsys stub: dotsysrc loaded"

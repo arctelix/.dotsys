@@ -42,7 +42,7 @@ info () {
 }
 
 warn () {
-  printf   "\r%b[%b WARN %b] %b\n" $clear_line $dark_yellow $rc "$1"
+  printf   "\r%b[%b WARN %b] %b%b%b\n" $clear_line $dark_yellow $rc $yellow "$1" $rc
   log "WARN" "$1"
 }
 
@@ -353,7 +353,6 @@ get_user_input () {
         options="$options $opt"
     done
 
-    extra_regex="${extra_regex:-All the things that make architects go mad!}"
     debug "      get_user_input: extra_regex=$extra_regex"
 
     # Get user input
@@ -409,7 +408,6 @@ get_user_input () {
                     state=$?
                     break
                     ;;
-                #TODO: TEST Putting this after blank we wont need the crazy string
                 [${extra_regex}] )
                     state=1
                     break
@@ -439,7 +437,7 @@ get_user_input () {
 
 confirm_task () {
 
-  local usage="-- confirm_task <action> <topic> <limits>..."
+  local usage="confirm_task <action> <topic> <limits>..."
 
   local action="${1-$action}"
   local prefix="${2:-\b}"
@@ -470,7 +468,7 @@ confirm_task () {
   debug "   CONFIRMED_VAR=${CONFIRMED_VAR}"
   debug "   CONFIRMED_VAR value=${!CONFIRMED_VAR}"
 
-  if ! [ "${!CONFIRMED_VAR}" ] && ! [ "$confirmed" ] && [ "$topic" ]; then
+  if ! [ "${!CONFIRMED_VAR}" ] && ! [ "$confirmed" ]; then
 
       local text="$(printf "Would you like to %b%s%b %s %b%s%b %s?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \

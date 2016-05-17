@@ -3,6 +3,7 @@
 #
 # SOURCED BY ALL BORNE SHELLS (LOGIN)
 # -------------------------------------
+export dotsysprofile="loaded"
 
 # TESTING
 echo "dotsys stub: dotsysprofile loaded"
