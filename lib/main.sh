@@ -538,7 +538,7 @@ dotsys () {
 
     # We stub here rather then during symlink process
     # to get all user info up front for auto install
-    if [ "$action" != "uninstall" ] && in_limits "stubs" "dotsys"; then
+    if [ "$action" != "uninstall" ] || in_limits "stubs" "dotsys"; then
         manage_stubs "$action" "${topics[@]}" "$force"
     fi
 

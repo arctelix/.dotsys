@@ -16,4 +16,4 @@ ERROR: Not a valid action: --debugERROR: Invalid action: ERROR: Invalid action: 
     [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/builtins[0mFAIL: The topic [0;32mlib[0m, was not found in the specified repo:
     [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/lib[0mFAIL: The topic [0;32mstate[0m, was not found in the specified repo:
     [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/state[0mFAIL: The topic [0;32muser[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0m
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0m
