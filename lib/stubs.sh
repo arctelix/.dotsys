@@ -88,8 +88,8 @@ manage_stubs () {
         local deps="$(get_topic_config_val "dotsys" "deps")"
         debug "   manage_stubs dotsys deps: $deps"
         debug "   manage_stubs dotsys deps[@]: ${deps[@]}"
-        topics+=( $deps )
-        debug "   manage_stubs topics = ${topics[@]}"
+        topics+=($deps)
+        debug "   manage_stubs dotsys topics = ${topics[@]}"
     fi
 
     if verbose_mode; then
