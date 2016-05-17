@@ -81,16 +81,13 @@ manage_stubs () {
         return
     fi
 
-    if [ "${#topics[@]}" -gt 1 ]; then
+    if verbose_mode; then
         confirm_task "create" "stub files for" "${topics[@]}"
     fi
 
     for topic in $builtins; do
-        # always install shell stub (it's required by dotsys)!
-        if ! [ "$topic" = "shell" ];then
-            # abort if no user topic directory or if topic is not in current scope
-            if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
-        fi
+        # abort if no user topic directory or if topic is not in current scope
+        if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
         create_topic_stubs "$topic" "$action" "$force"
     done
 }
@@ -122,7 +119,7 @@ get_builtin_stub_files(){
 get_topic_stub_target(){
     local topic="$1"
     local stub_src="$2"
-    echo "$(topic_dir "$topic")/"$(basename "${stub_src%.stub}.symlink")""
+    echo "$(topic_dir "$topic")/$(basename "${stub_src%.stub}.symlink")"
 }
 
 # create custom stub file in user/repo/topic
@@ -134,9 +131,9 @@ create_user_stub () {
 
     local topic="$1"
     local stub_name="$2"
+    shift; shift
     local force="$3"
     local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
-    local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
 
     # abort if there is no stub for topic
     if ! [ -f "$stub_src" ]; then
@@ -144,16 +141,32 @@ create_user_stub () {
         return
     fi
 
-    local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
-    local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
+    local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
     local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
-    shift; shift
+
+    debug "-- create_user_stub stub_src : $stub_src"
+    debug "   create_user_stub stub_dst : $stub_dst"
+    debug "-- create_user_stub stub_target : $stub_target"
+
+
+    # catch dotsys stubs (should not be required but keeping for now)
+    local dotsys_stub
+    if [ "$stub_src" = "$stub_dst" ]; then
+        stub_dst="$(dotsys_user_stubs)/${stub_name}.stub"
+        dotsys_stub="true"
+        debug "   create_user_stub: SOURCE AND DST ARE THE SAME"
+        debug "   create_user_stub new stub_dst    : $stub_dst"
+    fi
 
     # abort if stub exists unless forced
     if [ -f "$stub_dst" ] && ! [ "$force" ]; then return;fi
 
     debug "-- create_user_stub: $stub_src
-                     -> $stub_dst"
+            \r-> $stub_dst"
+
+    # create temp files
+    local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
+    local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
 
     # Create output file
     cp -f "$stub_src" "$stub_out"
@@ -165,7 +178,7 @@ create_user_stub () {
 
     local variables="$(sed -n 's|.*[^\$]{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
 
-    # FIXME (IF NEEDED): IF more topic specific variables become common implement topic/*.stub.vars scripts
+    # TODO (IF NEEDED): IF more topic specific variables become common implement topic/*.stub.vars scripts
     # implement topic/*.stub.vars script to provide custom values.
     # get_custom_stub_vars $topic
     # > returns a list of "VARIABLE=some value" pairs

@@ -78,38 +78,51 @@ symlink_topic () {
 #     symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
 #  fi
 
-  symlinks="$(/usr/bin/find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
+  # find stubs & symlinks (TODO:move generated stubs to dotsys_user_stubs)
+  symlinks="$(/usr/bin/find "$(dotsys_user_stubs)" "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name '*.stub' -o -name '*.symlink' -not -name '\.*')"
 
   local last_stub # tracks last stub found
+  local linked=()
   local src
+  local dst
+  local dst_name
   while IFS=$'\n' read -r src; do
 
-    local filename_no_ext="${src%.*}"
-    local stub="${filename_no_ext}.stub"
-
     debug "   symlink_topic src  : $src"
-    debug "   symlink_topic stub : $stub"
 
     # No simlinks found
-    if [[ -z "$src" ]] && [ "$action" != "freeze" ]; then
-      #success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
+    if [[ -z "$src" ]]; then
+#      if [ "$action" != "freeze" ]; then
+#        #success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
+#      fi
+      debug "   symlink_topic src  ABORT no symlinks required: $src"
       continue
-    fi
-
-    if [ "$last_stub" = "$filename_no_ext" ]; then
-        debug "symlink_topic: already linked -> $src"
-        continue
-    fi
-
-    if [ "$src" = "$stub" ]; then
-        last_stub="$filename_no_ext"
-        debug "symlink_topic: symlinking stub -> $src"
     fi
 
     # check for alternate dst in config  *.symlink -> path/name
     dst="$(get_symlink_dst "$src" "$dst_path")"
+    dst_name="$(basename "$dst")"
 
-    debug "$src -> $dst"
+    # Check if stub was already linked
+    if [[ "${linked[@]}" =~ "$dst_name" ]]; then
+        debug "   symlink_topic ABORT stub already linked"
+        continue
+    fi
+    linked+=("$dst_name")
+
+#    local src_no_ext="${src%.*}"
+#    # Check if stub was linked already
+#    if [ "$last_stub" = "$src_no_ext" ]; then
+#        debug "symlink_topic: already linked -> $src"
+#        continue
+#    fi
+#    # set last stub
+#    if [ "$src" = "$stub" ]; then
+#        last_stub="$src_no_ext"
+#        debug "symlink_topic: symlinking stub -> $src"
+#    fi
+
+    debug "   symlink_topic dts : $dst"
 
     if [ "$action" = "link" ] ; then
       symlink "$src" "$dst"
@@ -186,7 +199,7 @@ symlink () {
   local message
 
   src="$(drealpath "$src")"
-  stub="$(drealpath "${src%.*}.stub")"
+  #stub="$(drealpath "${src%.*}.stub")"
 
   # target path matches source (do nothing)
   if [ "$dst_link_target" = "$src" ] && [ -L "$dst"  ]; then

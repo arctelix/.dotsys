@@ -150,7 +150,8 @@ manage_dependencies () {
   for dep in ${deps[@]}; do
     # filter duplicates from user topic and builtin topics
     if [[ "${done[@]}" == *"$dep"* ]];then
-        debug "   manage_dependencies: ABORT $dep already $action"
+        #FIXME: Topic config must be loaded twice somewhere, getting duplicates on dotsys deps
+        debug "   manage_dependencies: ABORT $dep duplicate from  builtin/user topic"
         continue
     fi
     done+=("$dep")
@@ -176,7 +177,7 @@ manage_dependencies () {
           fi
         # already installed
         else
-          success "$(printf "Already installed dependency %s %b%s%b" "$DRY_RUN" $green "$dep" $rc)"
+          success "$(printf "Dependency Already installed %s: %b%s%b" "$DRY_RUN" $green "$dep" $rc)"
         fi
     fi
   done

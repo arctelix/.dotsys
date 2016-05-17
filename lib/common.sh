@@ -25,7 +25,7 @@ topic_dir () {
   local repo=$(get_topic_config_val "$topic" "repo")
 
   # catch dotsys as topic
-  if [ "$topic" = "dotsys" ]; then
+  if is_dotsys_repo; then
       echo "$(builtin_topic_dir "$topic")"
       return
   fi
@@ -47,8 +47,8 @@ repo_dir () {
     fi
 
     # catch dotsys repo
-    if [ "$repo" = "dotsys/dotsys" ]; then
-        repo="$(drealpath "$DOTSYS_REPOSITORY")"
+    if is_dotsys_repo; then
+        repo="$DOTSYS_REPOSITORY"
     fi
 
     _split_repo_branch
@@ -60,6 +60,25 @@ repo_dir () {
     else
         echo "$(dotfiles_dir)/$repo"
     fi
+}
+
+# determines the active repo config -> state
+get_active_repo () {
+  if [ "$ACTIVE_REPO" ]; then echo "$ACTIVE_REPO"; fi
+
+  # check for config file repo
+  local repo="$(get_config_val "_repo")"
+
+  # state primary repo
+  if ! [ "$repo" ]; then
+      repo="$(state_primary_repo)"
+  fi
+  echo "$repo"
+}
+
+is_dotsys_repo () {
+    [ "$repo" = "dotsys/dotsys" ]
+    return $?
 }
 
 # seperate repo:branch into repo and branch
@@ -78,6 +97,10 @@ builtin_topic_dir () {
 
 dotsys_user_bin () {
   echo "$(dotsys_dir)/user/bin"
+}
+
+dotsys_user_stubs() {
+  echo "$(dotsys_dir)/user/stubs"
 }
 
 # MISC TESTS

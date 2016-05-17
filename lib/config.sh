@@ -35,7 +35,7 @@ load_config_vars (){
 
     # set by validate_config_or_repo or new_user_config
     local config_file
-    local active_repo
+    local ACTIVE_REPO
 
     debug "-- load_config_vars: $action from: $repo"
 
@@ -53,14 +53,14 @@ load_config_vars (){
         validate_config_or_repo "$repo" "$action"
     # existing user (no from supplied)
     else
-        active_repo="$(get_active_repo)"
+        ACTIVE_REPO="$(get_active_repo)"
         config_file="$(get_config_file_from_repo "$active_repo")"
-        debug "existing user repo: $active_repo"
+        debug "existing user repo: $ACTIVE_REPO"
         debug "existing user cfg: $config_file"
     fi
 
-    # Set active_repo & config_file for new user/repo
-    if [ ! "$active_repo" ] ; then
+    # Set ACTIVE_REPO & config_file for new user/repo
+    if [ ! "$ACTIVE_REPO" ] ; then
         if is_new_user && [ "$action" != "uninstall" ]; then
             new_user_config "$repo"
         else
@@ -76,14 +76,14 @@ load_config_vars (){
 
         if in_limits "repo" "dotsys"; then
             debug "   load_config_vars -> call manage_repo"
-            manage_repo "$action" "$active_repo" "$force" "$confirmed"
+            manage_repo "$action" "$ACTIVE_REPO" "$force" "$confirmed"
         fi
         status=$?
     fi
 
     # make sure we get config file from a downloaded repo
     if ! [ "$config_file" ]; then
-        config_file="$(get_config_file_from_repo "$active_repo")"
+        config_file="$(get_config_file_from_repo "$ACTIVE_REPO")"
     fi
 
     debug "   load_config_vars: load config file"
@@ -107,14 +107,17 @@ load_config_vars (){
 #    fi
 
     # Not required when limited to repo
-    debug "   load_config_vars: set ACTIVE_REPO vars"
+
     # must be set after config
-    ACTIVE_REPO="$(get_active_repo)"
+    ACTIVE_REPO="$ACTIVE_REPO"
     ACTIVE_REPO_DIR="$(repo_dir)"
+    debug "   load_config_vars: set ACTIVE_REPO=$ACTIVE_REPO"
+    debug "   load_config_vars: set ACTIVE_REPO_DIR=$ACTIVE_REPO_DIR"
 
     # Set default cmd app manager as per config or default
-    debug "   load_config_vars: set DEFAULT_MANGER vars"
     set_default_managers
+    debug "   load_config_vars: set DEFAULT_APP_MANAGER=$DEFAULT_APP_MANAGER"
+    debug "   load_config_vars: set DEFAULT_CMD_MANAGER=$DEFAULT_CMD_MANAGER"
 
     # Show config info when more then one topic
     if [ ${#topics[@]} -gt 1 ]; then print_stats; fi
@@ -133,7 +136,7 @@ validate_config_or_repo (){
     # FILE: anything with . must be a file
     if [[ "$input" =~ ^[^/]*\.cfg$ ]]; then
         config_file="$input"
-        active_repo="$(get_repo_from_config_file "$config_file")"
+        ACTIVE_REPO="$(get_repo_from_config_file "$config_file")"
 
         # catch file does not exist
         if ! [ -f "$config_file" ]; then
@@ -154,9 +157,10 @@ validate_config_or_repo (){
             #clear_lines "\n"
             return
         fi
+
         # get the repo config file
         config_file="$(get_config_file_from_repo "$input")"
-        active_repo="$input"
+        ACTIVE_REPO="$input"
     fi
 
     # repo manager handles all other repo issues
@@ -178,7 +182,7 @@ prompt_config_or_repo () {
 
     local default
     if ! [ "$error" ]; then
-        if [ "$active_repo" ]; then default=" [$active_repo]"
+        if [ "$ACTIVE_REPO" ]; then default=" [$ACTIVE_REPO]"
         elif [ "$config_file" ]; then default=" [$config_file]"
         fi
     fi
@@ -379,14 +383,19 @@ print_stats () {
 load_topic_config_vars () {
     local topic="$1"
     local loaded="_${topic}_config_loaded"
-    local file="$(topic_dir ${topic})/dotsys.cfg"
-    local default_file="$(topic_dir ${topic})/dotsys.cfg"
+    local builtin_cfg="$(builtin_topic_dir "$topic")/dotsys.cfg"
+    local topic_cfg="$(topic_dir "$topic")/dotsys.cfg"
+
     # exit if config is loaded or does not exist
-    if [ "${!loaded}" ] || ! [ -f "$file" ];then return; fi
+    if [ "${!loaded}" ]; then return; fi
     # Load default topic config
-    eval "$(parse_yaml "$default_file" "_${topic}_")"
+    if [ -f "$builtin_cfg" ];then
+        eval "$(parse_yaml "$builtin_cfg" "_${topic}_")"
+    fi
     # overwrite default with repo topic config
-    eval "$(parse_yaml "$file" "_${topic}_")"
+    if [ -f "$topic_cfg" ];then
+        eval "$(parse_yaml "$topic_cfg" "_${topic}_")"
+    fi
     eval "${loaded}=true"
 }
 

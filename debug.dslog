@@ -1,2 +1,12 @@
 ERROR: Not a valid action: --debugERROR: Invalid action: ERROR: Invalid action: FAIL: Failed to add fatal: remote origin already exists.FAIL: Failed to link [0;32m/usr/local/bin/[0m
-            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys[0mFAIL: Failed to add fatal: remote origin already exists.
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/bin/dotsys[0mFAIL: Failed to add fatal: remote origin already exists.FAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/user/stubs/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/user/stubs/shellrc.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/user/stubs/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/user/stubs/shellrc.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.profile[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub[0mFAIL: Failed to link [0;32m/Users/arctelix/.shellrc[0m
+            [K         -> [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub[0m

@@ -34,11 +34,11 @@ manage_repo (){
 
     debug "-- manage_repo: received  a:$action r:$repo b:$branch $force"
 
-    local github_repo
-    if [ "$repo" = "dotsys/dotsys" ];then
-        github_repo="https://github.com/arctelix/.dotsys"
+    local remote_repo
+    if is_dotsys_repo;then
+        remote_repo="https://github.com/arctelix/.dotsys.git"
     else
-        github_repo="https://github.com/$repo"
+        remote_repo="https://github.com/${repo}.git"
     fi
 
     local local_repo="$(repo_dir "$repo")"
@@ -75,10 +75,10 @@ manage_repo (){
     else
         # check for remote
         debug "   check for remote #1"
-        info "Checking if repo has remote: $github_repo"
+        info "Checking if repo has remote: $remote_repo"
         # remote repo found
         if has_remote_repo "$repo"; then
-            info "Found uninstalled remote repo: $github_repo"
+            info "Found uninstalled remote repo: $remote_repo"
             repo_status="remote"
         # no remote repo or directory
         else
@@ -213,7 +213,7 @@ manage_repo (){
         fi
 
         # Check EXISTING/INSTALLED status
-        if [ "$repo_status" != "remote" ] && [ "$repo_status" != "new" ];then
+        if ! is_dotsys_repo && [ "$repo_status" != "remote" ] && [ "$repo_status" != "new" ];then
             debug "   local directory/installed check for remote"
             if has_remote_repo "$repo"; then
                 manage_remote_repo "$repo" auto
@@ -238,7 +238,7 @@ manage_repo (){
         # MAKE PRIMARY if not offer some options
         debug "checi if: state primary repo = current repo"
         debug "$(state_primary_repo) = $repo"
-        if [ "$(state_primary_repo)" != "$repo" ]; then
+        if ! is_dotsys_repo && [ "$(state_primary_repo)" != "$repo" ]; then
 
             confirm_make_primary_repo "$repo"
 
@@ -330,13 +330,13 @@ manage_remote_repo (){
 
     required_vars "repo" "task"
 
-    debug "-- manage_remote_repo: $task b:$branch"
-
-
-    local local_repo="$(repo_dir "$repo")"
-    local remote_repo="https://github.com/$repo"
+    local local_repo="$local_repo"
+    local remote_repo="$remote_repo"
     local result
-    local OWD="$PWD"
+
+    debug "-- manage_remote_repo: $task b:$branch"
+    debug "-- manage_remote_repo local_repo: $local_repo"
+    debug "-- manage_remote_repo remote_repo: $remote_repo"
 
 
     # http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
@@ -457,9 +457,8 @@ manage_remote_repo (){
 
 init_local_repo (){
     local repo="$1"
-    local local_repo="$(repo_dir "$repo")"
-    local github_repo="https://github.com/$repo"
-    local OWD="$PWD"
+    local local_repo="$local_repo"
+    local remote_repo="$remote_repo"
 
     confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo"
     if ! [ $? -eq 0 ]; then exit; fi
@@ -469,7 +468,7 @@ init_local_repo (){
     result="$(git init 2>&1)"
     success_or_error $? "" "$(indent_lines "$result")"
 
-    result="$(git remote add origin "$github_repo" 2>&1)"
+    result="$(git remote add origin "$remote_repo" 2>&1)"
     success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
 
     # Make sure we are on master branch without a commit
@@ -485,9 +484,8 @@ git_commit () {
 
     local repo="$1"
     local message="$2"
-    local local_repo="$(repo_dir "$repo")"
-    local github_repo="https://github.com/$repo"
-    local OWD="$PWD"
+    local local_repo="$local_repo"
+    local remote_repo="$remote_repo"
     local result
     local user_input
     local default
@@ -529,7 +527,7 @@ git_commit () {
                 --invalid omit --default "$default" --true omit --hint "or enter a commit message\n$spacer" -r
         if ! [ $? -eq 0 ];then
             printf "$spacer %bcommit aborted%b\n" $red $rc
-            return
+            return 1
             cd "$OWD"
         fi
     fi
@@ -545,11 +543,11 @@ git_commit () {
 
 init_remote_repo () {
     local repo="$1"
-    local local_repo="$(repo_dir "$repo")"
-    local github_repo="https://github.com/$repo"
+    local local_repo="$local_repo"
+    local remote_repo="$remote_repo"
     local OWD="$PWD"
 
-    confirm_task "initialize" "remote" "repo:" "$github_repo"
+    confirm_task "initialize" "remote" "repo:" "$remote_repo"
     if ! [ $? -eq 0 ]; then return; fi
 
     cd "$local_repo"
@@ -559,11 +557,11 @@ init_remote_repo () {
 
     # Git hub will prompt for the user password
     local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
-    success_or_fail $? "create" "$(printf "%b$repo_status%b remote repo %b$github_repo%b" $green $rc $green $rc)" \
+    success_or_fail $? "create" "$(printf "%b$repo_status%b remote repo %b$remote_repo%b" $green $rc $green $rc)" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
 
     git push -u origin "$branch"
-    success_or_fail $? "initialize" "$(printf "%b$repo_status%b repo %b$github_repo%b" $green $rc $green $rc)" \
+    success_or_fail $? "initialize" "$(printf "%b$repo_status%b repo %b$remote_repo%b" $green $rc $green $rc)" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
 
     cd "$OWD"
@@ -572,7 +570,7 @@ init_remote_repo () {
 checkout_branch (){
     local repo="$1"
     local branch="${2:-$branch}"
-    local local_repo="$(repo_dir "$repo")"
+    local local_repo="$local_repo"
     local OWD="$PWD"
 
     debug "   checkout_branch: r:$repo b:$branch"
@@ -597,7 +595,7 @@ checkout_branch (){
 
 clone_remote_repo () {
     local repo="$1"
-    local github_repo="https://github.com/$repo"
+    local remote_repo="$remote_repo"
     local repo_user="$(cap_first "${repo%/*}")"
     local repo_user_dir="$(repo_dir "$repo_user")"
     local OWD="$PWD"
@@ -606,8 +604,8 @@ clone_remote_repo () {
     mkdir -p "$repo_user_dir"
 
     cd "$repo_user_dir"
-    git clone "$github_repo" --progress 2>&1 | indent_lines
-    success_or_fail $? "download" "remote repo: $github_repo"
+    git clone "$remote_repo" --progress 2>&1 | indent_lines
+    success_or_fail $? "download" "remote repo: $remote_repo"
     if ! [ $? -eq 0 ];
         then repo_status="new"
     fi
@@ -619,7 +617,7 @@ clone_remote_repo () {
 
 install_required_repo_files () {
     local repo="$1"
-    local local_repo="$(repo_dir "$repo")"
+    local local_repo="$local_repo"
     local OWD="$PWD"
 
     cd "$local_repo"
@@ -749,11 +747,11 @@ setup_git_config () {
 
 has_remote_repo (){
     local repo="${1:-$repo}"
-    local remote="https://github.com/$repo/.git"
+    local remote_repo="$remote_repo"
     local silent="$2"
     local status
 
-    status="$(curl -Ls --head --silent "${remote}.git" | head -n 1 )"
+    status="$(curl -Ls --head --silent "${remote_repo}.git" | head -n 1 )"
     #wget -q "${remote}.git" --no-check-certificate -O - > /dev/null
 
     local ret=1
@@ -761,19 +759,19 @@ has_remote_repo (){
         ret=0
         if [ "$silent" ];then  return $ret;fi
         success "remote found: $status
-         $spacer -> $remote"
+         $spacer -> $remote_repo"
 
     elif echo "$status" | grep "$status" "HTTP/[4].." > /dev/null; then
         ret=1
         if [ "$silent" ];then  return $ret;fi
         success "remote not found: $status
-         $spacer -> $remote"
+         $spacer -> $remote_repo"
 
     elif echo "$status" | grep "$status" "HTTP/[4].." > /dev/null; then
         ret=2
         if [ "$silent" ];then  return $ret;fi
         error "connection failed: $status
-       $spacer -> $remote"
+       $spacer -> $remote_repo"
     fi
 
     return $ret
@@ -908,23 +906,12 @@ confirm_make_primary_repo (){
     # if repo is same as state, bypass check
     if [ "$(state_primary_repo)" = "$repo" ]; then return ; fi
 
-    confirm_task "make" "this your" "primary repo:" "$(repo_dir "$repo")"
+    get_user_input "Would you like to make this your primary repo:\n$spacer $(repo_dir "$repo")" --required
     if [ $? -eq 0 ]; then
         state_primary_repo "$repo"
         set_user_vars "$repo"
         success "$(printf "New primary repo: %b$repo%b" $green $rc)"
     fi
-}
-
-# determines the active repo config -> state
-get_active_repo () {
-  # check for config repo
-  local repo="$(get_config_val "_repo")"
-  # primary repo
-  if ! [ "$repo" ]; then
-      repo="$(state_primary_repo)"
-  fi
-  echo "$repo"
 }
 
 # Determine if the repo is present in any state file

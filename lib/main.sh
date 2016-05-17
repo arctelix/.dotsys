@@ -89,6 +89,10 @@ fi
 . "$DOTSYS_LIBRARY/repos.sh"
 . "$DOTSYS_LIBRARY/stubs.sh"
 
+DOTSYS_REPOSITORY="$(drealpath "$DOTSYS_REPOSITORY")"
+DOTSYS_LIBRARY="$(drealpath "$DOTSYS_LIBRARY")"
+debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 
 #GLOBALS
 STATE_SYSTEM_KEYS="installed_repo"
@@ -142,7 +146,6 @@ VERBOSE_MODE=
 SHOW_LOGO=0
 SHOW_STATS=0
 
-#debug "DOTFILES_ROOT: $(dotfiles_dir)"
 
 dotsys () {
     local usage="dotsys <action> [<topics> <limits> <options>]"
@@ -784,27 +787,23 @@ dotsys_installer () {
     # make sure PLATFORM_USER_BIN is on path
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
         debug "adding /usr/local/bin to path"
-        #TODO: .profile persists user bin on path, should we just permanently add to path file?
+        #TODO: .dotsysrc persists user bin on path, should we just permanently add to path file?
         export PATH=$PATH:/usr/local/bin
     fi
 
     # create required directories
-
     if [ "$action" = "install" ]; then
         task "Prepare required directories and files"
         mkdir -p "$(dotfiles_dir)"
         mkdir -p "$DOTSYS_REPOSITORY/user/bin"
+        mkdir -p "$DOTSYS_REPOSITORY/user/stubs"
         mkdir -p "$DOTSYS_REPOSITORY/state"
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
         touch "$DOTSYS_REPOSITORY/state/repo.state"
     fi
 
-    # This is what makes dotsys command accessible
     dotsys "$action" dotsys --force --confirm none
-
-    # were going to have to do this
-    #dotsys install shell bash zsh
 }
 
 
