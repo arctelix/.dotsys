@@ -389,6 +389,7 @@ manage_remote_repo (){
     # make sure everything is committed or we'll get a false reading
     git_commit "$repo" "$message"
 
+    cd "$local_repo"
     # Determine git status
     debug "   manage_remote_repo: check status local"
     local LOCAL=$(git rev-parse @)
@@ -450,6 +451,8 @@ manage_remote_repo (){
         success_or_fail $? "$task" "$(indent_lines "$result")"
         ret_val=$?
     fi
+
+    cd "$OWD"
 
     return $ret_val
 }

@@ -462,7 +462,7 @@ dotsys () {
             if dotsys_in_use; then
                 warn "Dotsys is still in use and cannot be uninstalled until
               $spacer all topics, packages, & repos are uninstalled\n"
-                get_user_input "Would you like to uninstall everything, including dotsys, now?" -r
+                get_user_input "Would you like to uninstall everything, including dotsys, now?" --required
                 if ! [ $? -eq 0 ]; then exit; fi
             fi
             # Clear topics so that all installed topics are removed
