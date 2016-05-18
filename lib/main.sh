@@ -626,11 +626,13 @@ dotsys () {
 
         # CONFIRM / ABORT DOTSYS UNINSTALL
         if [ "$topic" == "dotsys" ] && [ "$action" = "uninstall" ]; then
-            # running 'dotsys uninstall' will attempt to remove dotsys
+
+            # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
             if ! in_limits "dotsys" -r; then continue; fi
-            # Dotsys is intentionally removed!
+
+            # Dotsys is expicity being uninstalled with 'dotsys uninstall dotsys'
             get_user_input "$(printf "%bAre you sure you want to remove the 'dotsys' command
-                              $spacer and it's required components from your system?%b" $red $rc)"
+                              $spacer and it's required components from your system?%b" $red $rc)" --required
 
         # CONFIRM TOPIC
         else
@@ -707,13 +709,8 @@ dotsys () {
             debug "main -> FINISHED (repo uninstalled)"
 
             if in_limits "dotsys"; then
-                msg "\nDotsys has been uninstalled. You can now safely delete
-                     \rthe flowing directories to remove all traces:
-                     \r- $DOTSYS_REPOSITORY
-                     \r- $(dotfiles_dir)
-
+                msg "\nDotsys has been uninstalled!
                      \rThanks for using dotsys!"
-
             fi
             exit
         fi
