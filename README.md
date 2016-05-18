@@ -41,7 +41,7 @@ Just scripts:
 > `dotsys update scripts`
 
 Just package managers:
-> ` dotsys update managers`
+> `dotsys update managers`
 
 Just packages:
 > `dotsys upgrade packages`
@@ -52,16 +52,24 @@ Just dotsys (core system):
 #### REPO MANAGEMENT (local and remote)
 
 Your default repo's "master" branch
-> dotsys <action> repo
+> dotsys \<action\> repo
+
+> dotsys upgrade repo
            
 Your default repo's "min" branch
-> dotsys <action> repo min       
+> dotsys \<action\> repo min    
+
+> dotsys install repo min
 
 Another repo's master branch
-> dotsys <action> user/repo      
+> dotsys \<action\> user/repo  
+    
+> dotsys uninstall user/repo  
 
 Another repo's "min" branch
-> dotsys <action> user/repo:min  
+> dotsys \<action\> user/repo:min  
+
+> dotsys update user/repo:min
 
 
 Why another dotfile management system ?
