@@ -132,6 +132,7 @@ That's cool, what else does it do ?
 - Decouples software installation and system config from dotfiles.
 - Separates sourcing of topic extensions from dotfiles.
 - Automates repository download, installation, and management.
+- Facilitates clear hierarchy of global shell config files.
 - Supports multiple repositories and branches.
 - Install topics from multiple repositories simultaneously.
 - Maintain unlimited configurations for one repository.
@@ -155,7 +156,7 @@ More details to come, stay tuned...
 WARNING!
 --------
 
-THIS IS A WORK IN PROGRESS AND ONLY SUFFICIENTLY TESTED ON OSX WITH BASH!
+THIS IS A WORK IN PROGRESS AND ONLY SUFFICIENTLY TESTED ON MAC OSX WITH BASH!
 The infrastructure for all platforms exists, but has not been tested
 and will likely have platform specific issues that need to be tweaked.
 
