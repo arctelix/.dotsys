@@ -23,12 +23,12 @@ Perform action on all topics:
 Perform an action on specific topics
 > dotsys \<action\> \<topics\>
 
-> `dotsys install tmux vim`
+> `dotsys upgrade tmux vim`
 
 Perform an action on topics from another repo
 > dotsys \<action\> \<topic\> from \<repo\>
 
-> `dotsys install vim from user/repo`
+> `dotsys uninstall vim from user/repo`
 
 #### LIMIT ACTIONS
 
@@ -130,24 +130,27 @@ That's cool, what else does it do ?
 - Supports all posix compliant shells and has NO DEPENDENCIES.
 - Allows a configuration to be deployed on multiple platforms.
 - Decouples software installation and system config from dotfiles.
+- Separates sourcing of topic extensions from dotfiles.
 - Automates repository download, installation, and management.
 - Supports multiple repositories and branches.
-- Save unlimited configurations for one repository.
-- Manages personal information and separates from public repo. 
+- Install topics from multiple repositories simultaneously.
+- Maintain unlimited configurations for one repository.
+- Manages personal information and separates from public repo.
 - Minimal and intelligent defaults that are easily superseded.
 - Allows user to choose exactly what they want form a config!
-- Easily review and modify yaml configs before installation.
+- Easily review and modify repo configuration before installation.
 - Constant visual feedback on what's happening.
 - Provides dependency management system for topics.
 - Guided setup and install (no docs or code to read).
 - Optionally migrate existing dotfiles and or topics to dotsys.
 - Automatically backs up any original files (safety first!).
-- Separates dotfiles configs from extension sourcing.
 - Management and organization of OS settings and versions (soon).
+- Stub file template variables to automate collection of user data.
+- Topics are easy to create and distribute.
 - An API you already know how to use.
 - AND MANY MORE FEATURES
 
-more details to come, stay tuned...
+More details to come, stay tuned...
 
 WARNING!
 --------
