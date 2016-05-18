@@ -916,7 +916,7 @@ confirm_make_primary_repo (){
 
 # Determine if the repo is present in any state file
 repo_in_use () {
-    local repo="$1"
+    local repo="${1:-dotsys/dotsys}"
     debug "repo in use: $repo"
     local states="$(get_state_list)"
     local s

@@ -122,8 +122,8 @@ get_topic_stub_files(){
     #TODO: TEST stub files from repos (need to prevent duplicates in stub process)
     local repo_dir="$(topic_dir "$topic")"
     local builtin_dir="$(builtin_topic_dir "$topic")"
-    local result="$(find "$repo_dir" "$builtin_dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*')"
-    echo "$(remove_duplicates "$result")"
+    local result="$(find "$repo_dir" "$builtin_dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*' | sort -u)"
+    echo "$result"
 }
 
 # returns the stub file symlink target

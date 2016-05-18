@@ -270,6 +270,13 @@ get_topic_list () {
     local topic
 
 
+
+    if [ "$dir" = "$DOTSYS_REPOSITORY" ]; then
+        # ALWAYS GET INSTALLED TOPICS FOR DOTSYS
+        force=
+        dir="$DOTSYS_REPOSITORY/builtins"
+    fi
+
     # only installed topics when not installing unless forced
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read line; do
@@ -331,24 +338,21 @@ reverse() {
     eval "$arrayname=( \"\${revarray[@]}\" )"
 }
 
-remove_duplicates () {
+unique_list () {
     local var="$1"
     local seen
     local word
-    local i=0
 
-    while IFS= read -r word; do
-        case $seen in
+    for word in $var; do
+      case $seen in
         $word\ * | *\ $word | *\ $word\ * | $word)
           # already seen
           ;;
         *)
           seen="$seen $word"
           ;;
-        esac
-        i=$((i+1))
-    done <<< $var
-
+      esac
+    done
     echo $seen
 }
 

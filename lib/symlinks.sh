@@ -594,7 +594,7 @@ manage_topic_bin () {
     # search for files in topic bin and link/unlink
     local files=("$(find "$src_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
     local file
-    while IFS=$'\n' read -r file; do
+    while IFS=$'\n ' read -r file; do
 
         # test for exitsing command
         local command="$(basename "$file")"

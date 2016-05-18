@@ -81,17 +81,6 @@ dotsys_installer () {
 
     # This is the actual installer
     dotsys "$action" dotsys --force --confirm none
-
-    if [ "$action" = "uninstall" ]; then
-        # remove the remaining dependencies
-        #dotsys "$action" from "dotsys/dotsys" --recursive --confirm default
-        msg "\nDotsys has been uninstalled. You can now safely delete
-             \rthe flowing directories to remove all traces:
-             \r- $DOTSYS_REPOSITORY
-             \r- $(dotfiles_dir)
-
-             \rThanks for using dotsys!"
-    fi
 }
 
 dotsys_installer $@

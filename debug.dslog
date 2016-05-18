@@ -18,4 +18,26 @@ ERROR: Not a valid action: --debugERROR: Invalid action: ERROR: Invalid action: 
     [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/state[0mFAIL: The topic [0;32muser[0m, was not found in the specified repo:
     [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mFAIL: Failed to update installed repo [0;32m/Users/arctelix/dotsys_project/.dotsys[0mERROR: shell does not have a stub file at:
 /Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: shell does not have a stub file at:
-/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub
+/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: git does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stub /Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stubERROR: shell does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: git does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stub /Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stubERROR: shell does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: git does not have a stub file at:
+ERROR: git does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stub /Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stubERROR: shell does not have a stub file at:
+ERROR: shell does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: git does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stub /Users/arctelix/dotsys_project/.dotsys/builtins/git/gitconfig.stubERROR: shell does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: shell does not have a stub file at:
+/Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/profile.stub /Users/arctelix/dotsys_project/.dotsys/builtins/shell/shellrc.stubERROR: Invalid action: FAIL: The topic [0;32mbin[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/bin[0mFAIL: The topic [0;32mbuiltins[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/builtins[0mFAIL: The topic [0;32mlib[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/lib[0mFAIL: The topic [0;32mstate[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/state[0mFAIL: The topic [0;32muser[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0mFAIL: The topic [0;32mbin[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/bin[0mFAIL: The topic [0;32mbuiltins[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/builtins[0mFAIL: The topic [0;32mlib[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/lib[0mFAIL: The topic [0;32mstate[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/state[0mFAIL: The topic [0;32muser[0m, was not found in the specified repo:
+    [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0mERROR: Not a valid action: insntallERROR: Not a valid action: insntallERROR: Missing or incorrect parameters <repo> 
+    recieved: <action> 

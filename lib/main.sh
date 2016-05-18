@@ -456,23 +456,17 @@ dotsys () {
         debug "main -> DOTSYS IN LIMITS"
         topics=("dotsys")
         from_repo="dotsys/dotsys"
-        limits=("${limits[@]/dotsys}")
 
         if [ "$action" = "uninstall" ]; then
             # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
             if dotsys_in_use; then
                 warn "Dotsys is still in use and cannot be uninstalled until
               $spacer all topics, packages, & repos are uninstalled\n"
-                get_user_input "Would you like to uninstall everything now?" -r
-                if [ $? -eq 0 ]; then
-                    dotsys uninstall
-                else
-                    exit
-                fi
-            # Clear topics so that all installed from dotsys/dotsys get removed
-            else
-                topics=
+                get_user_input "Would you like to uninstall everything, including dotsys, now?" -r
+                if ! [ $? -eq 0 ]; then exit; fi
             fi
+            # Clear topics so that all installed topics are removed
+            topics=
         fi
     fi
 
@@ -533,7 +527,6 @@ dotsys () {
         fi
         topics=("$list")
         debug "main -> topics list:\n\r$topics"
-        debug "main -> end list"
     fi
 
     # We stub here rather then during symlink process
@@ -573,6 +566,7 @@ dotsys () {
 
             # All actions but uninstall
             if ! [ "$action" = "uninstall" ]; then
+
                 debug "main -> ACTIVE_MANAGERS: ${ACTIVE_MANAGERS[@]}"
                 # ABORT: Silently prevent managers from running more then once (even with --force)
                 if [[ "${ACTIVE_MANAGERS[@]}" =~ "$topic" ]]; then
@@ -630,19 +624,28 @@ dotsys () {
            continue
         fi
 
-        # CONFIRM TOPIC
-        debug "main -> call confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
-        confirm_task "$action" "" "$topic" "${limits[@]}"
-        if ! [ $? -eq 0 ]; then continue; fi
-        debug "main -> post confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
+        # CONFIRM / ABORT DOTSYS UNINSTALL
+        if [ "$topic" == "dotsys" ] && [ "$action" = "uninstall" ]; then
+            # running 'dotsys uninstall' will attempt to remove dotsys
+            if ! in_limits "dotsys" -r; then continue; fi
+            # Dotsys is intentionally removed!
+            get_user_input "$(printf "%bAre you sure you want to remove the 'dotsys' command
+                              $spacer and it's required components from your system?%b" $red $rc)"
 
+        # CONFIRM TOPIC
+        else
+            debug "main -> call confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
+            confirm_task "$action" "" "$topic" "${limits[@]}"
+            if ! [ $? -eq 0 ]; then continue; fi
+            debug "main -> post confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
+        fi
 
         # ALL CHECKS DONE START THE ACTION
 
         # 1) dependencies
         if in_limits "scripts" "dotsys"; then
             manage_dependencies "$action" "$topic"
-            # Topic is in use by other topics
+            # TOPIC HAS DEPENDANTS AND CAN NOT BE UNINSTALLED YET
             if ! [ $? -eq 0 ]; then continue; fi
         fi
 
@@ -697,10 +700,21 @@ dotsys () {
         uninstall_inactive "topics"
 
         # Check if all repo topics are uninstalled
-        if in_limits "repo" && ! repo_in_use "$ACTIVE_REPO"; then
+        ACTIVE_REPO="${ACTIVE_REPO:-dotsys/dotsys}"
+        if in_limits "repo" "dotsys" && ! repo_in_use "$ACTIVE_REPO"; then
             debug "main -> REPO NO LONGER USED uninstalling"
             manage_repo "uninstall" "$ACTIVE_REPO" "$force"
             debug "main -> FINISHED (repo uninstalled)"
+
+            if in_limits "dotsys"; then
+                msg "\nDotsys has been uninstalled. You can now safely delete
+                     \rthe flowing directories to remove all traces:
+                     \r- $DOTSYS_REPOSITORY
+                     \r- $(dotfiles_dir)
+
+                     \rThanks for using dotsys!"
+
+            fi
             exit
         fi
     fi
