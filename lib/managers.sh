@@ -71,11 +71,11 @@ run_manager_task () {
   local topic
   for topic in ${topics[@]}; do
 
-     # check if already installed on install action
+     # check if already installed (not testing for repo!)
      if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic"; then
         success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
         continue
-     # check if already uninstalled on install action
+     # check if already uninstalled (not testing for repo!)
      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic"; then
         success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
         continue

@@ -35,7 +35,8 @@ load_config_vars (){
 
     # set by validate_config_or_repo or new_user_config
     local config_file
-    local ACTIVE_REPO
+    #sets global ACTIVE_REPO
+    #sets global ACTIVE_REPO_DIR
 
     debug "-- load_config_vars: $action from: $repo"
 
@@ -335,46 +336,6 @@ user_config_stubs () {
   $spacer - zsh  extensions are sourced by zsh only.
   $spacer Check your topic directories for new *.stub files
   $spacer to see which topics are stubbed and what they do."
-}
-
-print_logo (){
-if ! get_state_value "show_logo" "user" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
-    return
-fi
-
-local message=
-if [ "$USER_NAME" ]; then
-    message="Welcome To Dotsys $USER_NAME"
-else
-    message="WELCOME  TO  YOUR  DOTSYS"
-fi
-
-printf "%b
-  (          )
-  )\ )    ( /(   (
- (()/( (  )\()|  )\ ) (
-  ((_)))\(_))/)\(()/( )\\
-  _| |((_) |_((_))(_)|(_)
-/ _\` / _ \  _(_-< || (_-<
-\__,_\___/\__/__/\_, /__/
-                 |__/
-
-$message%b\n\n" $dark_red $rc
-# make sure it's only seen once
-SHOW_LOGO=1
-}
-
-print_stats () {
-    if ! get_state_value "show_stats" "user" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
-        return
-    fi
-
-    info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
-    info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
-    info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
-    info "$(printf "There are %b${#topics[@]} topics to $action%b" $green $rc)"
-    # make sure it's only seen once
-    SHOW_STATS=1
 }
 
 # TOPIC CONFIG

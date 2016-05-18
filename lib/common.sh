@@ -117,7 +117,7 @@ dotsys_user_stubs() {
 # Test for VERBOSE_MODE
 verbose_mode (){
     if ! [ "$VERBOSE_MODE" ]; then
-        if ! [ "$topics" ] || [ ${#topics[@]} -gt 1 ]; then
+        if ! [ "$topics" ]; then
             # verbose on
             VERBOSE_MODE=0
         else
@@ -194,15 +194,17 @@ in_limits () {
         return 0
     fi
 
+    debug "-- in_limits $@"
+
     local t
     for t in $tests; do
-        debug "  - testing: $t"
         if [[ ${limits[@]} =~ "$t" ]]; then
-            debug "   - in limits: $t"
+            debug "   - is in_limits: $t"
             return 0
         fi
+        debug "   - not in_limits: $tests"
     done
-    debug "   - not in limits: $tests"
+
     return 1
 }
 

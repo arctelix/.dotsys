@@ -77,7 +77,7 @@ is_installed () {
     local manager="$(get_topic_manager "$key")"
     local system_ok
 
-    debug "-- is_installed initial state=$state"
+    debug "-- is_installed got: $state ($key:$var)"
 
     # if state is "system" then a system install is acceptable
     # so bypass warnings and just return 0
@@ -86,12 +86,15 @@ is_installed () {
         system_ok="true"
     elif [ "$manager" ]; then
         state="$manager"
+        val="" # managers do not track repo
+        debug "   is_installed: MANAGER skip dotsys state & checking ${state}.state!"
     fi
 
     # test if in specified state file
     in_state "$state" "$key" "$val"
     installed=$?
-    debug "   is_installed in: $state -> $installed"
+
+    debug "   is_installed in: $state = $installed"
 
     # Check if installed by manager ( packages installed via package.yaml file )
 #    if [ "$state" = "dotsys" ] && ! [ "$installed" -eq 0 ]; then
@@ -159,7 +162,7 @@ in_state () {
   results="$(grep "$(grep_kv)" "$file")"
   local status=$?
   debug "     in_state grep '$(grep_kv)' = $status"
-  debug "     in_state grep result:\n$(echo "$results" | indent_lines)"
+  debug "     in_state grep result:$(echo "$results" | indent_lines)"
 
   if [ "$not" ]; then
       for r in $results; do
@@ -172,6 +175,7 @@ in_state () {
       return 1
   fi
 
+  debug "$indent -> in_state = $status"
   return $status
 }
 

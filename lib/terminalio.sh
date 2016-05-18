@@ -64,7 +64,7 @@ fail () {
 
 task() {
   printf  "\r%b[%b TASK %b] %b$1%b %b\n" $clear_line $dark_cyan $rc $cyan $rc "$2"
-  log "TASK" "$1"
+  log "TASK" "$1 $2"
 }
 
 # messages
@@ -176,7 +176,6 @@ indent_lines () {
   local line
   # Take input from pipe
   if ! [ "$input" ]; then
-      local line
       while read -r line || [[ -n "$line" ]]; do
         echo "$indent $(echo "$line" | sed "s/$(printf '\r')/$(printf '\r')$indent /g")"
       done
@@ -191,6 +190,23 @@ indent_lines () {
         fi
       done <<< $input
   fi
+}
+
+indent_list () {
+  local list="$1"
+  local i
+
+  # Take input from pipe
+  if ! [ "$list" ]; then
+      while read -r i || [[ -n "$line" ]];do
+        list="$list$i "
+      done
+  fi
+
+  # input from variable
+  for i in $list;do
+      echo "$indent $i"
+  done
 }
 
 
@@ -643,4 +659,44 @@ uncaught_case (){
    \r${uc_c_vals}\rhave been set and got value: $uc_c_val"
    show_usage
  fi
+}
+
+print_logo (){
+if ! get_state_value "show_logo" "user" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
+    return
+fi
+
+local message=
+if [ "$USER_NAME" ]; then
+    message="Welcome To Dotsys $USER_NAME"
+else
+    message="WELCOME  TO  YOUR  DOTSYS"
+fi
+
+printf "%b
+  (          )
+  )\ )    ( /(   (
+ (()/( (  )\()|  )\ ) (
+  ((_)))\(_))/)\(()/( )\\
+  _| |((_) |_((_))(_)|(_)
+/ _\` / _ \  _(_-< || (_-<
+\__,_\___/\__/__/\_, /__/
+                 |__/
+
+$message%b\n\n" $dark_red $rc
+# make sure it's only seen once
+SHOW_LOGO=1
+}
+
+print_stats () {
+    if ! get_state_value "show_stats" "user" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
+        return
+    fi
+
+    info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
+    info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
+    info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
+    info "$(printf "There are %b${#topics[@]} topics to $action%b" $green $rc)"
+    # make sure it's only seen once
+    SHOW_STATS=1
 }

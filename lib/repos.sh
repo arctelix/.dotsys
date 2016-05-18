@@ -70,19 +70,20 @@ manage_repo (){
         fi
     # existing uninstalled local repo
     elif [ -d "$local_repo" ]; then
-        info "Found a local directory: $local_repo"
+        info "Local directory exists: $local_repo"
         repo_status="local directory"
     else
         # check for remote
         debug "   check for remote #1"
-        info "Checking if repo has remote: $remote_repo"
+        info "Checking for remote:
+      $spacer $remote_repo"
         # remote repo found
         if has_remote_repo "$repo"; then
-            info "Found uninstalled remote repo: $remote_repo"
+            info "Found remote repo: $remote_repo"
             repo_status="remote"
         # no remote repo or directory
         else
-            info "A new repo has been specified: $local_repo"
+            info "New repo specified: $local_repo"
             repo_status="new"
         fi
     fi
@@ -243,7 +244,7 @@ manage_repo (){
             confirm_make_primary_repo "$repo"
 
             # create dotsys-export.yaml
-            confirm_task "freeze" "repo" "${repo}" "-> ${repo}/.dotsys-default.cfg"
+            confirm_task "freeze" "repo" "${repo}" "\n$spacer -> ${repo}/.dotsys-default.cfg"
             if [ "$?" -eq 0 ]; then
                 create_config_yaml "$repo"
             fi

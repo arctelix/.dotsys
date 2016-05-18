@@ -424,13 +424,13 @@ dotsys () {
         debug "main -> topic is repo: ${topics[0]}"
         limits+=("repo")
         from_repo="${topics[0]}"
-        topics=
+        topics=()
 
     # allows syntax action "repo"
     elif [ ! "$from_repo" ] && in_limits "repo" -r; then
         debug "main -> repo is in limits"
         from_repo="repo"
-        topics=
+        topics=()
     fi
 
     # allow "repo" as shortcut to active repo
@@ -467,7 +467,7 @@ dotsys () {
                 if ! [ $? -eq 0 ]; then exit; fi
             fi
             # Clear topics so that all installed topics are removed
-            topics=
+            topics=()
         fi
     fi
 
@@ -520,7 +520,7 @@ dotsys () {
                 msg "$( printf "\nThere are no topics %binstalled by dotsys%b to $action\n" $green $yellow)"
             fi
             if [ "$action" = "install" ]; then
-                copy_topics_to_repo "$ACTIVE_REPO"
+                copy_topics_to_repo "$(get_active_repo)"
                 add_existing_dotfiles "$ACTIVE_REPO"
                 # Check for topics again
                 list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
@@ -616,11 +616,12 @@ dotsys () {
 
 
         # ABORT: on install if already installed (override --force)
+        debug "main -> check is_installed for $topic $ACTIVE_REPO"
         if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$ACTIVE_REPO" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         # ABORT: on uninstall if not installed (override --force)
-        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" && ! [ "$force" ]; then
+        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$ACTIVE_REPO" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         fi

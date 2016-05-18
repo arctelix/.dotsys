@@ -90,9 +90,10 @@ manage_stubs () {
 
     debug "-- manage_stubs: $action ${topics[@]} $force"
 
-    if verbose_mode; then
-        confirm_task "create" "stub files for" "${topics[@]}"
-    fi
+    # Confirming stubs seems unnecessary since we get permission during user config
+    # if verbose_mode; then
+    #     confirm_task "create" "stub files for" "\n$(echo "${topics[@]}" | indent_list)"
+    # fi
 
     for topic in $builtins; do
         # abort if no user topic directory or if topic is not in current scope
