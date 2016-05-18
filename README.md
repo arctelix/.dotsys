@@ -17,14 +17,17 @@ Dotsys actions are install, uninstall, update, upgrade, & freeze
 
 Perform action on all topics:
 > dotsys \<action\>
+
 > `dotsys install`
 
 Perform an action on specific topics
 > dotsys \<action\> \<topics\>
+
 > `dotsys install tmux vim`
 
 Perform an action on topics from another repo
 > dotsys \<action\> \<topic\> from \<repo\>
+
 > `dotsys install vim from user/repo`
 
 #### LIMIT ACTIONS
