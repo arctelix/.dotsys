@@ -59,9 +59,8 @@ dotsys_installer () {
 
     # make sure PLATFORM_USER_BIN is on path
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
-        #TODO: .dotsysrc persists user bin on path, should we just permanently add to path file?
         export PATH=$PATH:/usr/local/bin
-        #debug "added /usr/local/bin to path: $PATH"
+        debug "added /usr/local/bin to path: $PATH"
     fi
 
     # create required directories
@@ -80,7 +79,10 @@ dotsys_installer () {
     fi
 
     # This is the actual installer
-    dotsys "$action" dotsys --force --confirm none
+    dotsys "$action" dotsys --confirm none
+
+    msg "\nDotsys has been ${action%e}ed
+         \rThanks for using dotsys!"
 }
 
 dotsys_installer $@

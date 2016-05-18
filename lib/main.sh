@@ -44,6 +44,7 @@
 #TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..
 
 #QUESTIONS:
+#TODO QUESTION: Currently .dotsysrc persists usr/local/bin on path, should we just permanently add to path file?
 #TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show state, show managers?
 #TODO QUESTION: Hold all manager's package file installs to end of topic runs?
 #TODO QUESTION: Currently repo holds user files, maybe installed topics should be copied to internal user directory.
@@ -707,11 +708,6 @@ dotsys () {
             debug "main -> REPO NO LONGER USED uninstalling"
             manage_repo "uninstall" "$ACTIVE_REPO" "$force"
             debug "main -> FINISHED (repo uninstalled)"
-
-            if in_limits "dotsys"; then
-                msg "\nDotsys has been uninstalled!
-                     \rThanks for using dotsys!"
-            fi
             exit
         fi
     fi
