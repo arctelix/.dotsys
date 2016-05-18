@@ -1,82 +1,91 @@
-# DOTSYS
+DOTSYS
+======
 
-### A platform agnostic package-manager with dotfile integration!
+A platform agnostic package-manager with dotfile integration!
+-------------------------------------------------------------
 
 This system is based on the topic-centric concept introduced by Zach Holman.  If 
 you are using this system and are familiar with package mangers like brew..
 
-### You already know how to use it!
+You already know how to use it!
+-------------------------------
 
-NOTE: A repo is any github repository containing topic-centric dotfiles
+A repo is any github repository containing topic-centric dotfiles.
+Dotsys actions are install, uninstall, update, upgrade, & freeze
 
-Bootstrap a new machine from a remote repo:
-> dotsys install from github_user_/repo_name
+#### BASIC ACTIONS
 
-Install a new topic on your system:
-> dotsys install tmux
+Perform action on all topics:
+> dotsys \<action\>
+> `dotsys install`
 
-Try a somebody else's vim config:
-> dotsys install vim from other_user/repo_name
+Perform an action on specific topics
+> dotsys \<action\> \<topics\>
+> `dotsys install tmux vim`
 
-Update all local data (update package lists, reload bash config, etc):
-> dotsys update
+Perform an action on topics from another repo
+> dotsys \<action\> \<topic\> from \<repo\>
+> `dotsys install vim from user/repo`
 
-Update just package managers:
-> dotsys update managers
+#### LIMIT ACTIONS
 
-Update brew:
-> dotsys update brew
+> dotsys \<action\> \<limit\>
 
-Update your local repo (pull changes from remote):
-> dotsys update repo
+Just symlinks:
+> `dotsys update links`
 
-Upgrade everything on your system (that nuts!):
-> dotsys upgrade
+Just scripts:
+> `dotsys update scripts`
 
-Upgrade a just few topic packages:
-> dotsys upgrade vim tmux node
+Just package managers:
+> ` dotsys update managers`
 
-Upgrade a repo (auto push or pull remote repo)
-> dotsys upgrade repo           # your default repo's master branch
+Just packages:
+> `dotsys upgrade packages`
 
-> dotsys upgrade repo min       # your default repo min branch
+Just dotsys (core system):
+> `dotsys upgrade dotsys`
 
-> dotsys upgrade user/repo      # another repo's master branch
+#### REPO MANAGEMENT (local and remote)
 
-> dotsys upgrade user/repo:min  # another repo's full branch
+Your default repo's "master" branch
+> dotsys <action> repo
+           
+Your default repo's "min" branch
+> dotsys <action> repo min       
 
-Remove a topic's software package and all system changes (topic files remain intact):
-> dotsys uninstall vim
+Another repo's master branch
+> dotsys <action> user/repo      
 
-Remove all packages and changes installed with dotsys:
-> dotsys uninstall
-
-Remove all changes from a repo you tried and hated:
-> dotsys uninstall from other_user/repo_name
+Another repo's "min" branch
+> dotsys <action> user/repo:min  
 
 
-### Why another dotfile management system ?
+Why another dotfile management system ?
+---------------------------------------
 
 Most people have developed dotfile systems that integrate system settings and software instalation 
 which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to 
 really share and fork dotfiles.  Dotsys separates these functions so dotfies can be easily managed 
 ,shared shared with everyone, and forked in a more usefull way.
 
-### Why do i need dotsys if i don't manage my dotfiles as topics ?
+Why do i need dotsys if i don't manage my dotfiles as topics ?
+--------------------------------------------------------------
 
 Because we have some brains built in, right out of the box you can do things like..
 
 Install a new OS app (no topic required):
-> dotsys install app google-chrome
+> `dotsys install app google-chrome`
 
 Install a new command line utility (no topic required):
-> dotsys install cmd zip
+> `dotsys install cmd zip`
 
 Install a node package (no topic required):
-> dotsys install node packages gulp
+> `dotsys install node packages gulp`
 
 
-### Why another package manger ?
+Why another package manger ?
+----------------------------
 
 Dotsys is not really a package manager at all, more like a package_manager wrapper.  We simply chooses 
 the correct package manager for any given topic on a given platform.  By allowing any topic to be a 
@@ -85,7 +94,7 @@ managers  out there that support custom setting management (dotfiles) and dotsys
 illustrate this is by example.
 
 Say you run the command:
-> dotsys install gulp
+> `dotsys install gulp`
 
 Dotsys will check for node and if not installed will:
 - Ubuntu   : install Node.js with **apt-get** 
@@ -103,13 +112,8 @@ for any symlinks you have in your topic, such as an npmrc.symlink and symlink it
 
 Then dotsys will will install **gulp** with **npm** and repeat process for your npm topic.
 
-In case you were wondering if this would work.. 
-> dotsys install google-chrome
-
-Yes, dotsys will install cask and then install chrome with cask on a mac, chocolaty on windows, etc..
-
-
-### That's cool, what else does it do ?
+That's cool, what else does it do ?
+-----------------------------------
 
 - Supports Mac, all Linux variations, FreeBSD, OpenBSD, Ubunto, Debian, Windows 10 w/Bash, Windows Babun, Windows Cygwin, Windows Mysys
 - Supports all posix compliant shells and has NO DEPENDENCIES.
@@ -134,20 +138,23 @@ Yes, dotsys will install cask and then install chrome with cask on a mac, chocol
 
 more details to come, stay tuned...
 
-### WARNING!
+WARNING!
+--------
 
-THIS IS A WORK IN PROGRESS AND IS NOT SUFFICIENTLY TESTED!
-The api could change and things could break at any time.
+THIS IS A WORK IN PROGRESS AND ONLY SUFFICIENTLY TESTED ON OSX WITH BASH!
+The infrastructure for all platforms exists, but has not been tested
+and will likely have platform specific issues that need to be tweaked.
 
 If you are interested in helping out that would be awesome!
+Please submit your pull requests!
 
+Installation
+============
 
-# Installation
+1) First download and extract the dotsys repository to a location 
+of your choosing (your home directory or .dotfiles directory are good choices).
 
-1) First download and extract the dotsys repository a location 
-of your choosing (your home directory is cool).
-
-Make sure the root directory is called ".dotsys"
+NOTE: The dotsys root directory must be named ".dotsys" witht he "."
 
 ## All platforms (except pre windows 10 w/Bash)
 
@@ -173,10 +180,11 @@ OPTION 1&2:
 
 3) Now follow the steps for All Platforms
 
-### How do I learn more about dotsys and it's features ?
+How do I learn more about dotsys and it's features ?
+----------------------------------------------------
 
 Just ask dotsys for help.
-> dotsys --help
+> `dotsys --help`
 
 
 

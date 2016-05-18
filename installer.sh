@@ -79,7 +79,7 @@ dotsys_installer () {
     fi
 
     # This is the actual installer
-    dotsys "$action" dotsys --confirm none
+    dotsys "$action" dotsys --force --confirm none
 
     msg "\nDotsys has been ${action%e}ed
          \rThanks for using dotsys!"
