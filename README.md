@@ -157,7 +157,7 @@ Again we'll illustrate this by example :
 That's cool, what else does it do ?
 -----------------------------------
 
-- Supports Mac, all Linux variations, FreeBSD, OpenBSD, Ubunto, Debian, Windows 10 w/Bash, Windows Babun, Windows Cygwin, Windows Mysys
+- Supports all Linux variations including Mac & Windows 10 w/Bash, Windows Babun, Windows Cygwin, Windows Mysys
 - Supports all posix compliant shells and has NO DEPENDENCIES.
 - Allows a configuration to be deployed on multiple platforms.
 - Decouples software installation and system config from dotfiles.
