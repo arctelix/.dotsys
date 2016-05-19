@@ -139,14 +139,15 @@ vim, just make changes to your .vimrc and dotsys will handle everything else.
 
 Again we'll illustrate this by example :
 
-1. You decide to make some changes to your `.vimrc` and test it out by running `dotsys update vim`.
+1. You decide to make some changes to your `.vimrc` at work and test it out by running `dotsys update vim`.
     - Dotsys will commit the change to your local repo, re-source any required files, and update symlinks
 
-2. If like the changes and want to push it to your remote repo, run `dotsys upgrade repo`
+2. If you like the changes and want to push it to your remote repo, run `dotsys upgrade repo`
     - Dotsys will push the changes to your remote repo
 
 3. When you get home you can run `dotsys upgrade repo` & `dotsys install vim`.
     - Dotsys will pull the changes from your remote repo and update your local vim with your changes.
+    - Now your home and work machines are totally in sync.
 
 That's cool, what else does it do ?
 -----------------------------------
