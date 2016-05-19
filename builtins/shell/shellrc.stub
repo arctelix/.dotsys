@@ -16,6 +16,10 @@ test -f "$HOME/.dotsysrc" && source "$HOME/.dotsysrc"
 stub_target="{STUB_TARGET}"
 test -f "$stub_target" && source "$stub_target"
 
+echo "- sourcing shell files"
+# SOURCE TOPIC FILES: .shell
+dotsys source_topic_files shell
+
 
 
 

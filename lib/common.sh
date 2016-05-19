@@ -116,16 +116,23 @@ dotsys_user_stubs() {
 
 # Test for VERBOSE_MODE
 verbose_mode (){
-    if ! [ "$VERBOSE_MODE" ]; then
+    local vm
+    if ! [ "$VERBOSE_MODE" ] || [ "$recursive" ]; then
+
         if ! [ "$topics" ]; then
             # verbose on
-            VERBOSE_MODE=0
+            vm=0
         else
             # verbose off
-            VERBOSE_MODE=1
+            vm=1
         fi
     fi
-    return $VERBOSE_MODE
+
+    if ! [ "$VERBOSE_MODE" ]; then
+        VERBOSE_MODE=$vm
+    fi
+
+    return ${vm:-$VERBOSE_MODE}
 }
 
 dry_run (){
@@ -263,49 +270,6 @@ get_dir_list () {
     for t in ${list[@]}; do
         echo "$(basename "$t") "
     done
-}
-
-get_topic_list () {
-    local dir="$1"
-    local force="$2"
-    local list
-    local topic
-
-
-
-    if [ "$dir" = "$DOTSYS_REPOSITORY" ]; then
-        # ALWAYS GET INSTALLED TOPICS FOR DOTSYS
-        force=
-        dir="$DOTSYS_REPOSITORY/builtins"
-    fi
-
-    # only installed topics when not installing unless forced
-    if [ "$action" != "install" ] && ! [ "$force" ]; then
-        while read line; do
-            topic=${line%:*}
-            # skip system keys
-            if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
-            echo "$topic"
-        done < "$(state_file "dotsys")"
-    # all defined topic directories
-    else
-        if ! [ -d "$dir" ];then return 1;fi
-        get_dir_list "$dir"
-    fi
-}
-
-get_installed_topic_paths () {
-    local list
-    local topic
-    local repo
-
-    while read line; do
-        topic=${line%:*}
-        repo=${line#*:}
-        # skip system keys
-        if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
-        echo "$repo/$topic"
-    done < "$(state_file "dotsys")"
 }
 
 rename_all() {

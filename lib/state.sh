@@ -254,3 +254,54 @@ freeze_state() {
 
     done < "$file"
 }
+
+get_topic_list () {
+    local dir="$1"
+    local force="$2"
+    local list
+    local topic
+
+    if [ "$dir" = "$DOTSYS_REPOSITORY" ]; then
+        # ALWAYS GET INSTALLED TOPICS FOR DOTSYS
+        force=
+        # USE BUILTIN TOPICS FOR DOTSYS
+        dir="$DOTSYS_REPOSITORY/builtins"
+    fi
+
+    # only installed topics when not installing unless forced
+    if [ "$action" != "install" ] && ! [ "$force" ]; then
+        while read line; do
+            topic=${line%:*}
+            # skip system keys
+            if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
+            echo "$topic"
+        done < "$(state_file "dotsys")"
+    # all defined topic directories
+    else
+        if ! [ -d "$dir" ];then return 1;fi
+        get_dir_list "$dir"
+    fi
+}
+
+get_installed_topic_paths () {
+    local list
+    local topic
+    local repo
+
+    while read line; do
+        topic=${line%:*}
+        repo=${line#*:}
+        # skip system keys
+        if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
+
+        if [ "$repo" = "dotsys/dotsys" ]; then
+            repo="$DOTSYS_REPOSITORY/builtins"
+
+        else
+            repo="$(dotfiles_dir)/$repo"
+        fi
+
+        echo "$repo/$topic"
+
+    done < "$(state_file "dotsys")"
+}

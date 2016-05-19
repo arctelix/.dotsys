@@ -694,6 +694,7 @@ print_stats () {
     fi
 
     info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
+    info "$(printf "Platform : %b%s%b" $green $PLATFORM $rc)"
     info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
     info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
     local count=${#topics[@]}

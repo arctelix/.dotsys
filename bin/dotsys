@@ -58,7 +58,12 @@ elif [ "$1" = "ds_utils" ]; then
 # (only works for shell scripts only)
 elif [ "$1" = "source_topic_files" ]; then
   shift
-  sh "$DOTSYS_LIBRARY/stubs.sh" source_topic_files $@
+  source "$DOTSYS_LIBRARY/common.sh"
+  source "$DOTSYS_LIBRARY/platforms.sh"
+  source "$DOTSYS_LIBRARY/state.sh"
+  source "$DOTSYS_LIBRARY/stubs.sh"
+  echo "-> source_topic_files called: $@"
+  source_topic_files $@
 
 # call main dotsys func
 else

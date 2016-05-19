@@ -169,11 +169,11 @@ manage_dependencies () {
         fi
         # install
         if ! is_installed "system" "$dep" --silent;then
-          dotsys "install" "$dep" from "$ACTIVE_REPO" --recursive
+          dotsys "install" "$dep" --recursive
           # Add dep to deps state
           if [ $? -eq 0 ]; then
-            debug "state_install: deps $dep $topic"
-            state_install "deps" "$dep" "$topic"
+            debug "state_install: deps $dep $topic $ACTIVE_REPO"
+            state_install "deps" "$dep" "$ACTIVE_REPO/$topic"
           fi
         # already installed
         else
@@ -309,7 +309,7 @@ topic_in_use () {
     local topic="${1:-$topic}"
     # If the topic is a key in deps.state then it can not be
     # uninstalled until all it's dependant topics are uninstalled.
-    in_state "deps" "$topic"
+    in_state "deps" "$topic" "$ACTIVE_REPO"
     local r=$?
     debug "   - topic_in_use: $topic = $r"
     return $r

@@ -304,19 +304,37 @@ get_credential_helper () {
 # use shell script to append source_topic_files to stub..
 source_topic_files () {
     local topic="$1"
-    local installed_topics="$(get_installed_topic_paths)"
+    local installed_paths="$(get_installed_topic_paths)"
     local src_cmd="${2:-source}"
-    local t_dir
-    debug "-- source_topic_files for: $topic"
-    for t_dir in $installed_topics; do
-        local files="$(find "$t_dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
-        local file
-        debug "  source_topic_files from: $t_dir"
-        while IFS=$'\n' read -r file; do
-            debug "   source_topic_files file: $file"
+    local file
+    local topic_dir
+    local OWD="$PWD"
+
+    local order="path functions aliases"
+
+    for topic_dir in $installed_paths; do
+        local sourced=()
+        local o
+
+        cd "$topic_dir"
+
+        # source ordered files
+        for o in $order; do
+            file="$(find . -mindepth 1 -maxdepth 1 -type f -name "$order.$topic" -not -name '\.*' )"
+            if ! [ "$file" ]; then continue; fi
             $src_cmd "$file"
-        done <<< $files
+            sourced+=("$file")
+        done
+
+        # source topic files of any name
+        local topic_files="$(find . -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
+        while IFS=$'\n' read -r file; do
+            if ! [ "$file" ] || [[ "$sourced[@]" =~ "$file" ]]; then continue;fi
+            $src_cmd "$file"
+        done <<< $topic_files
     done
+
+    cd "$OWD"
 }
 
 SYSTEM_SH_FILES="manager.sh topic.sh install.sh update.sh upgrade.sh freeze.sh uninstall.sh"

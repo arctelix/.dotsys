@@ -2,10 +2,7 @@
 
 # Platform specific functions
 # Author: arctelix
-# Thanks to the following sources:
-# https://github.com/agross/dotfiles
-# https://github.com/holman/dotfiles
-# https://github.com/webpro/dotfiles
+
 
 PLATFORMS="windows linux mac freebsd openbsd mysys cygwin"
 
@@ -15,21 +12,26 @@ get_platform () {
     return
   fi
 
+  local platform
+
   if [ "$(uname)" == "Darwin" ]; then
-    printf "linux-mac"
+    platform="linux-mac"
   elif [ "$(uname -s)" = "FreeBSD" ]; then
-    printf "linux-freebsd"
+    platform="linux-freebsd"
   elif [ "$(uname -s)" == "OpenBSD" ]; then
-    printf "linux-openbsd"
+    platform="linux-openbsd"
   elif [ "$(uname -s)" == "Linux" ]; then
-    printf "linux"
+    platform="linux"
   elif [ "$(uname -o)" == "Cygwin" ]; then
-    printf "windows-cygwin"
+    platform="windows-cygwin"
   elif [ "$(uname -o)" == "Msys" ]; then
-    printf "windows-msys"
+    platform="windows-msys"
   else
-    printf "unknown"
+    platform="unknown"
   fi
+
+  PLATFORM="$platform"
+  echo "$platform"
 }
 
 
@@ -99,15 +101,17 @@ user_home_dir () {
 
   case "$platform" in
     *cygwin )
-      echo "$(printf "%s" "$(cygpath --unix $USERPROFILE)")"
+      HOME="$(printf "%s" "$(cygpath --unix $USERPROFILE)")"
       ;;
     *msys )
-      echo "$(printf "%s" "$($USERPROFILE)")"
+      HOME="$(printf "%s" "$($USERPROFILE)")"
       ;;
     * )
       fail "$(printf "Cannot determine home directories for platform %b%s%b" $green "$platform" $rc)"
       ;;
   esac
+
+  echo "$HOME"
 }
 
 
@@ -131,9 +135,9 @@ topic_excluded () {
 
   # topic specific platform val
   if ! [ "$val" ]; then val="$(get_topic_config_val "$topic" "$specific")"; fi
-
   # topic generic platform val
   if ! [ "$val" ]; then val="$(get_topic_config_val "$topic" "$generic")"; fi
+
 
   if [[ "$val" =~ (x| x|no| no) ]]; then return 0;fi
 
@@ -162,3 +166,5 @@ if_platform () {
 
   return 1
 }
+
+get_platform 2>&1 >/dev/null

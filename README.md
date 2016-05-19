@@ -126,9 +126,14 @@ Say you have a topic for gulp and run the command:
 
 4. Start the **gulp** install process by installing it with **npm**.
 
-5. Check for a custom install function in gulp/topic.sh and run it (make any custom modifications here). 
+5. Check for a custom install function in gulp/topic.sh and run it (make any custom modifications here).
 
-6. Check for custom dotfiles and symlink them to the proper location (such as `npmrc.symlink` to your home directory)
+6. Check for any `.gulp` files in other topics and source them as required.
+
+7. Check for custom dotfiles and symlink them to the proper location (such as `npmrc.symlink` to your home directory)
+
+8. Any file with a `.shell` extension will be sourced by your shell of choice at startup. You can add some aliases for
+your standard project configs in a .shell file. For example gulp-init-django and gulp_init_rails.
 
 Why is dotsys better than a package manager ?
 ---------------------------------------------
@@ -220,6 +225,12 @@ OPTION 2:
 OPTION 1&2: 
 
 3) Now follow the steps for All Platforms
+
+Anatomy of a dotsys.cfg file ?
+------------------------------
+
+
+
 
 How do I learn more about dotsys and it's features ?
 ----------------------------------------------------

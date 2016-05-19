@@ -284,7 +284,7 @@ manage_repo (){
 
             # delete local repo (only if remote is pushed)
             if [ $? -eq 0 ]; then
-                get_user_input "Would you like to delete local repo $repo?" -r
+                get_user_input "Would you like to delete local repo $repo?" -d no -r
                 if [ $? -eq 0 ]; then
                     rm -rf "$local_repo"
                 fi

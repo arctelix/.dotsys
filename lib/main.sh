@@ -471,9 +471,10 @@ dotsys () {
         fi
     fi
 
+    verbose_mode
+
     # Verbose, logo, user
     if ! [ "$recursive" ]; then
-        verbose_mode
         set_user_vars
         print_logo
     fi
