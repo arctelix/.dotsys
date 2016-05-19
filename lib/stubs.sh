@@ -65,8 +65,10 @@ add_existing_dotfiles () {
 }
 
 # Collects all required user data at start of process
-# Creates stub file in user directory
-# The stub is not symlinked to destination until symlink process
+# Creates stub file in .dotsys/user/stub directory
+# Stubs do not get symlinked untill topic is installed.
+# However, since stubs are symlinked to user directory
+# changes are instant and do not need to be relinked!
 manage_stubs () {
     local action="$1"
     local topics=("$2")
@@ -91,9 +93,10 @@ manage_stubs () {
     debug "-- manage_stubs: $action ${topics[@]} $force"
 
     # Confirming stubs seems unnecessary since we get permission during user config
-    # if verbose_mode; then
-    #     confirm_task "create" "stub files for" "\n$(echo "${topics[@]}" | indent_list)"
-    # fi
+    if verbose_mode; then
+        #confirm_task "create" "stub files for" "\n$(echo "${topics[@]}" | indent_list)"
+        task "Managing stub files"
+    fi
 
     for topic in $builtins; do
         # abort if no user topic directory or if topic is not in current scope
@@ -156,11 +159,19 @@ create_user_stub () {
     fi
 
     local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
-    #local stub_dst="$(topic_dir "$topic")/${stub_name}.stub"
     local stub_dst="$(dotsys_user_stubs)/${stub_name}.${topic}.stub"
 
-    # abort if stub dst exists & is newer then source, unless forced
-    if [ -f "$stub_dst" ] && [ "$stub_dst" -nt "$stub_src" ] && ! [ "$force" ]; then return;fi
+    local mode="create"
+
+    # If stub exists were in update mode
+    if ! [ "$force" ]  && [ -f "$stub_dst" ]; then
+        # Abort if stub_dst is newer then source and has correct target (everything is correct)
+
+        if [ "$stub_dst" -nt "$stub_src" ] && grep -q "$stub_target" "$stub_dst" ; then return;fi
+        mode="update"
+    fi
+
+
 
     debug "-- create_user_stub stub_src : $stub_src"
     debug "   create_user_stub stub_dst : $stub_dst"
@@ -264,14 +275,16 @@ create_user_stub () {
 
     done
 
-    # move to dotsys_user_stubs/stubname.topic.stub
-    #mkdir -p "$(dirname "$stub_dst")"
+    # move to .dotsys/user/stubs/stubname.topic.stub
     mv -f "$stub_out" "$stub_dst"
+    local status=$?
 
-    if ! is_installed "dotsys" "$topic" --silent; then
-        success_or_fail $? "create" "$(printf "stub file for %b$topic $stub_name%b:
+#    if ! is_installed "dotsys" "$topic" --silent; then
+#        removed success_or_fail from here
+#    fi
+
+    success_or_fail $status "$mode" "$(printf "stub file for %b$topic $stub_name%b:
             $spacer ->%b$stub_dst%b" $green $rc $green $rc)"
-    fi
 
 }
 

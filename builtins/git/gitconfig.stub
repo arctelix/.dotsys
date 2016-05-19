@@ -1,6 +1,6 @@
 [user]
-        name = {TOPIC_USER_NAME}
-        email = {TOPIC_USER_EMAIL}
+    name = {TOPIC_USER_NAME}
+    email = {TOPIC_USER_EMAIL}
 [credential]
         helper = {CREDENTIAL_HELPER}
 

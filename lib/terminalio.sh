@@ -696,7 +696,9 @@ print_stats () {
     info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
     info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
     info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
-    info "$(printf "There are %b${#topics[@]} topics to $action%b" $green $rc)"
+    local count=${#topics[@]}
+    if [ $count -eq 0 ]; then count="all"; fi
+    info "$(printf "$(cap_first "${action}ing") %b$count topics%b" $green $rc)"
     # make sure it's only seen once
     SHOW_STATS=1
 }

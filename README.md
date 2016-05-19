@@ -94,34 +94,59 @@ Install a new command line utility (no topic required):
 Install a node package (no topic required):
 > `dotsys install node packages gulp`
 
+This way your repo is updated automatically and the next time you run 
+`dotsys install`, you get the exact same setup you had previously used!
+
 
 Why another package manger ?
 ----------------------------
 
 Dotsys is not really a package manager at all, more like a package_manager wrapper.  We simply chooses 
 the correct package manager for any given topic on a given platform.  By allowing any topic to be a 
-manger and allow any topic to be managed the system is limitless. Secondly, there are no existing package 
-managers  out there that support custom setting management (dotfiles) and dotsys does!  The best way to 
-illustrate this is by example.
+manger and allowing any topic to be managed the system is limitless. Secondly, there are no existing package 
+managers out there that support custom setting file management (dotfiles) and dotsys does!  The best way to 
+illustrate this is by example of the process.
 
-Say you run the command:
+Say you have a topic for gulp and run the command:
 > `dotsys install gulp`
 
-Dotsys will check for node and if not installed will:
-- Ubuntu   : install Node.js with **apt-get** 
-- Debian   : install Node.js with **apt-get** 
-- BSD      : install Node.js with **pkg**
-- ArchLinux: install Node.js with **pacman** 
-- Mac      : install Node.js with **brew**
-- Windows  : install Node.js with **Scoop**
-- Linux    : install node.js with **yum**
-- Babun    : install Node.js with **pact**
-- Mysys    : install Node.js with **mingw-get**
+1. Dotsys will check for node and if not installed will:
 
-After it's installed, your node topic's custom install function wil be run. Finally dotsys wil check 
-for any symlinks you have in your topic, such as an npmrc.symlink and symlink it to the right place.
+    - Ubuntu   : install Node.js with **apt-get** 
+    - Debian   : install Node.js with **apt-get** 
+    - BSD      : install Node.js with **pkg**
+    - ArchLinux: install Node.js with **pacman** 
+    - Mac      : install Node.js with **brew**
+    - Windows  : install Node.js with **Scoop**
+    - Linux    : install node.js with **yum**
+    - Babun    : install Node.js with **pact**
+    - Mysys    : install Node.js with **mingw-get**
 
-Then dotsys will will install **gulp** with **npm** and repeat process for your npm topic.
+3. Then, since we know that npm is required for gulp, install **npm** if it's not installed.
+
+4. Start the **gulp** install process by installing it with **npm**.
+
+5. Check for a custom install function in gulp/topic.sh and run it (make any custom modifications here). 
+
+6. Check for custom dotfiles and symlink them to the proper location (such as `npmrc.symlink` to your home directory)
+
+Why is dotsys better than a package manager ?
+---------------------------------------------
+
+Quite simply, dotsys manages your customized packages.  When you install vim with dotsys, you get YOUR fully 
+customized version vim not the generic version of vim!  The best part is you don't need to worry about repackaging vim,
+or updating vim, make changes to your .vimrc and dotsys will sync the changes to your repo and handle everything else.
+
+Again we'll illustrate this by example :
+
+1. You decide to make some changes to your `.vimrc` and test it out by running `dotsys update vim`.
+    - Dotsys will commit the change to your local repo resource any required files and update symlinks
+
+2. If like the changes and want to push it to your remote repo, run `dotsys upgrade repo`
+    - Dotsys will push the changes to your remote repo
+
+3. When you get home you can run `dotsys upgrade repo` & `dotsys install vim` to get the changes you made at work.
+    - Dotsys will pull the changes from your remote repo and update your .vimrc with your changes.
 
 That's cool, what else does it do ?
 -----------------------------------
