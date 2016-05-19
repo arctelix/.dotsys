@@ -200,7 +200,7 @@ Installation
 1) First download and extract the dotsys repository to a location 
 of your choosing (your home directory or .dotfiles directory are good choices).
 
-NOTE: The dotsys root directory must be named ".dotsys" witht he "."
+NOTE: The dotsys root directory must be named ".dotsys" witht the "."
 
 ## All platforms (except pre windows 10 w/Bash)
 
@@ -229,6 +229,7 @@ OPTION 1&2:
 Anatomy of a dotsys.cfg file ?
 ------------------------------
 
+https://github.com/arctelix/.dotsys/blob/master/config.md
 
 
 

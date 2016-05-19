@@ -1,72 +1,111 @@
+dotsys.cfg
+==========
+
 TOPIC CONFIG (topic/dotsys.cfg)
 -------------------------------
+change repo to install from
 
-repo: user/repo_name 				        # change repo to install from
-manager: cmd 					            # specify a manager ([none], app, cmd, topic )
-installed_test: [shell test] 			    # test determines if installed on system by other means (default: is_cmd $topic)
-name: package_name 				            # manager package name if not (default: topic name)
-brew: package_name 				            # specific manager package name ex: brew: python,  pact: python2
-deps:						                # list topic dependancies
-  - topic_name
-symlinks:  					                # set symlink alternate path/name (default: $HOME)
-  - file.symlink->$HOME/subdir/_file 		# alternate path/name for file.symlink
+    repo: user/repo_name
+    
+specify a manager ([none], app, cmd, topic )
+
+    manager: cmd
+    
+test determines if installed on system by other means (default: is_cmd $topic)
+				            
+    installed_test: [shell test] 
+    
+manager package name if not (default: topic name)
+
+    name: package_name
+     				           
+specific manager package name ex: brew: python,  pact: python2
+
+    brew: package_name 
+    	
+topic dependencies	
+
+    deps:
+      - topic_name
+
+symlinks (override $HOME directroy as destination)
+
+    symlinks:
+      - file.symlink->$HOME/subdir/_file
 
 
 MANAGER CONFIG OPTIONS
 ----------------------
-manager: app 					        # system manger ie: cask, chocolaty, yum
-manager: cmd 					        # envrionment manager ie: brew, scoop,
-manager: both 					        # install with both (TODO: not implimented)
-manager: npm 					        # any topic can be a manager if it does the folowing
+Install with apps manager ie: cask, chocolaty, yum
+    
+    manager: app 
+
+Install with command line manager ie: brew, apt-get
+			        
+    manager: cmd 
+
+Install with a specific manager
+
+    manager: npm
 
 
 PLATFORM CONFIG OPTIONS
 -----------------------
 
-# full platform name (do not use in config files)
-linux-mac:
-windows-cygwin:
+full platform names (do not use in config files)
 
-mac:                                          # specific platform name (only linux-mac)
-cygwin:                                       # specific platform name (only windows-cygwin)
+    linux-mac:
+    windows-cygwin:
+    
+specific platform name (only linux-mac, windows-cygwin)
 
-# generic platform name
-windows:                                      # applies to all windows platforms
-linux:                                        # applies to all linux platforms
+    mac:
+    cygwin: 
 
-# Include/exclude for platform (use 'x' to exclude and 'i' to include)
-# any platform not excluded generically or specifically will be installed
-# when a generic platform is excluded you must explicitly include any specific platforms you want to use
+generic platform name (all windows-*, all linux-*)
 
-linux: x                                      # exclude all linux platforms
-mac: i                                        # override include linux-mac
+    windows:
+    linux:
+
+Include/exclude for platform (use 'x' to exclude and 'i' to include)
+any platform not excluded generically or specifically will be installed
+when a generic platform is excluded you must explicitly include any specific platforms you want to use
+
+exclude all linux platforms
+
+    linux: x
+    
+override include linux-mac
+
+    mac: i                                        
 
 
 TOPIC CONFIG: PLATFORM SPECIFIC (windoes/mac/linux/freebsd/mysys)
 -----------------------------------------------------------------
-# All base config settings are applicable as platform children and will supersede the base config
+All base config settings are applicable as platform children and will supersede the base config
 
-windows: i 					                # include all windows platforms
-  manager: app 					            # override manager for platform
-  repo: user/repo_name			      	    # override repo for platform
-  symlinks: 					            # set paths for platform
-    - file.symlink->$HOME/subdir/_file  	# set file specific path for platform
-
-linux: x                                    # exclude all other linux platforms
+    windows: i
+      manager: app 
+      repo: user/repo_name
+      symlinks:
+        - file.symlink->$HOME/subdir/_file 
+    
+    linux: x
 
 
 EXAMPLE TYPICAL TOPIC (vim)
 ---------------------------
 
-manager: cmd
-brew: macvim
-  installed_test: mvim
-windows:
-  symlinks:
-    - vimrc.symlink -> $HOME/_vimrc
+    manager: cmd
+    brew: macvim
+      installed_test: mvim
+    windows:
+      symlinks:
+        - vimrc.symlink -> $HOME/_vimrc
 
 
-# REPO CONFIG (user/repo/dotsys.cfg)
+REPO CONFIG (user/repo/dotsys.cfg)
+----------------------------------
 
 repo: user_name/repo_name\[:branch\]	# default repo for all topics (branch is optional, defaults to master)
 					
@@ -140,13 +179,13 @@ auto_hide (){
 
 # Now each setting can be controlled by cfg file
 
-settings_windows: i	       # all child settings installed despite individual settings
+settings_windows: i	          # all child settings installed despite individual settings
 settings_osx:
-  dock: i			# all child settings installed despite individual settings
+  dock: i			          # all child settings installed despite individual settings
     auto_hide: x              # installed due to parent override
-  finder: 			# check individual settings
+  finder: 			          # check individual settings
     show_hidden_files: i      # included
-    as_list: x			# excluded
+    as_list: x			      # excluded
 settings_windows:
 settings_freebsd:
 settings_linux:
