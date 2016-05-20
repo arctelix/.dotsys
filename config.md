@@ -1,6 +1,10 @@
 dotsys.cfg
 ==========
 
+Nearly all of the dotsys defaults can be superseded with a repo level and topic level dotsys.cfg file.  
+A dotsys.cfg file located in a topic directory tells dotsys how to treat a topic and a repo config file 
+allows you to easily supersede topic settings.
+
 TOPIC CONFIG (topic/dotsys.cfg)
 -------------------------------
 change repo to install from
@@ -93,7 +97,7 @@ All base config settings are applicable as platform children and will supersede 
     linux: x
 
 
-EXAMPLE TYPICAL TOPIC (vim)
+TYPICAL TOPIC EXAMPLE (vim)
 ---------------------------
 
     manager: cmd
@@ -107,50 +111,68 @@ EXAMPLE TYPICAL TOPIC (vim)
 REPO CONFIG (user/repo/dotsys.cfg)
 ----------------------------------
 
-repo: user_name/repo_name\[:branch\]	# default repo for all topics (branch is optional, defaults to master)
-					
-windows:					            # platform manger overrides for windows(defaults shown)
-  app_manager: choco
-  cmd_manager: pact
-mac:                                    # platform manger overrides for mac (defaults shown)
-  app_manager: cask
-  cmd_manager: brew
+default repo for all topics (branch is optional, defaults to master)
+
+    repo: user_name/repo_name\[:branch\]	
+    
+platform manger overrides for windows(defaults shown)  
+                      
+    windows:
+      app_manager: choco
+      cmd_manager: pact
+
+platform manger overrides for mac (defaults shown)
+
+    mac:
+      app_manager: cask
+      cmd_manager: brew
 
 
 REPO CONFIG TOPIC OVERRIDES
 ---------------------------
-# all topic child settings apply
+all topic child settings apply
 
-topic1:  					          # include
-  repo: alternate/repo				  # alternate repo for topic
-  windows: x					      # exclude on windows platforms
-topic2: x  					          # exclude all platforms
+override topic1 repo and exclude on windows
+
+    topic1:  					          
+      repo: alternate/repo				  
+      windows: x
+
+Exclude topic2
+
+    topic2: x  					          
+
 
 INCLUDE / EXCLUDE RULES
 -----------------------
+Include all files
 
-package: i              # include all subs
-  file1:                # include
-  file2: x              # include
-  file3: i              # include
+    package: i              
+      file1:                # include
+      file2: x              # include
+      file3: i              # include
 
-package: x              # exclude all subs
-  file1:                # exclude
-  file2: x              # exclude
-  file3: i              # exclude
+Exclude all files
 
-package:                # limited install
-  file1:                # include
-  file2: x              # exclude
-  file3: i              # include
+    package: x              
+      file1:                # exclude
+      file2: x              # exclude
+      file3: i              # exclude
+
+Check each file individually
+
+    package:                
+      file1:                # include
+      file2: x              # exclude
+      file3: i              # include
 
 
 TOPIC TASKS (alternate to topic.sh functions or task.sh scripts)
 ----------------------------------------------------------------
 (not implemented?)
 
-install: install command				
-uninstall: uninstall command			
+install: install command
+uninstall: uninstall command
 update: update command	
 upgrade: update command
 freeze: update command
@@ -158,59 +180,47 @@ freeze: update command
 
 SPECIAL FILE EXTENSIONS & DIRECTORIES
 -------------------------------------
+A file to be symlinked
 
-*.symlink 					# a symlink file
-*.shell 					# sourced by all shells
-*.$topic                    # sourced by topic
-topic/bin 					# files are symlinked to user/bin
+    *.symlink
+		
+Source file from when any shell loaded
+
+    *.shell 
+
+Source file when topic loaded
+
+    *.$topic
+
+Files in directory are symlinked to user/bin
+
+    topic/bin
 
 
 TODO: SETTINGS (*.settings)
 ---------------------------
 
-# ex: finder.settings file defines individual functions for each setting
-show_hiden_files (){
-  commands to execute
-}
-# ex: dock.settings file defines individual functions for each setting
-auto_hide (){
-  commands to execute
-}
+ex: finder.settings file defines individual functions for each setting
 
-# Now each setting can be controlled by cfg file
+    show_hiden_files (){
+      commands to execute
+    }
+    
+ex: dock.settings file defines individual functions for each setting
 
-settings_windows: i	          # all child settings installed despite individual settings
-settings_osx:
-  dock: i			          # all child settings installed despite individual settings
-    auto_hide: x              # installed due to parent override
-  finder: 			          # check individual settings
-    show_hidden_files: i      # included
-    as_list: x			      # excluded
-settings_windows:
-settings_freebsd:
-settings_linux:
+    auto_hide (){
+      commands to execute
+    }
 
+Now each setting can be controlled by cfg file
 
-TODO (maybe) OS SPECIFIC SCRIPTS
---------------------------------
-# topic.sh 
-  platform function prefix ex: mac_install
-
-# install, update, uninstall
-  *.sh.os (platform extension, executes first only for platform)
-  install.sh (applies to all os)
-  uninstall.sh (applies to all os)
-  update.sh (applies to all os)
-# equivalent dotsys.yaml
-  all: yes
-    install: some command
-    uninstall: some command
-    update: some command
-  platform: yes
-    install: some command
-    uninstall: some command
-    update: some command
-
-
-
-
+    settings_windows: i	          
+    settings_osx:
+      dock: i			          
+        auto_hide: x
+      finder:
+        show_hidden_files: i
+        as_list: x
+    settings_windows:
+    settings_freebsd:
+    settings_linux:
