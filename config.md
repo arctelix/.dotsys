@@ -5,29 +5,61 @@ Nearly all of the dotsys defaults can be superseded with a repo level and topic 
 A dotsys.cfg file located in a topic directory tells dotsys how to treat a topic and a repo config file 
 allows you to easily supersede topic settings.
 
+Topics should be named after the system command when possible, as dotsys will 
+test for the topic name as an existing commend. For example:
+
+> To crate a topic named for vim, you would crate a directory called 'vim', dotsys will test for the command 'vim' and if 
+> it already exits will skip the package installation.  
+
+This is actually very important.  It allows dotsys to respect previously installed versions of packages on your system.  
+If you have a version of vim on your current system we will not overwrite it unless you explicitly use the --force
+option.
+    
+However, on the mac platform you likely want to install 'macvim'.  Don't create another topic called 'macvim' 
+just modify the dotsys.cfg for the 'vim' topic telling dotsys to use 'macvim' for brew.
+
+    manager: cmd
+    brew: macvim
+      installed_test: mvim
+    windows:
+      symlinks:
+        - vimrc.symlink->$HOME/_vimrc
+        
+The configuration for vim happens to be built in to dotsys, so all you need to do is create a folder called 'vim' and 
+add your `vimrc.symlink` file and your done!  
+
+Now if for some reason you wanted to override and use 'vim' on the mac platform instaed of 'macvim'.  Create add the 
+following to your 'vim' topic's dotsys.cfg.
+
+    brew: vim
+      installed_test: vim
+
+You will also notice we changed the symlink location for windows platforms to '$HOME/_vimrc_' rather then '$HOME/.vimrc'.  
+The details for all config file settings are explained below, so that you can implement topics that are not built in to dotsys.  
+Please submit pull requests for your topic configs!  Look at `.dotsys/builtins` for more examples of how to configure a topic.
+
+
+
 TOPIC CONFIG (topic/dotsys.cfg)
 -------------------------------
-change repo to install from
-
-    repo: user/repo_name
-    
-specify a manager ([none], app, cmd, topic )
+  
+Specify a manager if required ( app, cmd, topic )
 
     manager: cmd
     
-test determines if installed on system by other means (default: is_cmd $topic)
+Modify test to determine if topic installed on system (default: topic_name)
 				            
     installed_test: [shell test] 
     
-manager package name if not (default: topic name)
+Modify package name (default topic__name):
 
     name: package_name
      				           
-specific manager package name ex: brew: python,  pact: python2
+modify package name for specific manager: 
 
-    brew: package_name 
+    brew: package_name
     	
-topic dependencies	
+List topic dependencies:
 
     deps:
       - topic_name
@@ -36,6 +68,10 @@ symlinks (override $HOME directroy as destination)
 
     symlinks:
       - file.symlink->$HOME/subdir/_file
+      
+Install topic from a different repo:
+
+    repo: user/repo_name
 
 
 MANAGER CONFIG OPTIONS
@@ -95,17 +131,6 @@ All base config settings are applicable as platform children and will supersede 
         - file.symlink->$HOME/subdir/_file 
     
     linux: x
-
-
-TYPICAL TOPIC EXAMPLE (vim)
----------------------------
-
-    manager: cmd
-    brew: macvim
-      installed_test: mvim
-    windows:
-      symlinks:
-        - vimrc.symlink -> $HOME/_vimrc
 
 
 REPO CONFIG (user/repo/dotsys.cfg)
