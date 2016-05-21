@@ -177,6 +177,7 @@ indent_lines () {
   # Take input from pipe
   if ! [ "$input" ]; then
       while read -r line || [[ -n "$line" ]]; do
+        # remove \r and replace with \r$indent
         echo "$indent $(echo "$line" | sed "s/$(printf '\r')/$(printf '\r')$indent /g")"
       done
   # input from variable

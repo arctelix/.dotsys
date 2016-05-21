@@ -15,3 +15,4 @@ test -f "$stub_target" && source "$stub_target"
 
 # SOURCE TOPIC FILES: .bash
 echo "- souring bash files"
+{SOURCE_FILES}

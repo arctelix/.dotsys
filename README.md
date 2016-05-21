@@ -101,7 +101,7 @@ This way your repo is updated automatically and the next time you run
 Why another package manger ?
 ----------------------------
 
-Dotsys is not really a package manager at all, more like a package_manager wrapper.  We simply chooses 
+Dotsys is not really a package manager at all, more like a package manager wrapper.  We simply choose
 the correct package manager for any given topic on a given platform.  By allowing any topic to be a 
 manger and allowing any topic to be managed the system is limitless. Secondly, there are no existing package 
 managers out there that support custom setting file management (dotfiles) and dotsys does!  The best way to 

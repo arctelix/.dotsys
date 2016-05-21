@@ -210,7 +210,7 @@ create_user_stub () {
     local var_text
     local g_state_key
     local val
-    local required_val="true"
+    local user_var
 
     debug "   create_user_stub variables: $variables"
 
@@ -231,18 +231,28 @@ create_user_stub () {
         # check system vars
         if [ "$var" = "DOTSYS_BIN" ]; then
             val="$(dotsys_user_bin)"
+
         elif [ "$var" = "USER_NAME" ]; then
             val="$USER_NAME"
+
         elif [ "$var" = "CREDENTIAL_HELPER" ]; then
             val="$(get_credential_helper)"
+
         elif [ "$var" = "SOURCE_FILES" ]; then
             val=""
-            required_val=
             source_topic_files "$topic" "$stub_out"
+
+        elif [ "$var" = "DOTFILES_DIR" ]; then
+            val="$(dotfiles_dir)"
+
+        elif [ "$var" = "DOTSYS_DIR" ]; then
+            val="$(dotsys_dir)"
+
         # get topic_state_key and set value
         else
             debug "   create_user_stub checking for state key: ${topic}_$g_state_key"
             val="$(get_state_value "$t_state_key" "user")"
+            user_var="true"
         fi
 
         # DO NOT REMOVE: If required for custom values
@@ -256,13 +266,14 @@ create_user_stub () {
         debug "   create_user_stub pre user $var = $val "
 
         # Get user input if no val found
-        if ! [ "$val" ] && [ "$required_val" ]; then
+        if ! [ "$val" ] && [ "$user_var" ]; then
             # use global_state_key value as default
             debug "   create_user_stub get default: $g_state_key"
-            def="$(get_state_value "${g_state_key}" "user" || "non")"
+            local def
+            def="$(get_state_value "${g_state_key}" "user" || "none")"
 
             local user_input
-            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "$def"
+            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "$def" -r
 
             # abort stub process
             if ! [ $? -eq 0 ]; then return;fi
@@ -323,7 +334,7 @@ source_topic_files () {
         local sourced=()
         local o
 
-        cd "$topic_dir"
+        #cd "$topic_dir"
 
         # source ordered files
         for o in $order; do
@@ -345,7 +356,7 @@ source_topic_files () {
 
     #echo $(echo "$files" | tr '\n' "\\n")
 
-    cd "$OWD"
+    #cd "$OWD"
 }
 
 SYSTEM_SH_FILES="manager.sh topic.sh install.sh update.sh upgrade.sh freeze.sh uninstall.sh"

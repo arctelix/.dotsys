@@ -509,7 +509,7 @@ git_commit () {
 
     cd "$local_repo"
 
-    git add .
+    git add . --no-all
 
     # Abort if nothing to commit
     local status="$(git status --porcelain | indent_lines)"

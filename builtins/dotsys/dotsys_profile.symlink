@@ -4,10 +4,10 @@
 # SOURCED BY ALL BORNE SHELLS (LOGIN)
 # -------------------------------------
 if [ "$dotsysprofile" = "loaded" ]; then return; fi
-export dotsysprofile="loaded"
+export dotsys_profile="loaded"
 
 # TESTING
-echo "dotsys stub: dotsysprofile loaded"
+echo "dotsys stub: dotsys_profile loaded"
 
 # LOAD: .dotsysrc if it exists
 test -f $HOME/.dotsysrc && source "$HOME/.dotsysrc"

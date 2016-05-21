@@ -24,6 +24,7 @@ dotsys_dir () {
 topic_dir () {
   local topic="${1:-$topic}"
   local repo=$(get_topic_config_val "$topic" "repo")
+  local path
 
   if [ "$repo" ]; then
       repo="$(get_active_repo)"
@@ -35,7 +36,18 @@ topic_dir () {
       return
   fi
 
-  echo "$(repo_dir "$repo")/$topic"
+  path="$(repo_dir "$repo")/$topic"
+
+  if ! [ -d "$path" ]; then
+    path="$(builtin_topic_dir "$topic")"
+  fi
+
+  if ! [ -d "$path" ]; then
+    error "Directory for $topic could not be found
+         \rin builtins or $repo"
+  fi
+
+  echo "$path"
 }
 
 # converts supplied repo or active repo to full path
