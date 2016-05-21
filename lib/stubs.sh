@@ -248,6 +248,12 @@ create_user_stub () {
         elif [ "$var" = "DOTSYS_DIR" ]; then
             val="$(dotsys_dir)"
 
+        elif [ "$var" = "DOTSYS_PLATFORM" ]; then
+            val="$(specific_platform "$(get_platform)")"
+
+        elif [ "$var" = "DOTSYS_PLATFORM_GEN" ]; then
+            val="$(generic_platform "$(get_platform)")"
+
         # get topic_state_key and set value
         else
             debug "   create_user_stub checking for state key: ${topic}_$g_state_key"
