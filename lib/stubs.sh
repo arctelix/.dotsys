@@ -320,7 +320,7 @@ source_topic_files () {
 
         # source ordered files
         for o in $order; do
-            file="$(find . -mindepth 1 -maxdepth 1 -type f -name "$order.$topic" -not -name '\.*' )"
+            file="$(find . -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
             if ! [ "$file" ]; then continue; fi
             $src_cmd "$file"
             sourced+=("$file")
@@ -329,9 +329,9 @@ source_topic_files () {
         # source topic files of any name
         local topic_files="$(find . -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
         while IFS=$'\n' read -r file; do
-            if ! [ "$file" ] || [[ "$sourced[@]" =~ "$file" ]]; then continue;fi
+            if ! [ "$file" ] || [[ ${sourced[@]} =~ $file ]]; then continue;fi
             $src_cmd "$file"
-        done <<< $topic_files
+        done <<< "$topic_files"
     done
 
     cd "$OWD"

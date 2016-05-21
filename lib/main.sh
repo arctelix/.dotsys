@@ -429,13 +429,14 @@ dotsys () {
     # allows syntax action "repo"
     elif [ ! "$from_repo" ] && in_limits "repo" -r; then
         debug "main -> repo is in limits"
-        from_repo="repo"
+        #from_repo="repo"
         topics=()
     fi
 
     # allow "repo" as shortcut to active repo
     if [ "$from_repo" = "repo" ] ; then
-        from_repo="$(get_active_repo)"
+        #from_repo="$(get_active_repo)"
+        from_repo=""
         if ! [ "$from_repo" ]; then
             error "There is no primary repo configured, so
             $spacer a repo must be explicitly specified"

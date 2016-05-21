@@ -301,7 +301,9 @@ get_installed_topic_paths () {
             repo="$(dotfiles_dir)/$repo"
         fi
 
-        echo "$repo/$topic"
+        if [ -d "$repo/$topic" ]; then
+            echo "$repo/$topic"
+        fi
 
     done < "$(state_file "dotsys")"
 }

@@ -35,6 +35,7 @@ create_config_yaml() {
     local repo="$1"
     local level="$2"
     local cfg_mode="$3"
+    local parent="$4"
     # "user"    : prints only user settings
     # "topic"   : prints topic $ user settings
     # "default" : prints all non blank keys (user, topic, default)
@@ -46,10 +47,10 @@ create_config_yaml() {
 
     # FIRST CALL ONLY (non recursive)
     if ! [ "$_cfg_yaml_last_node" ];then
-        # main takes care of loading config now
-        #load_config_vars "$repo" "freeze"
 
         debug "-- create_config_yaml r:$repo l:$level m:$cfg_mode"
+
+        load_repo_config_vars "$(get_config_file_from_repo "$repo")"
 
         _cfg_yaml_last_node="${NODES[${#NODES[@]}-1]}"
 
@@ -80,19 +81,22 @@ create_config_yaml() {
         # node is topic
         if [ -d "$i" ];then
             load_topic_config_vars "$node"
-            cfg_val_to_file "$level" "$node"
+            cfg_val_to_file "$level" "$parent$node" "" " "
             cfg_list_to_file "$level" "$node"
 
             # go to next level
             level+="  "
-            create_config_yaml "$i" "$level"
+            parent="$parent${node}_"
+            create_config_yaml "$i" "$level" "$cfg_mode" "$parent"
+            # go to previous level
+            parent="${parent%${node}_}"
             level="${level%  }"
 
         # node is file
         elif [ -f "$i" ]; then
             # ignore files list
-            if ! [[ "$node" =~ (install|uninstall|update|freeze|upgrade|dotsys) ]]; then
-                cfg_val_to_file "$level" "$fnode"
+            if ! [[ "$node" =~ (install|uninstall|update|freeze|upgrade|dotsys|topic|manager) ]]; then
+                cfg_val_to_file "$level" "$parent$fnode" ""
             fi
         fi
 
@@ -155,6 +159,7 @@ cfg_val_to_file (){
     local u_val=$(get_config_val "_$base" "$sub")
     local t_val=$(get_config_val "$base" "$sub")
     local d_val=$(get_config_val "__$base" "$sub")
+
 
     # user config val
     if [ "$u_val" ]; then

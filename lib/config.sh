@@ -42,22 +42,24 @@ load_config_vars (){
 
     debug "   load_config_vars: loading default config"
 
-    # load default cfg (prefix with ___)
+    # load DEFAULT CFG (prefix with ___)
     local yaml="$(parse_yaml "$(dotsys_dir)/dotsys.cfg" "___")"
-    #debug "$yaml"
+    debug "LOADED DEFAULT CFG:"
+    debug "$yaml"
     eval "$yaml" #set default config vars
 
-    debug "   load_config_vars: validate from"
+
 
     # validate from and set config_file
     if [ "$repo" ]; then
+        debug "   load_config_vars validate: $repo"
         validate_config_or_repo "$repo" "$action"
     # existing user (no from supplied)
     else
         ACTIVE_REPO="$(get_active_repo)"
-        config_file="$(get_config_file_from_repo "$active_repo")"
-        debug "existing user repo: $ACTIVE_REPO"
-        debug "existing user cfg: $config_file"
+        config_file="$(get_config_file_from_repo "$ACTIVE_REPO")"
+        debug "   existing user repo: $ACTIVE_REPO"
+        debug "   existing user cfg: $config_file"
     fi
 
     # Set ACTIVE_REPO & config_file for new user/repo
@@ -88,13 +90,9 @@ load_config_vars (){
     fi
 
     debug "   load_config_vars: load config file"
-    # load the user config file vars (prefix with __)
+    # load USER REPO CFG vars (prefix with __)
     if [ -f "$config_file" ]; then
-        yaml="$(parse_yaml "$config_file" "__")"
-        #debug "load_config_vars loaded:"
-        #debug "$yaml"
-        eval "$yaml" #set config vars
-
+        load_repo_config_vars "$config_file"
     # warn no config
     else
         warn "No config file was found"
@@ -123,6 +121,25 @@ load_config_vars (){
     # Show config info when more then one topic
     if verbose_mode; then print_stats; fi
 }
+
+load_repo_config_vars () {
+    local config_file="$1"
+    local loaded="_repo_config_loaded"
+    local yaml
+    # exit if config is loaded or does not exist
+    if [ "${!loaded}" ]; then return; fi
+
+    # load USER REPO CFG vars (prefix with __)
+    if [ -f "$config_file" ]; then
+        yaml="$(parse_yaml "$config_file" "__")"
+        debug "LOADED REPO CFG:"
+        debug "$yaml"
+        eval "$yaml" #set config vars
+        eval "${loaded}=true"
+    fi
+}
+
+
 
 # sets config_file & config_file
 # from user specific file or repo
@@ -405,7 +422,7 @@ get_topic_config_val () {
 
     for var in "${cfg_vars[@]}";do
         val="$(get_config_val $var)"
-        if [ "$val" ] && [ "$val" != "$topic" ];then
+        if [ "$val" ];then
             echo "$val"
             return 0
         fi

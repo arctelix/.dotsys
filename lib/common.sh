@@ -119,7 +119,7 @@ verbose_mode (){
     local vm
     if ! [ "$VERBOSE_MODE" ] || [ "$recursive" ]; then
 
-        if ! [ "$topics" ]; then
+        if ! [ "$topics" ] && ! in_limits "repo" -r; then
             # verbose on
             vm=0
         else
