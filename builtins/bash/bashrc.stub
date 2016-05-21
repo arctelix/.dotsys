@@ -4,8 +4,6 @@
 # SOURCED BY BASH (ALWAYS)
 # ---------------------------------------
 
-echo "dotsys stub: bashrc loaded"
-
 # LOAD: .dotsysrc if it exists (required for dotsys)
 test -f $HOME/.dotsysrc && source "$HOME/.dotsysrc"
 

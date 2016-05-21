@@ -4,8 +4,6 @@
 # SOURCED BY BASH (LOGIN)
 # ---------------------------------------
 
-echo "dotsys stub: bash_profile loaded"
-
 #set architecture flags
 export ARCHFLAGS="-arch x86_64"
 

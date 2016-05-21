@@ -6,9 +6,6 @@
 if [ "$dotsysrc" = "loaded" ]; then return; fi
 export dotsysrc="loaded"
 
-# TESTING
-echo "dotsys stub: dotsysrc loaded"
-
 # MODIFY PATH: user-installed binaries supersede system
 export PATH=/usr/local/bin:$PATH
 

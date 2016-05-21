@@ -6,9 +6,6 @@
 if [ "$profile" = "loaded" ]; then return; fi
 export profile="loaded"
 
-# FOR TESTING
-echo "dotsys stub: profile loaded"
-
 # LOAD: .dotsys_profile if it exists
 test -f "$HOME/.dotsys_profile" && source "$HOME/.dotsys_profile"
 

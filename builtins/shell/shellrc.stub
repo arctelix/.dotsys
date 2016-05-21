@@ -6,9 +6,6 @@
 if [ "$shellrc" = "loaded" ]; then return; fi
 export shellrc="loaded"
 
-# FOR TESTING
-echo "dotsys stub: shellrc loaded"
-
 # LOAD: .dotsysrc if it exists
 test -f "$HOME/.dotsysrc" && source "$HOME/.dotsysrc"
 
