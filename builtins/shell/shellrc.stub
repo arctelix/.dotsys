@@ -18,12 +18,4 @@ test -f "$stub_target" && source "$stub_target"
 
 echo "- sourcing shell files"
 # SOURCE TOPIC FILES: .shell
-dotsys source_topic_files shell
-
-
-
-
-
-
-
-
+{SOURCE_FILES}

@@ -54,17 +54,6 @@ elif [ "$1" = "ds_utils" ]; then
   source "$DOTSYS_LIBRARY/utils.sh"
   $@
 
-# Sources all files related to topic
-# (only works for shell scripts only)
-elif [ "$1" = "source_topic_files" ]; then
-  shift
-  source "$DOTSYS_LIBRARY/common.sh"
-  source "$DOTSYS_LIBRARY/platforms.sh"
-  source "$DOTSYS_LIBRARY/state.sh"
-  source "$DOTSYS_LIBRARY/stubs.sh"
-  echo "-> source_topic_files *.$@"
-  source_topic_files $@
-
 # call main dotsys func
 else
   source "$DOTSYS_LIBRARY/main.sh"

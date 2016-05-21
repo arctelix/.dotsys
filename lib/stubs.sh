@@ -171,8 +171,6 @@ create_user_stub () {
         mode="update"
     fi
 
-
-
     debug "-- create_user_stub stub_src : $stub_src"
     debug "   create_user_stub stub_dst : $stub_dst"
     debug "   create_user_stub stub_target : $stub_target"
@@ -198,8 +196,9 @@ create_user_stub () {
     sed  -e "s|{STUB_TARGET}|$stub_target|g" "$stub_out" > "$stub_tmp"
     mv -f "$stub_tmp" "$stub_out"
 
+    #source_topic_files "$topic" "$stub_out"
 
-    local variables="$(sed -n 's|.*[^\$]{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
+    local variables="$(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
 
     # TODO (IF NEEDED): IF more topic specific variables become common implement topic/*.stub.vars scripts
     # implement topic/*.stub.vars script to provide custom values.
@@ -211,6 +210,9 @@ create_user_stub () {
     local var_text
     local g_state_key
     local val
+    local required_val="true"
+
+    debug "   create_user_stub variables: $variables"
 
     for var in $variables; do
         # global key lower case and remove $topic_ or topic_
@@ -233,7 +235,10 @@ create_user_stub () {
             val="$USER_NAME"
         elif [ "$var" = "CREDENTIAL_HELPER" ]; then
             val="$(get_credential_helper)"
-
+        elif [ "$var" = "SOURCE_FILES" ]; then
+            val=""
+            required_val=
+            source_topic_files "$topic" "$stub_out"
         # get topic_state_key and set value
         else
             debug "   create_user_stub checking for state key: ${topic}_$g_state_key"
@@ -251,7 +256,7 @@ create_user_stub () {
         debug "   create_user_stub pre user $var = $val "
 
         # Get user input if no val found
-        if ! [ "$val" ]; then
+        if ! [ "$val" ] && [ "$required_val" ]; then
             # use global_state_key value as default
             debug "   create_user_stub get default: $g_state_key"
             def="$(get_state_value "${g_state_key}" "user" || "non")"
@@ -270,7 +275,7 @@ create_user_stub () {
         fi
 
         # modify the stub variable
-        sed -e "s|{$var}|$val|g" "$stub_out" > "$stub_tmp"
+        sed -e "s|{$var}|${val}|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
 
     done
@@ -304,13 +309,15 @@ get_credential_helper () {
 # use shell script to append source_topic_files to stub..
 source_topic_files () {
     local topic="$1"
+    local stub_file="$2"
     local installed_paths="$(get_installed_topic_paths)"
-    local src_cmd="${2:-source}"
     local file
     local topic_dir
     local OWD="$PWD"
 
     local order="path functions aliases"
+
+    local files
 
     for topic_dir in $installed_paths; do
         local sourced=()
@@ -320,19 +327,23 @@ source_topic_files () {
 
         # source ordered files
         for o in $order; do
-            file="$(find . -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
+            file="$(find "$topic_dir" -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
             if ! [ "$file" ]; then continue; fi
-            $src_cmd "$file"
+            echo source "$file" >> $stub_file
+            #echo "  - sourced $file"
             sourced+=("$file")
         done
 
         # source topic files of any name
-        local topic_files="$(find . -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
+        local topic_files="$(find "$topic_dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
         while IFS=$'\n' read -r file; do
             if ! [ "$file" ] || [[ ${sourced[@]} =~ $file ]]; then continue;fi
-            $src_cmd "$file"
+            echo source "$file" >> $stub_file
+            #echo "  - sourced $file"
         done <<< "$topic_files"
     done
+
+    #echo $(echo "$files" | tr '\n' "\\n")
 
     cd "$OWD"
 }

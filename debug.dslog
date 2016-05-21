@@ -42,4 +42,4 @@ ERROR: shell does not have a stub file at:
     [K         [0;32m/Users/arctelix/dotsys_project/.dotsys/builtins/user[0mERROR: Not a valid action: insntallERROR: Not a valid action: insntallERROR: Missing or incorrect parameters <repo> 
     recieved: <action> FAIL: The topic [0;32myum[0m, was not found in the specified repo:
     [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo/yum[0mFAIL: manager.sh is required for yumFAIL: The topic [0;32myum[0m, was not found in the specified repo:
-    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo/yum[0mFAIL: manager.sh is required for yum
+    [K         [0;32m/Users/arctelix/.dotfiles/arctelix/dotsys-repo/yum[0mFAIL: manager.sh is required for yumERROR: Invalid action: source_topic_files
