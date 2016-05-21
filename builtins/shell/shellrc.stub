@@ -14,5 +14,4 @@ stub_target="{STUB_TARGET}"
 test -f "$stub_target" && source "$stub_target"
 
 # SOURCE TOPIC FILES: .shell
-echo "- sourcing shell files"
 {SOURCE_FILES}
