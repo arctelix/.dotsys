@@ -82,6 +82,9 @@ dotsys_installer () {
     # This is the actual installer
     dotsys "$action" dotsys --force --confirm none
 
+    msg "\nDotsys has been ${action%e}ed
+         \rThanks for using dotsys!"
+
     if [ "$action" = "install" ]; then
         # reset confirm
         GLOBAL_CONFIRMED=""
@@ -92,9 +95,6 @@ dotsys_installer () {
         __repo=""
         dotsys "$action"
     fi
-
-    msg "\nDotsys has been ${action%e}ed
-         \rThanks for using dotsys!"
 }
 
 dotsys_installer $@

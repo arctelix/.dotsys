@@ -336,6 +336,7 @@ dotsys () {
     local from_branch
     local cfg_mode
     local LOG_FILE
+    local recursive
 
     while [[ $# > 0 ]]; do
     case $1 in
@@ -514,7 +515,9 @@ dotsys () {
     if ! [ "$topics" ]; then
 
         if ! [ "$ACTIVE_REPO_DIR" ]; then
-            error "Could not resolve active repo directory: $ACTIVE_REPO_DIR"
+            error "Could not resolve active repo directory
+                 \rrepository : $ACTIVE_REPO
+                 \rdirectory  : $ACTIVE_REPO_DIR"
             msg "$( printf "Run %bdotsys install%b to configure a repo%s" $green $yellow "\n")"
             return 1
         fi

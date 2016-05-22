@@ -62,8 +62,10 @@ load_config_vars (){
         debug "   existing user cfg: $config_file"
     fi
 
+    debug "found ACTIVE_REPO: $ACTIVE_REPO"
+
     # Set ACTIVE_REPO & config_file for new user/repo
-    if [ ! "$ACTIVE_REPO" ] ; then
+    if ! [ "$ACTIVE_REPO" ] ; then
         if is_new_user && [ "$action" != "uninstall" ]; then
             new_user_config "$repo"
         else

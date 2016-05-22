@@ -476,12 +476,10 @@ init_local_repo (){
     success_or_error $? "" "$(indent_lines "$result")"
 
     result="$(git remote add origin "${remote_repo}.git" 2>&1)"
-    success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
+    success_or_fail $? "add" "$(indent_lines "${result:-"remote origin: ${remote_repo}.git"}")"
 
-    # Make sure we are on master branch without a commit
-    git add .
-    result="$(git checkout $branch 2> /dev/null)"
-    success_or_fail $? "" "$(indent_lines "$result")"
+    install_required_repo_files "$repo"
+    git_commit "$repo" "initialized by dotsys"
 
     cd "$OWD"
 }
@@ -492,6 +490,7 @@ git_commit () {
     local repo="$1"
     local message="$2"
     local local_repo="$local_repo"
+    local remote_repo="$remote_repo"
     local result
     local user_input
     local default
@@ -520,7 +519,7 @@ git_commit () {
     info "$(printf "Git Status:\n%b$status%b" $yellow $rc)"
 
     # default message
-    default="dotsys $action"
+    default="${message:-dotsys $action}"
     if [ "$limits" ]; then default="$default $(echo "${limits[@]}" | tr '\n' ' ')";fi
     if [ "$topics" ]; then default="$default $(echo "${topics[@]}" | tr '\n' ' ')";fi
 
@@ -541,7 +540,7 @@ git_commit () {
 
     script -q /dev/null git commit -a -m "$message" 2>&1 | indent_lines
 
-    if ! [ "$silent" ]; then success_or_fail $? "commit" "$message";fi
+    if ! [ "$silent" ]; then success_or_fail $? "commit" ": $message";fi
     cd "$OWD"
 }
 
@@ -555,20 +554,19 @@ init_remote_repo () {
     confirm_task "initialize" "remote" "repo:" "$remote_repo"
     if ! [ $? -eq 0 ]; then return; fi
 
-    cd "$local_repo"
 
-    git add .
-    git commit -a -m "initialized by dotsys"
+
+    git_commit "$repo" "initialize remote"
 
     # Git hub will prompt for the user password
     local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
     success_or_fail $? "create" "$(printf "%b$repo_status%b remote repo %b$remote_repo%b" $green $rc $green $rc)" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
 
+    cd "$local_repo"
     git push -u origin "$branch"
-    success_or_fail $? "initialize" "$(printf "%b$repo_status%b repo %b$remote_repo%b" $green $rc $green $rc)" \
+    success_or_fail $? "push" "$(printf "%b$repo_status%b repo %b$remote_repo @ $branch%b" $green $rc $green $rc)" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
-
     cd "$OWD"
 }
 
@@ -590,7 +588,7 @@ checkout_branch (){
         # change branch if branch != current branch
         if [ "${branch:-$current}" != "$current" ]; then
             local result="$(git checkout "$branch")"
-            success_or_error $? "set" "$(indent_lines "$result")"
+            success_or_error $? "check" "out $(indent_lines "$result")"
         fi
         cd "$OWD"
     else
