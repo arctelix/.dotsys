@@ -10,7 +10,6 @@
 # With thanks to the following sources:
 # https://github.com/holman/dotfiles
 # https://github.com/agross/dotfiles
-# https://github.com/webpro/dotfiles
 
 set +o posix
 

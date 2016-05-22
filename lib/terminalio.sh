@@ -288,7 +288,7 @@ get_user_input () {
 
     while [[ $# > 0 ]]; do
     case "$1" in
-      -o | --options )  options=" $2";shift;;
+      -o | --options )  options="$2";shift;;
       -e | --extra)     extra+=("$2");shift;;
       -h | --hint)      hint="$2";shift;;
       -c | --clear )    clear="$2";shift;;
@@ -311,17 +311,21 @@ get_user_input () {
     false="${false:-no}"
 
     # Add ALL options when confvar is supplied
-    if [ "$CONFIRMED_VAR" != "TOPIC_CONFIRMED" ]; then
-        true_all="$(cap_first "$true")"
-        false_all="$(cap_first "$false")"
+    if [ "$CONFIRMED_VAR" ]; then
+        true_all="$(cap_first "$true-all")"
+        false_all="$(cap_first "$false-all")"
     fi
 
     debug "   -- get_user_input: CONFIRMED_VAR($CONFIRMED_VAR)=${!CONFIRMED_VAR} sets confirm=$confirmed "
 
     if [ "$options" = "omit" ]; then
+        options="\b"
         true="omit"
         false="omit"
+        invalid=
     fi
+
+    debug "      get_user_input: o:$options t:$true f:$false e:$extra d:$default"
 
     # add true
     if [ "$true" != "omit" ]; then
@@ -331,6 +335,8 @@ get_user_input () {
             options="$(printf "%b(%b${true_all:0:1}%b)%b${true_all:1}%b " \
                             "$options" $green $rc $green $rc )"
         fi
+    else
+        true=
     fi
 
     # add false
@@ -341,19 +347,15 @@ get_user_input () {
             options="$(printf "%b(%b${false_all:0:1}%b)%b${false_all:1}%b " \
                             "$options" $yellow $rc $yellow $rc)"
         fi
+    else
+        false=
     fi
 
-    # When false or true omitted all input is valid and confirm required
-    if [ "$false" = "omit" ] || [ "$false" = "omit" ]; then
-        confirmed=""
-        invalid="omit"
+    # When no false or true all input is valid and confirm required
+    if ! [ "$true" ] || ! [ "$false" ]; then
+        confirmed=
+        invalid=
     fi
-
-    # use default options
-#    else
-#        options="$(printf "(%b${true:0:1}%b)%b${true:1}%b (%b${false:0:1}%b)%b${false:1}%b" \
-#                        $green $rc $green $rc $yellow $rc $yellow $rc)"
-#    fi
 
     # put options on new line
     if [ "$hint" ] || [ "${extra[0]}" ]; then
@@ -385,8 +387,18 @@ get_user_input () {
         #shopt -s extglob
         while true; do
             read user_input < /dev/tty
-            #user_input="$user_input"
+
+            user_input="${user_input:-$default}"
+
             case "$user_input" in
+                "") # any input is ok
+                    if ! [ "$invalid" ]; then
+                        status=0
+                        break
+                    fi
+                    # use invalid message
+                    msg_invalid_input "$question > $invalid : "
+                    ;;
                 ${true}|${true:0:1})
                     state=0
                     user_input="${true}"
@@ -412,26 +424,12 @@ get_user_input () {
                 help )
                     msg_help "$(printf "$help")"
                     ;;
-                "")
-                    # blank value ok
-                    if [ "$true" = "omit" ]; then
-                        status=1
-                        user_input=
-                        break
-                    fi
-                    # blank value = default choice
-                    user_input="${default}"
-                    [ "$user_input" = "$true" ]
-                    state=$?
-                    break
-                    ;;
                 [${extra_regex}] )
-                    state=1
+                    state=0
                     break
                     ;;
-                * )
-                    # any input is ok
-                    if [ "$invalid" = "omit" ]; then
+                * ) # any input is ok
+                    if ! [ "$invalid" ]; then
                         status=0
                         break
                     fi
@@ -663,7 +661,7 @@ uncaught_case (){
 }
 
 print_logo (){
-if ! get_state_value "show_logo" "user" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
+if ! get_state_value "user" "show_logo" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
     return
 fi
 
@@ -690,7 +688,7 @@ SHOW_LOGO=1
 }
 
 print_stats () {
-    if ! get_state_value "show_stats" "user" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
+    if ! get_state_value "user" "show_stats" || [ $SHOW_STATS -eq 1 ] || ! verbose_mode; then
         return
     fi
 

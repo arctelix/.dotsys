@@ -157,7 +157,7 @@ manage_dependencies () {
     done+=("$dep")
 
     if [ "$action" = "uninstall" ]; then
-        state_uninstall "deps" "$dep" "$topic"
+        state_uninstall "deps" "$dep" "$ACTIVE_REPO/$topic"
         debug "   manage_dependencies: removed $topic:$dep from state"
 
     # handle install

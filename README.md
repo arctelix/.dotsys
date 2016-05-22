@@ -126,21 +126,22 @@ Say you have a topic for gulp and run the command:
 
 4. Start the **gulp** install process by installing it with **npm**.
 
-5. Check for a custom install function in gulp/topic.sh and run it (make any custom modifications here).
+5. Check for a custom install function in **gulp/topic.sh** and run it (make any custom modifications here).
 
-6. Check for any `.gulp` files in other topics and source them as required.
+6. Check for any **.gulp** files in other topics and source them as required.
 
-7. Check for custom dotfiles and symlink them to the proper location (such as `npmrc.symlink` to your home directory)
+7. Check for custom dotfiles and symlink them to the proper location, such as **npmrc.symlink**.
 
-8. Any file with a `.shell` extension will be sourced by your shell of choice at startup. You can add some aliases for
-your standard project configs in a .shell file. For example gulp-init-django and gulp_init_rails.
+8. Any file in the gulp topic directory with a **.shell** extension will be sourced by your shell of choice at startup. 
+You can add some functions for standard project configs in a **functions.shell** file. For example gulp-init-django and gulp_init_rails.
 
 Why is dotsys better than a package manager ?
 ---------------------------------------------
 
 Quite simply, dotsys manages your customized packages.  When you install vim with dotsys, you get YOUR fully customized 
 version of vim not the generic version!  The best part is you don't need to worry about repackaging and maintaining 
-vim, just make changes to your .vimrc and dotsys will handle everything else.
+vim, just make changes to your vimrc.symlink and dotsys will handle everything else.  Dotsys builtin topics like vim, will
+take care of essential mods. For example on windows the '.vimrc' file needs to be called '_vimrc'.
 
 Again we'll illustrate this by example :
 
@@ -150,9 +151,8 @@ Again we'll illustrate this by example :
 2. If you like the changes and want to push it to your remote repo, run `dotsys upgrade repo`
     - Dotsys will push the changes to your remote repo
 
-3. When you get home you can run `dotsys upgrade repo` & `dotsys install vim`.
+3. When you get home you can run `dotsys upgrade repo` & `dotsys update vim`.
     - Dotsys will pull the changes from your remote repo and update your local vim with your changes.
-    - Now your home and work machines are totally in sync.
 
 That's cool, what else does it do ?
 -----------------------------------
@@ -226,8 +226,128 @@ OPTION 1&2:
 
 3) Now follow the steps for All Platforms
 
-Anatomy of a dotsys.cfg file ?
-------------------------------
+
+Gettting Started with dotfiles and dotsys
+-----------------------------------------
+If you have never managed your dotfiles before Dotsys makes it easy!
+If you already have a dotfile management system it's easy to migrate!
+
+1) Create a GitHub account if you do not have one already
+
+2) Install dotsys as per the instructions above
+    
+3) When prompted enter the name for a new repo or an existing GitHub repo confining dotfiles:
+
+    github_user_name/repo_name
+    
+4) Dotsys will ask if you want to search for existing topics and dotfiles on 
+your system and add them to the dotsys repo automagically!
+
+From now on when you make changes to your system, use dotsys to make the changes and you
+will never have to do it again!
+
+
+What the hell is a topic?
+-------------------------
+
+A topic is how dotsys organizes your custom settings. If you currently use vim and had 
+dotsys search for exiting dotfiles this is probably done already, but we'll walk through
+the process so you can create topics that are not part of dotsys already.
+
+First create a directory in your local repo manually or with the following command:
+
+    # HINT: Topic names should corispond to it's shell command when possible!
+    mkdir ~/.dotfiles/<github_user_name>/<repo_name>/vim
+
+Add any required dotfiles, but remove the "." prefix and add a ".symlink" extension:
+
+    touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/vimrc.symlink
+
+Add some aliases for the shell:
+
+    touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/aliases.shell
+    
+Optionally create a dotsys.cfg file in the topic directory
+See Anatomy of a dotsys.cfg file for dotsys.cfg options:
+
+    # Cfg files use a basic yaml format using TWO spcaes for indents
+    touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/dotsys.cfg
+
+
+File names and extensions
+-------------------------
+
+### topic/\*.symlink
+
+Files or directories with a ".symlink" extension will be linked to the home directory and given a "." prefix
+unless a custom path/name is specified in the dotsys.cfg
+
+
+### topic/topic.sh
+    
+This file defines functions for any required dotsys actions.
+
+### topic/manager.sh
+
+This file designates a topic as a manager and defines functions for any required dotsys manager actions.
+
+### topic/packages.yaml
+
+A manager topic can have a packages.yaml file which is a list of packages that do not required topics but
+you want to install. Each package is entered with a colin "package_name:",  you will see why when you learn about cfg files.
+
+### topic/bin/*
+
+Any files in a topic's bin directory will be available in your shell environment, bash, zsh, etc...
+
+### *.stub
+    
+Collects user data required for a topic and sources .topic files from other topics.  Jusst add an uppercase
+variable in curly braces and dotsys will prompt the user for input and store the data locally.  
+For example the built in gitconfig.stub includes:
+
+    name = {TOPIC_USER_NAME}
+    email = {TOPIC_USER_EMAIL}
+
+When dotsys sees the variable names and the data is not already stored it will promt the user:
+    
+    What is your git user name?
+    What is your git user email?
+
+   
+### .<topic>    
+
+Any topic in dotsys can source files from other topics, just give the file an extension
+with the same name as the topic.  
+
+##### The following are built in to dotsys:
+|file extention|purpose                                                             |
+|:-------------|:-------------------------------------------------------------------|
+|\*.shell      | Sourced every time your shell of choice is loaded                  |
+|\*.bash       | Sourced every time bash is loaded                                  |
+|\*.zsh        | Sourced every time zsh is loaded                                   |
+##### Loading order
+|file name     | loading order                                                      |
+|:-------------|:-------------------------------------------------------------------|
+|path.\*       | Sourced first for a given topic extention                          |
+|funcitons.\*  | Sourced second for a given topic extention                         |
+|aliases.\*    | Sourced third for a given topic extention                          |
+|\*.\*         | All other files names are sourced in alphabetical order            |
+
+
+#### DEPRECIATED FILES (for compatibility with exiting dotfile managers)
+
+    A topic.sh file replaces the folloing files:
+    install.sh, uninstall.sh, update.sh, upgrade.sh, freeze.sh 
+    
+    The *.shell extenion replaces the *.sh extenion as to not interfere
+    imported systems that do not utilize stub files. 
+     
+    .exclude-platforms is replaced by dotsys.cfg files. 
+    
+
+Anatomy of a dotsys.cfg file
+----------------------------
 
 https://github.com/arctelix/.dotsys/blob/master/config.md
 

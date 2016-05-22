@@ -79,7 +79,7 @@ manage_stubs () {
     if [ "$action" = "uninstall" ] || [ "$action" = "freeze" ]; then return;fi
 
     # check if user accepted subs and at least one topic
-    if ! get_state_value "use_stub_files" "user" || ! [ "${topics[0]}" ]; then
+    if ! get_state_value "user" "use_stub_files" || ! [ "${topics[0]}" ]; then
         return
     fi
 
@@ -150,7 +150,11 @@ create_user_stub () {
     shift; shift
     local force="$3"
 
-    #local stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
+    # Convert stub_name to stub_src if required
+    # This allows: create_user_stub "git" "gitconfig"
+    if [ "$stub_src" = "$stub_name" ] ; then
+        stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
+    fi
 
     # abort if there is no stub for topic
     if ! [ -f "$stub_src" ]; then
@@ -220,7 +224,7 @@ create_user_stub () {
         g_state_key="${g_state_key#topic_}"
         g_state_key="${g_state_key#$topic_}"
         # topic key
-        t_state_key="${topic}_$g_state_key"
+        t_state_key="${topic}_${g_state_key}"
         # always use global key as text
         var_text="$(echo "$g_state_key" | tr '_' ' ')"
 
@@ -257,7 +261,7 @@ create_user_stub () {
         # get topic_state_key and set value
         else
             debug "   create_user_stub checking for state key: ${topic}_$g_state_key"
-            val="$(get_state_value "$t_state_key" "user")"
+            val="$(get_state_value "user" "$t_state_key")"
             user_var="true"
         fi
 
@@ -276,10 +280,10 @@ create_user_stub () {
             # use global_state_key value as default
             debug "   create_user_stub get default: $g_state_key"
             local def
-            def="$(get_state_value "${g_state_key}" "user" || "none")"
+            def="$(get_state_value "user" "${g_state_key}")"
 
             local user_input
-            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "$def" -r
+            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${def:-none}" -r
 
             # abort stub process
             if ! [ $? -eq 0 ]; then return;fi
@@ -288,7 +292,7 @@ create_user_stub () {
             val="${user_input:-$def}"
 
             # record user val to state
-            set_state_value "${topic}_state_key" "$val" "user"
+            set_state_value "user" "${topic}_state_key" "$val"
         fi
 
         # modify the stub variable

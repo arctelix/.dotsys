@@ -356,8 +356,8 @@ dotsys () {
 
         # options
         --force)        force="$1" ;;
-        --tlogo)        ! get_state_value "SHOW_LOGO"; SHOW_LOGO=$? ;;
-        --tstats)       ! get_state_value "SHOW_STATS"; SHOW_STATS=$? ;;
+        --tlogo)        ! get_state_value "dotsys" "SHOW_LOGO"; SHOW_LOGO=$? ;;
+        --tstats)       ! get_state_value "dotsys" "SHOW_STATS"; SHOW_STATS=$? ;;
         --debug)        DEBUG="true" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       dry_run 0 ;;
@@ -514,7 +514,8 @@ dotsys () {
             msg "$( printf "Run %bdotsys install%b to configure a repo%s" $green $yellow "\n")"
             return 1
         fi
-        local list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
+        debug "main -> get_topic_list $ACTIVE_REPO $from_repo $force"
+        local list="$(get_topic_list "$ACTIVE_REPO" "$from_repo" "$force")"
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
                 msg "$( printf "\nThere are no topics in %b$ACTIVE_REPO_DIR\n%b" $green $yellow)"
@@ -525,7 +526,7 @@ dotsys () {
                 copy_topics_to_repo "$(get_active_repo)"
                 add_existing_dotfiles "$ACTIVE_REPO"
                 # Check for topics again
-                list="$(get_topic_list "$ACTIVE_REPO_DIR" "$force")"
+                list="$(get_topic_list "$ACTIVE_REPO" "$from_repo" "$force")"
             fi
         fi
         topics=("$list")

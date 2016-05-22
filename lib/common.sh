@@ -95,6 +95,7 @@ get_active_repo () {
       repo="$(state_primary_repo)"
   fi
   echo "$repo"
+
 }
 
 is_dotsys_repo () {

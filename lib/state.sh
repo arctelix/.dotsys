@@ -181,8 +181,8 @@ in_state () {
 
 # gets value for unique key
 get_state_value () {
-  local key="$1"
-  local file="$(state_file "${2:-dotsys}")"
+  local file="$(state_file "$1")"
+  local key="$2"
   local status=0
 
   local line="$(grep "^$key:.*$" "$file")"
@@ -198,9 +198,10 @@ get_state_value () {
 
 # sets value for unique key
 set_state_value () {
-  local key="$1"
-  local val="$2"
-  local state="${3:-dotsys}"
+  local state="${1}"
+  local key="$2"
+  local val="$3"
+
   state_uninstall "$state" "$key"
   state_install "$state" "$key" "$val"
 }
@@ -211,9 +212,9 @@ state_primary_repo(){
   local key="user_repo"
 
   if [ "$repo" ]; then
-    set_state_value "$key" "$repo" "user"
+    set_state_value "user" "$key" "$repo"
   else
-    echo "$(get_state_value "$key" "user")"
+    echo "$(get_state_value "user" "$key")"
   fi
 }
 
@@ -256,30 +257,41 @@ freeze_state() {
 }
 
 get_topic_list () {
-    local dir="$1"
-    local force="$2"
+    local repo="$1"
+    local from="$2"
+    local force="$3"
     local list
     local topic
 
-    if [ "$dir" = "$DOTSYS_REPOSITORY" ]; then
-        # ALWAYS GET INSTALLED TOPICS FOR DOTSYS
+    # use from when supplied
+    if [ "$from" ]; then repo="$from";fi
+
+    if [ "$repo" = "dotsys/dotsys" ]; then
+        # no force permitted for dotsys repo
         force=
         # USE BUILTIN TOPICS FOR DOTSYS
-        dir="$DOTSYS_REPOSITORY/builtins"
+        repo="$DOTSYS_REPOSITORY/builtins"
+    else
+        repo="$(repo_dir "$repo")"
     fi
 
-    # only installed topics when not installing unless forced
+    # only installed topics when not installing unless forced or from
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read line; do
             topic=${line%:*}
+
             # skip system keys
             if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
+
+           # limit topics to from repo
+            if [ "$from" ] && [ "$line" != "${topic}:$from" ]; then continue;fi
+
             echo "$topic"
         done < "$(state_file "dotsys")"
     # all defined topic directories
     else
-        if ! [ -d "$dir" ];then return 1;fi
-        get_dir_list "$dir"
+        if ! [ -d "$repo" ];then return 1;fi
+        get_dir_list "$repo"
     fi
 }
 

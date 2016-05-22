@@ -36,9 +36,9 @@ manage_repo (){
 
     local remote_repo
     if is_dotsys_repo;then
-        remote_repo="https://github.com/arctelix/.dotsys.git"
+        remote_repo="https://github.com/arctelix/.dotsys"
     else
-        remote_repo="https://github.com/${repo}.git"
+        remote_repo="https://github.com/${repo}"
     fi
 
     local local_repo="$(repo_dir "$repo")"
@@ -241,14 +241,17 @@ manage_repo (){
         debug "$(state_primary_repo) = $repo"
         if ! is_dotsys_repo && [ "$(state_primary_repo)" != "$repo" ]; then
 
-            confirm_make_primary_repo "$repo"
-
-            # create dotsys-export.yaml
-            confirm_task "freeze" "repo" "${repo}" "\n$spacer -> ${repo}/.dotsys-default.cfg"
+            # preview repo option
+            confirm_task "preview" "repo" "${repo}" "-> ${repo}/.dotsys-default.cfg"
             if [ "$?" -eq 0 ]; then
                 create_config_yaml "$repo"
+                if [ $? -eq 0 ]; then
+                    get_user_input "Would you like to install this repo?" -r
+                    if ! [ $? -eq 0 ]; then exit; fi
+                fi
             fi
-            msg "$spacer HINT: Freeze any time with 'dotsys freeze user/repo_name'"
+
+            confirm_make_primary_repo "$repo"
         fi
 
         state_install "$state_file" "$state_key" "$repo"
@@ -472,7 +475,7 @@ init_local_repo (){
     result="$(git init 2>&1)"
     success_or_error $? "" "$(indent_lines "$result")"
 
-    result="$(git remote add origin "$remote_repo" 2>&1)"
+    result="$(git remote add origin "${remote_repo}.git" 2>&1)"
     success_or_fail $? "add" "$(indent_lines "${result:-"remote origin"}")"
 
     # Make sure we are on master branch without a commit
@@ -489,7 +492,6 @@ git_commit () {
     local repo="$1"
     local message="$2"
     local local_repo="$local_repo"
-    local remote_repo="$remote_repo"
     local result
     local user_input
     local default
@@ -509,7 +511,7 @@ git_commit () {
 
     cd "$local_repo"
 
-    git add . --no-all
+    git add .
 
     # Abort if nothing to commit
     local status="$(git status --porcelain | indent_lines)"
@@ -519,9 +521,8 @@ git_commit () {
 
     # default message
     default="dotsys $action"
-    if [ "${limits[@]}" ]; then default="$default ${limits[@]}";fi
-    if [ "${topics[@]}" ]; then default="$default ${topics[@]}";fi
-    default="$(echo "$default" | tr '\n' ' ')"
+    if [ "$limits" ]; then default="$default $(echo "${limits[@]}" | tr '\n' ' ')";fi
+    if [ "$topics" ]; then default="$default $(echo "${topics[@]}" | tr '\n' ' ')";fi
 
 
     # custom commit message
@@ -670,8 +671,8 @@ setup_git_config () {
         local global_authoremail="$(git config --global user.email || echo "none")"
 
         # check live config & state for value
-        local authorname="$(git config --$cfg user.name || get_state_value "${state_prefix}_user_name" "user" )"
-        local authoremail="$(git config --$cfg user.email || get_state_value "${state_prefix}_user_email" "user" )"
+        local authorname="$(git config --$cfg user.name || get_state_value "user" "${state_prefix}_user_name" )"
+        local authoremail="$(git config --$cfg user.email || get_state_value "user" "${state_prefix}_user_email" )"
 
         # set default
         local default_user="${authorname:-$global_authorname}"
@@ -722,11 +723,11 @@ setup_git_config () {
         if [ "$cfg" != "none" ]; then
             # set vars for immediate use & record to user state for stubs
 
-            set_state_value "${state_prefix}_user_name" "$authorname" "user"
+            set_state_value "user" "${state_prefix}_user_name" "$authorname"
             git config "--$cfg" user.name "$authorname"
             success "$(printf "git %b$cfg author%b set to: %b$authorname%b" $green $rc $green $rc)"
 
-            set_state_value "${state_prefix}_user_email" "$authoremail" "user"
+            set_state_value "user" "${state_prefix}_user_email" "$authoremail"
             git config "--$cfg" user.email "$authoremail"
             success "$(printf "git %b$cfg email%b set to: %b$authoremail%b" $green $rc $green $rc)"
 
@@ -755,23 +756,25 @@ has_remote_repo (){
     local silent="$2"
     local status
 
-    status="$(curl -Ls --head --silent "${remote_repo}.git" | head -n 1 )"
+    status="$(curl -Ls --head --silent "${remote_repo}" | head -n 1)"
     #wget -q "${remote}.git" --no-check-certificate -O - > /dev/null
 
+    debug "curl result=$status"
+
     local ret=1
-    if echo "$status" | grep "HTTP/1.[01] [23].." > /dev/null; then
+    if echo "$status" | grep "[23].." > /dev/null 2>&1; then
         ret=0
         if [ "$silent" ];then  return $ret;fi
         success "remote found: $status
          $spacer -> $remote_repo"
 
-    elif echo "$status" | grep "$status" "HTTP/[4].." > /dev/null; then
+    elif echo "$status" | grep "[4].." > /dev/null 2>&1; then
         ret=1
         if [ "$silent" ];then  return $ret;fi
         success "remote not found: $status
          $spacer -> $remote_repo"
 
-    elif echo "$status" | grep "$status" "HTTP/[4].." > /dev/null; then
+    elif echo "$status" | grep "[5].." > /dev/null 2>&1; then
         ret=2
         if [ "$silent" ];then  return $ret;fi
         error "connection failed: $status
@@ -910,7 +913,7 @@ confirm_make_primary_repo (){
     # if repo is same as state, bypass check
     if [ "$(state_primary_repo)" = "$repo" ]; then return ; fi
 
-    get_user_input "Would you like to make this your primary repo:\n$spacer $(repo_dir "$repo")" --required
+    get_user_input "$(printf "Would you like to make this your primary repo:\n$spacer %b$(repo_dir "$repo")%b" $green $rc)" --required
     if [ $? -eq 0 ]; then
         state_primary_repo "$repo"
         set_user_vars "$repo"

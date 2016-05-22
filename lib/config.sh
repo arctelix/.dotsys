@@ -277,7 +277,8 @@ prompt_config_or_repo () {
 
 is_new_user () {
     # Empty user state file is new user
-    ! [ -s "$(state_file "user")" ]
+    #! [ -s "$(state_file "user")" ]
+    get_state_value "user" "user_repo"
     return $?
 }
 
@@ -286,7 +287,6 @@ new_user_config () {
 
     print_logo "$repo"
 
-    msg "$(printf "A multiform package manger with dotfile integration!")"
     printf "\n"
     msg "$(printf "Before getting started we have a few questions.")"
     printf "\n"
@@ -324,13 +324,13 @@ get_repo_from_config_file () {
 user_config_logo () {
     get_user_input "Would you like to see the dotsys logo when
             $spacer working on multiple topics (it's helpful)?"
-    set_state_value "SHOW_LOGO" $? "user"
+    set_state_value "user" "SHOW_LOGO" $?
 }
 
 user_config_stats () {
     get_user_input "Would you like to see the dotsys stats when
             $spacer working on multiple topics (it's helpful)?"
-    set_state_value "SHOW_STATS" $? "user"
+    set_state_value "user" "SHOW_STATS" $?
 }
 
 user_config_stubs () {
@@ -340,19 +340,20 @@ user_config_stubs () {
 
     get_user_input "Would you like use dotsys sub files?"
     local status=$?
-    set_state_value "use_stub_files" $status "user"
+    set_state_value "user" "use_stub_files" $status
 
     if ! [ $status -eq 0 ]; then return;fi
-    warn "If your *.symlink files source files from topics by extension
-  $spacer such as, *.shell, *.bash, *.zsh, etc.. you should remove those
-  $spacer functions if you installed the associated dotsys stub file.
+    info "If you are migrating from another dotfile manager and your
+  $spacer current shell config files source topic files by extension
+  $spacer *.shell, *.bash, *.zsh, etc you can remove this functionality
+  $spacer since dotsys takes care of it for you now. You can review stub
+  $spacer files by opening the symlink in your home directory.
 
   $spacer IMPORTANT NOTE: Dotsys does not source *.sh files from topics!
   $spacer - shell extensions are sourced by all shells.
   $spacer - bash  extensions are sourced by bash only.
-  $spacer - zsh  extensions are sourced by zsh only.
-  $spacer Check your topic directories for new *.stub files
-  $spacer to see which topics are stubbed and what they do."
+  $spacer - zsh  extensions are sourced by zsh only."
+
 }
 
 # TOPIC CONFIG
