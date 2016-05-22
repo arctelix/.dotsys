@@ -88,7 +88,7 @@ get_active_repo () {
   fi
 
   # check for config file repo
-  local repo="$(get_config_val "_repo")"
+  #local repo="$(get_config_val "_repo")"
 
   # state primary repo
   if ! [ "$repo" ]; then

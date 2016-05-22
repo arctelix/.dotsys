@@ -1,15 +1,33 @@
 #!/bin/sh
 
-# Manger your dotfiles and package managers
-# Easily try new configurations without fear
-
-# Command entry point, see lib/min.sh for the guts.
-
-# Author: arctelix
-
+# Command entry point, see lib/min.sh.
+#
+# Author: Arctelix (http://gitbub.com/arctelix)
+#
 # With thanks to the following sources:
 # https://github.com/holman/dotfiles
 # https://github.com/agross/dotfiles
+#
+# Dotsys - A platform agnostic package-manager with dotfile integration
+#
+# Licence: GNU General Public License
+# Copyright (C) 2016  Arctelix (http://gitbub.com/arctelix)
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Other useful reference & rationale
+# http://superuser.com/questions/789448/choosing-between-bashrc-profile-bash-profile-etc
 
 set +o posix
 

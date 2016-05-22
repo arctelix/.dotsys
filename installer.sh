@@ -46,12 +46,13 @@ dotsys_installer () {
     debug "$action dotsys user_dotfiles: "$(dotfiles_dir)""
 
     if [ "$action" = "install" ]; then
-        msg "Please make sure the .dotsys directory is located where you
-           \rwant to keep it. If you need to move it in the future, run
-           \rthis script again.
+        msg "Please make sure the .dotsys directory is located in it's
+           \rpermanent location before running the installer.
+           \rYou can uninstall with '.dotsys/instller.sh uninstall'\n"
 
-           \rIf you want to uninstall dotsys you can run this script with
-           \rthe uninstall parameter '.dotsys/instller.sh uninstall'\n"
+        msg "Dotsys Copyright (C) 2016  Arctelix (http://gitbub.com/arctelix)
+           \rThis program comes with ABSOLUTELY NO WARRANTY. This is free software,
+           \rand you are welcome to redistribute it under certain conditions\n"
     fi
 
     confirm_task "$action" "" "dotsys"
@@ -86,7 +87,8 @@ dotsys_installer () {
         GLOBAL_CONFIRMED=""
         TOPIC_CONFIRMED=""
         SYMLINK_CONFIRMED=""
-        ACTIVE_REPO=""
+        ACTIVE_REPO=
+        ACTIVE_REPO_DIR=
         __repo=""
         dotsys "$action"
     fi

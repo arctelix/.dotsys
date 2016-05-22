@@ -3,9 +3,6 @@
 # Platform specific functions
 # Author: arctelix
 
-
-PLATFORMS="windows linux mac freebsd openbsd mysys cygwin"
-
 get_platform () {
   if [ -n "$PLATFORM" ]; then
     printf "$PLATFORM"
