@@ -521,8 +521,8 @@ dotsys () {
             msg "$( printf "Run %bdotsys install%b to configure a repo%s" $green $yellow "\n")"
             return 1
         fi
-        debug "main -> get_topic_list $ACTIVE_REPO $from_repo $force"
-        local list="$(get_topic_list "$ACTIVE_REPO" "$from_repo" "$force")"
+        debug "main -> get_topic_list $from_repo $force"
+        local list="$(get_topic_list "$from_repo" "$force")"
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
                 msg "$( printf "\nThere are no topics in %b$ACTIVE_REPO_DIR\n%b" $green $yellow)"
@@ -531,19 +531,22 @@ dotsys () {
             fi
             if [ "$action" = "install" ]; then
                 copy_topics_to_repo "$(get_active_repo)"
-                add_existing_dotfiles "$ACTIVE_REPO"
+                add_existing_dotfiles "$(get_active_repo)"
                 # Check for topics again
-                list="$(get_topic_list "$ACTIVE_REPO" "$from_repo" "$force")"
+                list="$(get_topic_list "$from_repo" "$force")"
             fi
         fi
-        topics=("$list")
-        debug "main -> topics list:\n\r$topics"
+        topics=( $list )
+        if [ "$action" = "uninstall" ]; then
+            reverse_array topics
+        fi
+        debug "main -> topics list:\n\r${topics[*]}"
     fi
 
     # We stub here rather then during symlink process
     # to get all user info up front for auto install
     if [ "$action" != "uninstall" ] || in_limits "stubs" "dotsys"; then
-        manage_stubs "$action" "${topics[@]}" "$force"
+        manage_stubs "$action" "${topics[*]}" "$force"
     fi
 
     # Iterate topics
@@ -585,6 +588,7 @@ dotsys () {
                     continue
                 fi
                 # create the state file
+                debug "*** create sate file for $topic"
                 touch "$(state_file "$topic")"
                 # set active (prevents running manager tasks more then once)
                 ACTIVE_MANAGERS+=("$topic")
@@ -627,11 +631,11 @@ dotsys () {
 
         # ABORT: on install if already installed (override --force)
         debug "main -> check is_installed for $topic $ACTIVE_REPO"
-        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$ACTIVE_REPO" && ! [ "$force" ]; then
+        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$from_repo" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         # ABORT: on uninstall if not installed (override --force)
-        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$ACTIVE_REPO" && ! [ "$force" ]; then
+        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$from_repo" && ! [ "$force" ]; then
            task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
            continue
         fi

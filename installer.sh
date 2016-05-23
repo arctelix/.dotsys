@@ -73,7 +73,7 @@ dotsys_installer () {
         mkdir -p "$DOTSYS_REPOSITORY/state"
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
-        touch "$DOTSYS_REPOSITORY/state/repo.state"
+        touch "$DOTSYS_REPOSITORY/state/repos.state"
         # some initial values for user state
         state_install "user" "show_stats" "0"
         state_install "user" "show_logo" "0"

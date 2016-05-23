@@ -72,12 +72,18 @@ run_manager_task () {
   for topic in ${topics[@]}; do
 
      # check if already installed (not testing for repo!)
-     if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic"; then
-        success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
+     if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic" --manager ; then
+        # Only show the message if is actually installed on manager state
+        if is_installed "$manager" "$topic"; then
+            success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
+        fi
         continue
      # check if already uninstalled (not testing for repo!)
-     elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic"; then
-        success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
+     elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic" --manager; then
+        # Only show the message if is actually uninstalled on manager state
+        if ! is_installed "$manager" "$topic"; then
+            success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
+        fi
         continue
      fi
 
@@ -89,7 +95,8 @@ run_manager_task () {
 
      # convert topic to package name
      load_topic_config_vars "$topic"
-     local pkg_name="$(get_topic_config_val $topic $manager)"
+     local pkg_name="$(get_topic_config_val $topic "pkg_name")"
+     if ! [ "$pkg_name" ]; then pkg_name="$(get_topic_config_val $topic $manager)"; fi
      if ! [ "$pkg_name" ]; then pkg_name="$topic"; fi
 
      debug "   run_manager_task for $manager: $topic CONVERTED to package name '$pkg_name' "
@@ -168,7 +175,7 @@ manage_dependencies () {
           task_shown="true"
         fi
         # install
-        if ! is_installed "system" "$dep" --silent;then
+        if ! is_installed "system" "$dep";then
           dotsys "install" "$dep" --recursive
           # Add dep to deps state
           if [ $? -eq 0 ]; then

@@ -2,7 +2,7 @@
     name = {TOPIC_USER_NAME}
     email = {TOPIC_USER_EMAIL}
 [credential]
-        helper = {CREDENTIAL_HELPER}
+    helper = {CREDENTIAL_HELPER}
 
 [include]
-	path = {STUB_TARGET}
+    path = {STUB_TARGET}

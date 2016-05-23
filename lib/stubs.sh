@@ -58,6 +58,7 @@ add_existing_dotfiles () {
                 cp "$stub_dst" "${stub_dst}.dsbak"
                 mkdir -p "$(dirname "$stub_target")"
                 mv "$stub_dst" "$stub_target"
+                symlink "$stub_target" "$stub_dst"
 
             fi
         done <<< "$stub_files"
@@ -134,7 +135,7 @@ get_topic_stub_files(){
 get_topic_stub_target(){
     local topic="$1"
     local stub_src="$2"
-    echo "$(topic_dir "$topic")/$(basename "${stub_src%.stub}.symlink")"
+    echo "$(repo_dir)/$topic/$(basename "${stub_src%.stub}.symlink")"
 }
 
 # create custom stub file in user/repo/topic

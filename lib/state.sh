@@ -62,32 +62,33 @@ is_installed () {
 
     usage="is_installed <state> <key> [<val>] [<option>]"
     usage_full="
-        -s | --silent        Silence warnings
+        -m | --manager        Use manager warnings
     "
-    local silent
+    local manager
     while [[ $# > 0 ]]; do
         case "$1" in
-        -s | --silent )      silent="$1" ;;
+        -m | --manager )      manager="$1" ;;
         *)  uncaught_case "$1" "state" "key" "val" ;;
         esac
         shift
     done
 
     local installed=1
-    local manager="$(get_topic_manager "$key")"
+    local manager_state="$(get_topic_manager "$key")"
     local system_ok
 
-    debug "-- is_installed got: $state ($key:$var)"
+    debug "-- is_installed got: $state ($key:$var) $manager"
 
     # if state is "system" then a system install is acceptable
     # so bypass warnings and just return 0
     if [ "$state" = "system" ]; then
         state="dotsys"
         system_ok="true"
-    elif [ "$manager" ]; then
-        state="$manager"
-        val="" # managers do not track repo
-        debug "   is_installed: MANAGER skip dotsys state & checking ${state}.state!"
+
+#    elif [ "$manager_state" ]; then
+#        state="$manager_state"
+#        val="" # managers do not track repo
+#        debug "   is_installed: MANAGER skip dotsys state & checking ${state}.state!"
     fi
 
     # test if in specified state file
@@ -105,12 +106,14 @@ is_installed () {
 #    fi
 
     # Check if installed on system, not managed by dotsys
-    if ! [ "$installed" -eq 0 ] && ! [ "$val" ]; then
+    if ! [ "$installed" -eq 0 ]; then
         local installed_test="$(get_topic_config_val "$key" "installed_test")"
+        # installed by other means
         if cmd_exists "${installed_test:-$key}"; then
-            if [ "$system_ok" ]; then
+
+            if [ "$system_ok" = "true" ]; then
                 installed=0
-            elif ! [ "$silent" ]; then
+            elif [ "$manager" ]; then
                 if [ "$action" = "uninstall" ]; then
                     warn "$(printf "Although %b$key is installed%b, it was not installed by dotsys.
                     $spacer You will have to %buninstall it by whatever means it was installed.%b" $green $rc $yellow $rc) "
@@ -121,8 +124,11 @@ is_installed () {
                     installed=0
                 fi
             fi
+            debug "   is_installed by other means -> $installed"
+        else
+            installed=1
+            debug "   not installed on system -> $installed"
         fi
-        debug "   is_installed by other means -> $installed"
     fi
 
     debug "   is_installed ($key:$val) final -> $installed"
@@ -257,41 +263,38 @@ freeze_state() {
 }
 
 get_topic_list () {
-    local repo="$1"
-    local from="$2"
-    local force="$3"
+    local from_repo="${1}"
+    local active_repo="$(get_active_repo)"
+    local repo_dir="$(repo_dir "${from_repo:-$active_repo}")"
+    local force="$2"
     local list
     local topic
+    local repo
 
-    # use from when supplied
-    if [ "$from" ]; then repo="$from";fi
-
-    if [ "$repo" = "dotsys/dotsys" ]; then
+    if is_dotsys_repo "$active_repo"; then
         # no force permitted for dotsys repo
         force=
         # USE BUILTIN TOPICS FOR DOTSYS
-        repo="$DOTSYS_REPOSITORY/builtins"
-    else
-        repo="$(repo_dir "$repo")"
+        repo_dir="$DOTSYS_REPOSITORY/builtins"
     fi
 
     # only installed topics when not installing unless forced or from
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read line; do
             topic=${line%:*}
+            repo=${line#*:}
 
-            # skip system keys
-            if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
-
-           # limit topics to from repo
-            if [ "$from" ] && [ "$line" != "${topic}:$from" ]; then continue;fi
+            # do not uninstall dotsys topics unless in limits
+            if [ "$action" = "uninstall" ] && ! in_limits "dotsys" -r && is_dotsys_repo "$repo"; then continue
+            # limit topics to from repo
+            elif [ "$from_repo" ] && [ "$from_repo" != "$repo" ]; then continue;fi
 
             echo "$topic"
         done < "$(state_file "dotsys")"
     # all defined topic directories
     else
-        if ! [ -d "$repo" ];then return 1;fi
-        get_dir_list "$repo"
+        if ! [ -d "$repo_dir" ];then return 1;fi
+        get_dir_list "$repo_dir"
     fi
 }
 

@@ -38,16 +38,18 @@ topic_dir () {
 
   path="$(repo_dir "$repo")/$topic"
 
-  if ! [ -d "$path" ]; then
-    path="$(builtin_topic_dir "$topic")"
-  fi
+#  if ! [ -d "$path" ]; then
+#    path="$(builtin_topic_dir "$topic")"
+#  fi
+#
+#  if ! [ -d "$path" ]; then
+#    error "Directory for $topic could not be found
+#         \rin builtins or $repo"
+#  fi
 
-  if ! [ -d "$path" ]; then
-    error "Directory for $topic could not be found
-         \rin builtins or $repo"
+  if [ -d "$path" ]; then
+      echo "$path"
   fi
-
-  echo "$path"
 }
 
 # converts supplied repo or active repo to full path
@@ -99,6 +101,7 @@ get_active_repo () {
 }
 
 is_dotsys_repo () {
+    local repo="${1:-$repo}"
     [ "$repo" = "dotsys/dotsys" ]
     return $?
 }
@@ -297,9 +300,8 @@ rename_all() {
 }
 
 #Reverse order of array
-#USAGE: reverse arrayname
-#TODO: IMPLIMENT REVERSE TOPICS FOR UNINSTALL
-reverse() {
+#USAGE: reverse_array arrayname
+reverse_array() {
     local arrayname=${1:?Array name required}
     local array
     local revarray

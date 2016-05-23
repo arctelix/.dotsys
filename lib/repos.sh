@@ -210,7 +210,9 @@ manage_repo (){
         # make sure repo is git!
         if ! is_git; then
             init_local_repo "$repo"
-            if ! [ $? -eq 0 ]; then exit; fi
+            if ! [ $? -eq 0 ]; then
+                msg "Dotsys requires git to function properly"; exit
+            fi
         fi
 
         # Check EXISTING/INSTALLED status
@@ -218,7 +220,6 @@ manage_repo (){
             debug "   local directory/installed check for remote"
             if has_remote_repo "$repo"; then
                 manage_remote_repo "$repo" auto
-                if ! [ $? -eq 0 ]; then exit; fi
             else
                 repo_status="new"
             fi
@@ -241,13 +242,17 @@ manage_repo (){
         debug "$(state_primary_repo) = $repo"
         if ! is_dotsys_repo && [ "$(state_primary_repo)" != "$repo" ]; then
 
-            # preview repo option
-            confirm_task "preview" "repo" "${repo}" "-> ${repo}/.dotsys-default.cfg"
-            if [ "$?" -eq 0 ]; then
-                create_config_yaml "$repo"
-                if [ $? -eq 0 ]; then
-                    get_user_input "Would you like to install this repo?" -r
-                    if ! [ $? -eq 0 ]; then exit; fi
+            # preview repo and confirm install
+            if [ "$repo_status" != "new" ]; then
+                confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg"
+                if [ "$?" -eq 0 ]; then
+                    create_config_yaml "$repo" | indent_lines
+                    if [ $? -eq 0 ]; then
+                        get_user_input "Would you like to install this repo?" -r
+                        if ! [ $? -eq 0 ]; then
+                            msg "Repo installation aborted"; exit
+                        fi
+                    fi
                 fi
             fi
 
@@ -564,7 +569,7 @@ init_remote_repo () {
                     "$(msg "$spacer However, The local repo is ready for topics...")"
 
     cd "$local_repo"
-    git push -u origin "$branch"
+    git push -u origin "$branch" 2>&1 | indent_lines
     success_or_fail $? "push" "$(printf "%b$repo_status%b repo %b$remote_repo @ $branch%b" $green $rc $green $rc)" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
     cd "$OWD"
@@ -829,56 +834,58 @@ copy_topics_to_repo () {
         esac
     done
 
-    local found_dirs=($(get_dir_list "$root_dir"))
+    local found_dirs=( $(get_dir_list "$root_dir") )
+
+    #IFS=$' \t\n'
 
     # filter and list found topics
-    if [ "$found_dirs" ]; then
-        task "$(printf "Import topics found in %b$root_dir%b:" $green $rc)"
-        local i
-        for i in "${!found_dirs[@]}"; do
-            local topic="${found_dirs[$i]}"
-            local files="$(find "$root_dir/$topic" -maxdepth 1 -type f)"
-            #local is_repo="$(find "$dir/$topic" -maxdepth 3 -type f -name "*dotsys.cfg")"
+    local i
+    for i in "${!found_dirs[@]}"; do
+        local topic="${found_dirs[$i]}"
+        local files="$(find "$root_dir/$topic" -maxdepth 1 -type f)"
+        #local is_repo="$(find "$dir/$topic" -maxdepth 3 -type f -name "*dotsys.cfg")"
 
-            debug "$topic=${repo%/*}"
+        debug "$topic=${repo%/*}"
 
-            # not $repo user and must have files
-            if [ "$topic" = "${repo%/*}" ] || ! [ "$files" ]; then
-                unset found_dirs[$i]
-                continue
+        # not $repo user and must have files
+        if [ "$topic" = "${repo%/*}" ] || ! [ "$files" ]; then
+            unset found_dirs[$i]
+            continue
+        fi
+
+        # and must contain at lest one recognised file type in topic root
+        local f
+        local found_file
+        for f in $files; do
+            debug "file = $f"
+            if [[ "$f" =~ (.*\.symlink|.*\.sh|.*\.zsh) ]]; then
+                debug "found = $f"
+                found_file="true"
+                break
             fi
-
-            # and must contain at lest one recognised file type in topic root
-            local f
-            local found_file
-            for f in $files; do
-                debug "file = $f"
-                if [[ "$f" =~ (.*\.symlink|.*\.sh|.*\.zsh) ]]; then
-                    debug "found = $f"
-                    found_file="true"
-                    break
-                fi
-            done
-
-            if ! [ "$found_file" ]; then
-                unset found_dirs[$i]
-                continue
-            fi
-            # list topic
-            msg "$spacer - $topic"
         done
 
+        if ! [ "$found_file" ]; then
+            unset found_dirs[$i]
+            continue
+        fi
+    done
+
+    # Importable found
+    if [ "${found_dirs[*]}" ]; then
+        task "$(printf "Import topics found in %b$root_dir%b:" $green $rc)"
+        msg "$(echo "${found_dirs[@]}" | indent_list)"
     # noting to import
     else
-       task "$(printf "Import topics not found in %b$root_dir%b:" $green $rc)"
+       info "$(printf "Importable topics not found in %b$root_dir%b:" $green $rc)"
        return
     fi
 
     question="$(printf "The above possible topics were found. How would
                 $spacer you like the topics you select imported" $yellow $rc $yellow $rc $yellow $rc)"
 
-    get_user_input "${question}?" -t move -f copy -f copy -c
-    if [ $? -eq 0 ]; then mode=move; else mode=copy; fi
+    get_user_input "${question}?" -t copy -f move -c
+    if [ $? -eq 0 ]; then mode=copy; else mode=move; fi
 
 
     local TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"

@@ -272,6 +272,10 @@ See Anatomy of a dotsys.cfg file for dotsys.cfg options:
 
     # Cfg files use a basic yaml format using TWO spcaes for indents
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/dotsys.cfg
+    
+NOTE: In order for git to save a directory it must contain at least one file.  A great
+way to insure that a topic directory is preserved in your remote repo is to add a 
+blank dotsys.cfg file.
 
 
 File names and extensions

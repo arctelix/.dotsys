@@ -598,7 +598,7 @@ manage_topic_bin () {
 
         # test for exitsing command
         local command="$(basename "$file")"
-        if ! [ "$silent" ] && cmd_exists $command; then
+        if ! [ "$silent" ] && [ "$action" = "install" ] && cmd_exists $command; then
             warn "The command '$command' already exists on the system path"
             get_user_input "Are you sure you want to supersede it with
                     $spacer $file?" --required

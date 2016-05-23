@@ -222,7 +222,7 @@ msg_invalid_input (){
 # debug debug
 debug () {
     if [ "$DEBUG" = true ]; then
-        printf "%b%b%b\n" $dark_gray "$1" $rc
+        printf "%b%b%b\n" $dark_gray "$1" $rc 1>&2
     fi
 }
 
@@ -477,7 +477,7 @@ confirm_task () {
   local line
   local lines=""
   for line in "${extra_lines[@]}"; do
-    lines+="\n$spacer $line"
+    lines="$lines\n$spacer $line"
   done
 
   debug "   CONFIRMED_VAR=${CONFIRMED_VAR}"
@@ -485,7 +485,7 @@ confirm_task () {
 
   if ! [ "${!CONFIRMED_VAR}" ] && ! [ "$confirmed" ]; then
 
-      local text="$(printf "Would you like to %b%s%b %s %b%s%b %s?
+      local text="$(printf "Would you like to %b%s%b %s %b%s%b%b?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
          $green "$action" $rc "$prefix" $green "$topic" $rc "$lines" \
          $yellow $rc \
@@ -532,10 +532,10 @@ confirm_task () {
   confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $cyan "$extra_lines")"
+    task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $cyan "$lines")"
     return 0
   else
-    task "$(printf "You skipped %s for %s %b%s%b %s" "$action" "$prefix" $green "$topic" $cyan "$extra_lines")"
+    task "$(printf "You skipped %s for %s %b%s%b %s" "$action" "$prefix" $green "$topic" $cyan "$lines")"
     return 1
   fi
 }
