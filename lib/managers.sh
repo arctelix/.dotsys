@@ -19,24 +19,31 @@ get_default_manager (){
 get_topic_manager () {
     local topic="$1"
     local manager=$(get_topic_config_val "$topic" "manager")
-
     # check unmanned topic
-    if ! [ "$manager" ]; then return; fi
+    if ! [ "$manager" ]; then return 1; fi
+    debug "  - get_topic_manager: $manager"
     # check cmd/app
     manager="$(get_default_manager "$manager")"
     echo "$manager"
+    return 0
+}
+
+is_managed () {
+ local topic="${1:-$topic}"
+ get_topic_manager "$topic" > /dev/null
+ return $?
 }
 
 run_manager_task () {
   local usage="run_manager_task <manager> <action> <topics>"
   local usage_full="Installs and uninstalls dotsys.
-
   --force        force install if installed
+  --packages     the topics supplied are packages from package file
   "
   local manager="$1"; shift
   local action="$1"; shift
   local topics=()
-  local packages # The topics are packages from package file
+  local packages
   local force
 
   while [[ $# > 0 ]]; do
@@ -52,10 +59,25 @@ run_manager_task () {
 
   debug "-- run_manager_task: m:$manager a:$action t:$topics f:$force"
 
+  # convert topic to manager (allows main to throw all topics this way)
+  if ! is_manager "$manager" || [ "$manager" = "$topic" ]; then
+    debug "   run_manager_task: got NON manager: $manager"
+    manager="$(get_topic_manager "$manager")"
+    debug "   run_manager_task: got NON manager found manager: $manager"
+  fi
+
   # abort un-managed topics
   if ! [ "$manager" ]; then
     debug "   run_manager_task: aborting run_manager_task $topic not managed"
     return
+  fi
+
+  # make sure the topic manager is installed on system
+  if [ "$action" = "install" ] && ! is_installed "dotsys" "$manager"; then
+     info "${action}ing manager" "$(printf "%b$manager" $thc)" "for" "$(printf "%b${topics[*]}" $thc)"
+     # install the manager
+     dotsys "$action" "$manager" ${limits[@]} --recursive
+     debug "run_manager_task -> END RECURSION continue : run_manager_task $manager $action t:$topic $force"
   fi
 
   # abort update & freeze actions (nothing to do)
@@ -74,15 +96,15 @@ run_manager_task () {
      # check if already installed (not testing for repo!)
      if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic" --manager ; then
         # Only show the message if is actually installed on manager state
-        if is_installed "$manager" "$topic"; then
-            success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
+        if is_installed "manager" "$topic"; then
+            success "The package for" "$( printf "%b$topic" $thc)," "was already ${action}ed by dotsys"
         fi
         continue
      # check if already uninstalled (not testing for repo!)
      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic" --manager; then
         # Only show the message if is actually uninstalled on manager state
         if ! is_installed "$manager" "$topic"; then
-            success "$(printf "%b$(cap_first "$manager")%b already ${action}ed %b%s%b" $green $rc $green $topic $rc )"
+            success "The package for" "$( printf "%b$topic" $thc)," "was already ${action}ed by dotsys"
         fi
         continue
      fi
@@ -154,7 +176,7 @@ manage_dependencies () {
   local done=()
   local dep
   local task_shown
-  for dep in ${deps[@]}; do
+  for dep in $deps; do
     # filter duplicates from user topic and builtin topics
     if [[ "${done[@]}" == *"$dep"* ]];then
         #FIXME: Topic config must be loaded twice somewhere, getting duplicates on dotsys deps
@@ -171,11 +193,11 @@ manage_dependencies () {
     else
         # only show the message for first dependency
         if ! [ "$task_shown" ]; then
-          info "$(printf "Installing %b%s%b's dependencies %s" $green $topic $rc "$DRY_RUN")"
+          info "Installing" "$( printf "%b$topic" $thc)'s" "dependencies $DRY_RUN"
           task_shown="true"
         fi
         # install
-        if ! is_installed "system" "$dep";then
+        if ! is_installed "dotsys" "$dep";then
           dotsys "install" "$dep" --recursive
           # Add dep to deps state
           if [ $? -eq 0 ]; then
@@ -184,13 +206,13 @@ manage_dependencies () {
           fi
         # already installed
         else
-          success "$(printf "Dependency Already installed %s: %b%s%b" "$DRY_RUN" $green "$dep" $rc)"
+          success "Dependency Already installed $DRY_RUN:" "$( printf "%b$dep" $thc)"
         fi
     fi
   done
 
   if [ "$action" = "install" ]; then
-    info "$(printf "Dependencies ${action%e}ed, resuming %b$action $topic%b" $green $rc)"
+    info "Dependencies ${action%e}ed, resuming" "$( printf "%b$action $topic" $thc)"
   fi
 
 }
@@ -283,7 +305,7 @@ manage_packages () {
 
     debug "   manage_packages final packages: $packages"
 
-    task "$(printf "${action}ing $DRY_RUN %b$manager's%b packages" $green $rc)"
+    task "${action}ing $DRY_RUN" "$(printf "%b$manager's" $thc)" "packages"
 
     run_manager_task "$manager" "$action" $packages "$force" --packages
 }

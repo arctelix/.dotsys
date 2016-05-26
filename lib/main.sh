@@ -337,6 +337,7 @@ dotsys () {
     local cfg_mode
     local LOG_FILE
     local recursive
+    local topic
 
     while [[ $# > 0 ]]; do
     case $1 in
@@ -350,7 +351,7 @@ dotsys () {
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
         -s | scripts)   limits+=("scripts") ;;
-        -f | from)      from_repo="$2"; shift ;;
+        -f | from)      from_repo="${2:-none}"; shift ;;
         -p | packages)  limits+=("packages") ;;
         -a | app)       limits+=("packages") ;;
         -c | cmd)       limits+=("packages") ;;
@@ -385,9 +386,15 @@ dotsys () {
 
     debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo"
 
-
-
-
+     # reset globals if non recursive call
+    if ! [ "$recursive" ]; then
+        GLOBAL_CONFIRMED=""
+        TOPIC_CONFIRMED=""
+        SYMLINK_CONFIRMED=""
+        ACTIVE_REPO=
+        ACTIVE_REPO_DIR=
+        __repo=""
+    fi
 
     # SET CONFIRMATIONS
     if ! [ "$recursive" ]; then
@@ -461,9 +468,7 @@ dotsys () {
 
     if in_limits "dotsys" -r; then
         debug "main -> DOTSYS IN LIMITS"
-        topics=("dotsys")
         from_repo="dotsys/dotsys"
-
         if [ "$action" = "uninstall" ]; then
             # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
             if dotsys_in_use; then
@@ -474,6 +479,10 @@ dotsys () {
             fi
             # Clear topics so that all installed topics are removed
             topics=()
+
+        # add dotsys to topics
+        else
+            topics=( core ${topics[*]} )
         fi
     fi
 
@@ -518,16 +527,17 @@ dotsys () {
             error "Could not resolve active repo directory
                  \rrepository : $ACTIVE_REPO
                  \rdirectory  : $ACTIVE_REPO_DIR"
-            msg "$( printf "Run %bdotsys install%b to configure a repo%s" $green $yellow "\n")"
+            msg "$( printf "Run %bdotsys install%b to configure a repo%s" $code $yellow "\n")"
             return 1
         fi
-        debug "main -> get_topic_list $from_repo $force"
-        local list="$(get_topic_list "$from_repo" "$force")"
+        debug "main -> get_topic_list $(get_active_repo) $force"
+        # Use from repo to limit actions to toppic from a specific repo
+        local list="$(get_topic_list "$(get_active_repo)" "$force")"
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
-                msg "$( printf "\nThere are no topics in %b$ACTIVE_REPO_DIR\n%b" $green $yellow)"
+                msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" $thc)"
             else
-                msg "$( printf "\nThere are no topics %binstalled by dotsys%b to $action\n" $green $yellow)"
+                msg "\nThere are no topics installed by dotsys to" "$action\n"
             fi
             if [ "$action" = "install" ]; then
                 copy_topics_to_repo "$(get_active_repo)"
@@ -549,11 +559,8 @@ dotsys () {
         manage_stubs "$action" "${topics[*]}" "$force"
     fi
 
-    # Iterate topics
-
+    # ITERATE TOPICS
     debug "main -> TOPIC LOOP START"
-
-    local topic
 
     for topic in ${topics[@]};do
 
@@ -570,7 +577,7 @@ dotsys () {
 
         # ABORT: on platform exclude (after config loaded)
         if topic_excluded "$topic"; then
-            #task "$(printf "Excluded %b${topic}%b on $PLATFORM" $green $cyan)"
+            #task "Excluded" "$(printf "%b${topic}" $thc)" "on $PLATFORM"
             continue
         fi
 
@@ -604,7 +611,7 @@ dotsys () {
 
                 # ABORT: uninstall if it's still in use (uninstalled at end as required).
                 if manager_in_use "$topic"; then
-                    warn "$(printf "Manager %b$topic%b is in use and can not be uninstalled yet." $green $rc)"
+                    warn "Manager" "$(printf "%b$topic" $thc)" "is in use and can not be uninstalled yet."
                     ACTIVE_MANAGERS+=("$topic")
                     debug "main -> ABORT MANGER IN USE: Active manager $topic can not be ${action%e}ed."
                     continue
@@ -631,16 +638,43 @@ dotsys () {
 
         # ABORT: on install if already installed (override --force)
         debug "main -> check is_installed for $topic $ACTIVE_REPO"
-        if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$from_repo" && ! [ "$force" ]; then
-           task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
-           continue
-        # ABORT: on uninstall if not installed (override --force)
-        elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$from_repo" && ! [ "$force" ]; then
-           task "$(printf "Already ${action}ed %b$topic%b" $green $rc)"
-           continue
+
+        if ! [ "$force" ]; then
+            local already_installed
+            if [ "$action" = "install" ] && is_installed "dotsys" "$topic"; then
+
+               # Check if topic is installed from active repo
+               if is_installed "dotsys" "$topic" "$ACTIVE_REPO";then
+                    already_installed="true"
+
+               # Check if topic is installed from another repo (not dotsys)
+               elif is_installed "dotsys" "$topic" "!dotsys/dotsys";then
+                    already_installed="true"
+
+                    # Option to replace existing topic or
+                    get_user_input "$topic is installed from another repo,
+                                  \rdo you want to replace it with this version?"
+                    if [ $? -eq 0 ]; then
+                        # No need to use manager
+                        dotsys uninstall "$topic" links scripts
+                        already_installed="false"
+                    fi
+               fi
+
+               if [ "$already_installed" = "true" ]; then
+                    task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $ACTIVE_REPO"
+                    continue
+               fi
+
+            # ABORT: on uninstall if not installed (any repo) (override --force)
+            elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic"; then
+               task "Already ${action}ed" "$(printf "%b$topic" $thc )"
+               continue
+            fi
         fi
 
         # CONFIRM / ABORT DOTSYS UNINSTALL
+
         if [ "$topic" == "dotsys" ] && [ "$action" = "uninstall" ]; then
 
             # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
@@ -653,7 +687,7 @@ dotsys () {
         # CONFIRM TOPIC
         else
             debug "main -> call confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
-            confirm_task "$action" "" "$topic" "${limits[@]}"
+            confirm_task "$action" "" "${limits[*]} $topic"
             if ! [ $? -eq 0 ]; then continue; fi
             debug "main -> post confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
         fi
@@ -668,19 +702,8 @@ dotsys () {
         fi
 
         # 2) managed topics
-        local topic_manager="$(get_topic_manager "$topic")"
-        if [ "$topic_manager" ]; then
-
-            # make sure the topic manager is installed on system
-            if [ "$action" = "install" ] && ! is_installed "dotsys" "$topic_manager"; then
-                info "$(printf "${action}ing manager %b$topic_manager%b for %b$topic%b" $green $rc $green $rc)"
-                # install the manager
-                dotsys "$action" "$topic_manager" ${limits[@]} --recursive
-            fi
-
-            # Always let manager manage topic
-            debug "main -> END RECURSION calling run_manager_task: $topic_manager $action t:$topic $force"
-            run_manager_task "$topic_manager" "$action" "$topic" "$force"
+        if in_limits "managers" "dotsys"; then
+            run_manager_task "$topic" "$action" "$topic" "$force"
         fi
 
         # 3) symlinks

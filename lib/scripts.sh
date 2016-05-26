@@ -22,6 +22,20 @@ run_topic_script () {
 
   local status=0
 
+  # undamaged topic scripts need to check if already installed (since there likely installing software)
+  # managed topic install scripts are really post-install scripts (manager checks for prior install)
+  if ! is_managed; then
+      debug "   run_topic_script un-managed topic: checking install status"
+      # check if already installed (not testing for repo!)
+      if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "dotsys" "$topic" --script ; then
+        continue
+      # check if already uninstalled (not testing for repo!)
+      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "dotsys" "$topic" --script; then
+        continue
+      fi
+      debug "   run_topic_script un-managed topic: ok to proceed with script"
+  fi
+
   # try topic.sh function call first
   if [ -f "$(topic_dir "$topic")/topic.sh" ];then
     run_script_func "$topic" "topic.sh" "$action" $packages $required
@@ -61,6 +75,7 @@ run_topic_script () {
 # 10   = script not found
 # 11   = missing required script
 # other = function executed with error
+# ONLY CHECKS TOIC DIRECTORY
 run_script (){
   local topic="${1:-$topic}"
   local action="${2:-$action}"
@@ -96,11 +111,11 @@ run_script (){
       status=$?
     fi
 
-    success_or_fail $status "exicute" "$(printf "script $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
+    success_or_fail $status "exicute" "script $DRY_RUN" "$(printf "%b$script" $thc )" "on" "$(printf "%b$PLATFORM" $thc)"
 
   # missing required
   elif [ "$required" ]; then
-    fail "$(printf "Script not found $DRY_RUN %b%s%b on %b%s%b" $green "$script" $rc $green "$PLATFORM" $rc)"
+    fail "Script not found $DRY_RUN" "$(printf "%b$script" $thc )" "on" "$(printf "%b$PLATFORM" $thc)"
     status=11
 
   # missing ok
@@ -153,10 +168,12 @@ run_script_func () {
   local script_src
   local script
   local result
+  local prefix
   local message
   local i=0
   for script in $scripts; do
       script_src="${script_sources[$i]}"
+      debug "   run script_src: $script_src $script"
       if script_func_exists "$script" "$action"; then
 
           debug "   running $script $action ${params[@]}"
@@ -169,32 +186,34 @@ run_script_func () {
               return
           # run script action func
           elif ! dry_run; then
-            script -q /dev/null "$script" "$action" ${params[@]} 2>&1  | indent_lines
+            script -q /dev/null "$script" "$action" ${params[@]} 2>&1 | indent_lines
             status=$?
           fi
 
           # manager message
           if [ "$script_name" = "manager.sh" ]; then
-            message="$(printf "%b${params:-\b}%b $DRY_RUN with %b$topic%b's %b$script_src $script_name%b" $green $rc $green $rc $green $rc )"
+            prefix="$DRY_RUN ${params:-\b} with"
+            message="'s $script_src"
           # other message
           else
-            message="$(printf "%b$topic%b $DRY_RUN %b${params:-\b}%b with %b$script_src $script_name%b" $green $rc $green $rc $green $rc )"
+            prefix="$DRY_RUN"
+            message="${params:-\b} with $script_src"
           fi
 
           # Required function success/fail
           if [ "$required" ]; then
-              success_or_fail $status "$action" "$message"
+              success_or_fail $status "$action" "$prefix" "$(printf "%b$topic" $thc)" "$message" "$script_name"
 
           # Only show success for not required
           #elif [ $status -eq 0 ]; then
           # On second thought, this is helpful
           else
-              success_or_fail $status "$action" "$message"
+              success_or_fail $status "$action" "$prefix" "$(printf "%b$topic" $thc)" "$message" "$script_name"
           fi
 
       # Required script fail
       elif [ "$required" ]; then
-          fail "$(printf "%b%s%b's $DRY_RUN %b%s%b file does not define the required %b%s%b function" $green "$(cap_first $topic)" $rc $green "$script_src $script_name" $rc $green "$action" $rc )"
+          fail "$(cap_first "$script_name") $DRY_RUN for" "$topic"  "does not define the required $action function"
           status=12
       # Silent fail when not required
       else
@@ -213,17 +232,26 @@ run_script_func () {
 get_topic_scripts () {
   local topic="$1"
   local file_name="$2"
-  local exists=()
+  local exists=
+  local builtin_script="$(builtin_topic_dir $topic)/${file_name}"
+  local topic_script="$(topic_dir $topic)/${file_name}"
+  local scripts=("$builtin_script")
 
-  local scripts=("$(builtin_topic_dir $topic)/${file_name}" "$(topic_dir $topic)/${file_name}")
+  # catch duplicate from topic script
+  debug "  -get_topic_scripts builtin: $builtin_script"
+  debug "  -get_topic_scripts topic_script: $topic_script"
+  if [ "$builtin_script" != "$topic_script" ]; then
+    scripts+=("$topic_script")
+  fi
+
   local path
   for path in ${scripts[@]}; do
       if [ -f "$path" ]; then
-        exists+=("$path")
+        echo "$path"
+        exists="true"
       fi
   done
 
   if ! [ "$exists" ]; then return 1;fi
-  echo "${exists[@]}"
   return 0
 }

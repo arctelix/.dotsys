@@ -34,56 +34,96 @@ clear_line_above="\e[1A\r\e[K"
 spacer="\r\e[K        " # indent from screen edge
 indent="        " # indent from current position
 
+white='\e[0;37m';
+dark_white='\e[1;37m';
+
+# topic highlight color
+thc=""
+
+# user color
+uc=$white
+# user highlight color
+uhc=$dark_white
+
+# code highlight color
+code=$magenta
+
 # BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE THESE METHODS )
 
+user () {
+  printf   "\r%b[%b  ?   %b] %b%b" $clear_line $dark_yellow $rc "$@" $rc
+  log "USER" "$@"
+}
+
 info () {
-  printf   "\r%b[%b INFO %b] %b\n" $clear_line $dark_blue $rc "$1"
-  log "INFO" "$1"
+  local text="$(compile_text $blue $dark_blue "$@")"
+  printf   "\r%b[%b INFO %b] %b%b\n" $clear_line $dark_blue $rc "$text" $rc
+  log "INFO" "$@"
 }
 
 warn () {
-  printf   "\r%b[%b WARN %b] %b%b%b\n" $clear_line $dark_yellow $rc $yellow "$1" $rc
-  log "WARN" "$1"
-}
-
-user () {
-  printf   "\r%b[%b  ?   %b] %b" $clear_line $dark_yellow $rc "$1"
-  log "USER" "$1"
+  local text="$(compile_text $yellow $dark_yellow "$@")"
+  printf   "\r%b[%b WARN %b] %b%b\n" $clear_line $dark_yellow $rc "$text" $rc
+  log "WARN" "$@"
 }
 
 success () {
-  printf "\r%b[%b  OK  %b] %b\n" $clear_line $dark_green $rc "$1"
-  log "SUCCESS" "$1"
+  local text="$(compile_text $green $dark_green "$@")"
+  printf "\r%b[%b  OK  %b] %b%b\n" $clear_line $dark_green $rc "$text" $rc
+  log "SUCCESS" "$@"
 }
 
-
 fail () {
-  printf  "\r%b[%b FAIL %b] %b\n" $clear_line $dark_red $rc "$1"
-  debug_log "FAIL" "$1"
+  local text="$(compile_text $red $dark_red "$@")"
+  printf  "\r%b[%b FAIL %b] %b%b\n" $clear_line $dark_red $rc "$text" $rc
+  debug_log "FAIL" "$@"
 }
 
 task() {
-  printf  "\r%b[%b TASK %b] %b$1%b %b\n" $clear_line $dark_cyan $rc $cyan $rc "$2"
-  log "TASK" "$1 $2"
+  local text="$(compile_text $cyan $dark_cyan "$@")"
+  printf  "\r%b[%b TASK %b] %b%b\n" $clear_line $dark_cyan $rc "$text" $rc
+  log "TASK" "$@"
+}
+
+compile_text () {
+    local color=$1
+    local hcolor=$2
+    shift; shift
+    local i=0
+    for a in "$@";do
+        if is_even $i ; then
+            printf "%b%b " $color "$a"
+        else
+            printf "%b%b " $hcolor "$a"
+        fi
+        i=$((i+1))
+    done
+}
+
+is_even () {
+    local val=$1
+    [[ $((val % 2)) -eq 0 ]]
+    return $?
 }
 
 # messages
 
 msg () {
-  printf  "\r%b%b$1%b\n" $clear_line $yellow $rc
-  log "MSG" "$1"
+  local text="$(compile_text $yellow $dark_yellow "$@")"
+  printf  "\r%b%b%b%b\n" $clear_line $yellow "$text" $rc
+  log "MSG" "$@"
 
 }
 
 msg_help () {
-  printf  "\r%b$1%b\n" $dark_gray $rc
-  log "HELP" "$1"
+  printf  "\r%b%b%b\n" $dark_gray "$1" $rc
+  log "HELP" "$@"
 }
 
 error () {
-  printf  "\r\n%b%bERROR:  %b ${1}%b\n\n" $clear_line $dark_red $red $rc
+  printf  "\r\n%b%bERROR:  %b%b%b\n\n" $clear_line $dark_red $red "$1" $rc
   debug_log "ERROR" "$1"
-  log "ERROR" "$1"
+  log "ERROR" "$@"
 
 }
 
@@ -128,16 +168,25 @@ debug_log () {
 }
 
 success_or_fail () {
-    func_or_func_msg success fail $1 "$2" "${3:-$?}"
+    local status=$1
+    local action="$2"
+    shift; shift
+    func_or_func_msg success fail $status "$action" "$@"
 }
 
 success_or_error () {
-    func_or_func_msg success error $1 "$2" "${3:-$?}"
+    local status=$1
+    local action="$2"
+    shift; shift
+    func_or_func_msg success error $status "$action" "$@"
     if ! [ $? -eq 0 ]; then exit; fi
 }
 
 success_or_none () {
-    func_or_func_msg success pass $1 "$2" "${3:-$?}"
+    local status=$1
+    local action="$2"
+    shift; shift
+    func_or_func_msg success pass $status "$action" "$@"
 }
 
 func_or_func_msg () {
@@ -145,25 +194,23 @@ func_or_func_msg () {
     local other_func="$2"
     local status="$3"
     local action="$4"
-    local message="$5"
+    local first_arg="$5"
     shift; shift; shift; shift; shift
 
     if [ $status -eq 0 ]; then
         if [ "$action" ]; then
             action="${action%ed}"
             action="$(cap_first "${action%e}ed")"
-            $zero_func "$action $message"
+            $zero_func "$action $first_arg" "$@"
         else
-            $zero_func "$message"
+            $zero_func "$first_arg" "$@"
         fi
     else
         if [ "$action" ]; then
-            $other_func "Failed to $action $message"
+            $other_func "Failed to $action $first_arg" "$@"
         else
-            $other_func "Failed to $message"
+            $other_func "Failed to $first_arg" "$@"
         fi
-        # all additional params get executed here
-        if [ $@ ]; then $@; fi
     fi
     return $status
 }
@@ -174,12 +221,15 @@ indent_lines () {
   local first
   local input="$1"
   local line
+
   # Take input from pipe
   if ! [ "$input" ]; then
-      while read -r line || [[ -n "$line" ]]; do
+
+      while IFS=$'\n' read -r line || [[ -n "$line" ]]; do
         # remove \r and replace with \r$indent
-        echo "$indent $(echo "$line" | sed "s/$(printf '\r')/$(printf '\r')$indent /g")"
+        echo "$indent $(echo "$line" | sed "s/$indent$(printf '\r')/$(printf '\r')$indent /g")"
       done
+
   # input from variable
   else
       while read -r line || [[ -n "$line" ]]; do
@@ -191,6 +241,31 @@ indent_lines () {
         fi
       done <<< $input
   fi
+}
+
+get_name () {
+   #read() { builtin read "$@" 2>/dev/tty; }
+   echo "this is a line of output 1"
+   echo "this is a line of output 2"
+   echo "this is a line of output 3"
+   read -p "enter your name: " user_input
+   echo
+   echo "$user_input is your name"
+   #unset -f read
+}
+
+read_tty() {
+  debug "=========read monkey1"
+  read(){
+      debug "=========read"
+      if [[ $1 = -p ]]; then
+      set -- "$1" "$2"$'\n' "${@:3}"
+
+      fi
+      builtin read "$@"
+  }
+  "$@"
+  unset -f read
 }
 
 indent_list () {
@@ -384,7 +459,6 @@ get_user_input () {
 
     if ! [ "$confirmed" ]; then
         local state=0
-        #shopt -s extglob
         while true; do
             read user_input < /dev/tty
 
@@ -487,7 +561,7 @@ confirm_task () {
 
       local text="$(printf "Would you like to %b%s%b %s %b%s%b%b?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
-         $green "$action" $rc "$prefix" $green "$topic" $rc "$lines" \
+         $uhc "$action" $rc "$prefix" $uhc "$topic" $rc "$lines" \
          $yellow $rc \
          $yellow $rc \
          $yellow $rc \
@@ -532,10 +606,10 @@ confirm_task () {
   confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(printf "%sing %s %s %b%s%b %s" $(cap_first "${action%e}") "$DRY_RUN" "$prefix" $green "$topic" $cyan "$lines")"
+    task "$(cap_first "${action%e}")ing $DRY_RUN $prefix" "$(printf "%b$topic" $thc)" "$lines"
     return 0
   else
-    task "$(printf "You skipped %s for %s %b%s%b %s" "$action" "$prefix" $green "$topic" $cyan "$lines")"
+    task "You skipped $action for $prefix" "$(printf "%b$topic" $thc)" "$lines"
     return 1
   fi
 }
@@ -692,13 +766,13 @@ print_stats () {
         return
     fi
 
-    info "$(printf "Active repo: %b${ACTIVE_REPO}%b" $green $rc)"
-    info "$(printf "Platform : %b%s%b" $green $PLATFORM $rc)"
-    info "$(printf "App package manager: %b%s%b" $green $DEFAULT_APP_MANAGER $rc)"
-    info "$(printf "Cmd Package manager: %b%s%b" $green $DEFAULT_CMD_MANAGER $rc)"
+    info "Active repo:" "$(printf "%b%s%b" $thc $ACTIVE_REPO $rc)"
+    info "Platform   :" "$(printf "%b%s%b" $thc $PLATFORM $rc)"
+    info "App manager:" "$(printf "%b%s%b" $thc $DEFAULT_APP_MANAGER $rc)"
+    info "Cmd manager:" "$(printf "%b%s%b" $thc $DEFAULT_CMD_MANAGER $rc)"
     local count=${#topics[@]}
     if [ $count -eq 0 ]; then count="all"; fi
-    info "$(printf "$(cap_first "${action}ing") %b$count topics%b" $green $rc)"
+    info "$(printf "$(cap_first "${action}ing") %b%s%b" $thc "$count topics" $rc)"
     # make sure it's only seen once
     SHOW_STATS=1
 }

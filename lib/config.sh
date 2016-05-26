@@ -65,11 +65,11 @@ load_config_vars (){
     debug "found ACTIVE_REPO: $ACTIVE_REPO"
 
     # Set ACTIVE_REPO & config_file for new user/repo
-    if ! [ "$ACTIVE_REPO" ] ; then
+    if ! [ "$ACTIVE_REPO" ]; then
         if is_new_user && [ "$action" != "uninstall" ]; then
             new_user_config "$repo"
         else
-            prompt_config_or_repo "$action" "A repo must be specified!"
+            prompt_config_or_repo "$action" --error "A repo must be specified!"
         fi
     fi
 
@@ -153,15 +153,18 @@ validate_config_or_repo (){
 
     local status=0
 
+    # Special repo key word to disregard user default
+    if [ "$input" = "none" ]; then
+        prompt_config_or_repo "$action" --default "$(state_primary_repo)"
+
     # FILE: anything with . must be a file
-    if [[ "$input" =~ ^[^/]*\.cfg$ ]]; then
+    elif [[ "$input" =~ ^[^/]*\.cfg$ ]]; then
         config_file="$input"
         ACTIVE_REPO="$(get_repo_from_config_file "$config_file")"
 
         # catch file does not exist
         if ! [ -f "$config_file" ]; then
-            prompt_config_or_repo "$action" "Config file was not found at $config_file"
-            #clear_lines "\n"
+            prompt_config_or_repo "$action" --error "Config file was not found at $config_file"
             return
         fi
 
@@ -173,8 +176,7 @@ validate_config_or_repo (){
         # catch repo incorrect format
         if ! [[ "$input" =~ ^[^/].*/.*$ ]]; then
             ((error_count+=1))
-            prompt_config_or_repo "$action" "Repo must be in the format 'github_user/repo_name[:branch]'"
-            #clear_lines "\n"
+            prompt_config_or_repo "$action" --error "Repo must be in the format 'github_user/repo_name[:branch]'"
             return
         fi
 
@@ -194,22 +196,40 @@ CURRENT_LINES=
 prompt_config_or_repo () {
 
     local action="${1:-install}"
-    local error="$2"
+    shift
+
+    usage="prompt_config_or_repo [<option>]"
+    usage_full="
+        -e | --error        Display error message
+        -d | --default      Display default
+    "
+
+    local error
+    local default
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -e | --error )          error="$2";shift ;;
+        -d | --default )        default="$2";shift  ;;
+        *)  invalid_option $1 ;;
+        esac
+        shift
+    done
 
     #find existing repos and offer choices
     #local config_files="$(find "$(dotfiles_dir)" -mindepth 1 -maxdepth 2 -type f -name 'dotsys.cfg -exec dirname {}')"
     #echo "found files: $config_files"
+    debug "prompt_config_or_repo AR: ${ACTIVE_REPO}"
+    debug "prompt_config_or_repo GAR:$(get_active_repo)"
 
-    local default
     if ! [ "$error" ]; then
-        if [ "$ACTIVE_REPO" ]; then default=" [$ACTIVE_REPO]"
-        elif [ "$config_file" ]; then default=" [$config_file]"
+        if [ "$(get_active_repo)" ]; then default="${default:-$(get_active_repo)}"
+        elif [ "$config_file" ]; then default="$config_file"
         fi
     fi
 
-
     local help="$(msg_help "$(printf "Use can type %bhelp%b for more info or %babort%b to exit" $blue $dark_gray $blue $dark_gray)")"
-    local question="Enter a repo or config file to ${action}${default}"
+    local question="Enter a repo or config file to ${action}"
     local prompt="$(printf "${help}\n${question}")"
 
 
@@ -224,7 +244,11 @@ prompt_config_or_repo () {
     while true; do
 
         # Read from tty, needed because we read in outer loop.
+        if [ "$default" ]; then
+        read -p "$prompt [$default] : " user_input < /dev/tty
+        else
         read -p "$prompt : " user_input < /dev/tty
+        fi
 
         if [ "$user_input" = "abort" ]; then
            exit

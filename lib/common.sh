@@ -26,30 +26,26 @@ topic_dir () {
   local repo=$(get_topic_config_val "$topic" "repo")
   local path
 
-  if [ "$repo" ]; then
+  if ! [ "$repo" ]; then
       repo="$(get_active_repo)"
-  fi
-
-  # catch dotsys repo or well get root not builtins
-  if is_dotsys_repo; then
-      echo "$(builtin_topic_dir "$topic")"
-      return
   fi
 
   path="$(repo_dir "$repo")/$topic"
 
-#  if ! [ -d "$path" ]; then
-#    path="$(builtin_topic_dir "$topic")"
-#  fi
-#
-#  if ! [ -d "$path" ]; then
-#    error "Directory for $topic could not be found
-#         \rin builtins or $repo"
-#  fi
-
-  if [ -d "$path" ]; then
-      echo "$path"
+  # catch dotsys repo or well get root not builtins
+  if is_dotsys_repo || ! [ -d "$path" ]; then
+    path="$(builtin_topic_dir "$topic")"
   fi
+
+  echo "$path"
+
+  if ! [ -d "$path" ]; then
+    debug "  - topic_dir: Directory for $topic could not be found
+         \rin $path"
+    return 1
+  fi
+  debug "  - topic_dir for $topic = $path"
+  return 0
 }
 
 # converts supplied repo or active repo to full path
@@ -124,7 +120,15 @@ dotsys_user_bin () {
   echo "$(dotsys_dir)/user/bin"
 }
 
-dotsys_user_stubs() {
+dotsys_user_stub_file() {
+  local topic="$1"
+  local stub_src="$2"
+  local stub_name="$(basename "${stub_src%.*}")"
+
+  echo "$(dotsys_user_stub_dir)/${stub_name}.${topic}.stub"
+}
+
+dotsys_user_stub_dir() {
   echo "$(dotsys_dir)/user/stubs"
 }
 
@@ -184,13 +188,33 @@ script_exists() {
 
 topic_exists () {
   local topic="$1"
-   # Verify built in or & user defined directories
-  if ! [ -d "$(builtin_topic_dir $topic)" ] && ! [ -d "$(topic_dir $topic)" ]; then
-    fail "$(printf "The topic %b$topic%b, was not found in the specified repo:
-    $spacer %b$(topic_dir $topic)%b" $green $rc $green $rc)"
-    msg "$spacer Check the topic spelling and make sure it's in the repo."
-    return 1
+  local restrict="$2"
+  local ret=0
+
+  # Verify built in or & user defined directories
+  if [ "$restrict" = "user" ] && ! [ -d "$(topic_dir $topic)" ]; then
+    if ! [ "$recursive" ];then
+        fail "The topic" "$(printf "%b$topic" $thc)" ",was not found repo:
+        $spacer $(topic_dir $topic)"
+    fi
+    ret=1
+
+  # Verify built in or & user defined directories
+  elif ! [ -d "$(builtin_topic_dir $topic)" ] && ! [ -d "$(topic_dir $topic)" ]; then
+    if ! [ "$recursive" ];then
+        fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in dotsys builtins or repo:
+        $spacer $(topic_dir $topic)"
+    fi
+    ret=1
   fi
+
+  if ! [ "$recursive" ] && [ $ret -eq 1 ];then
+    msg "$spacer Check the topic spelling and make sure it's in the repo."
+  fi
+
+  return $ret
+
+
 }
 
 # not used

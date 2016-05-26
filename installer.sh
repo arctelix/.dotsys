@@ -80,20 +80,13 @@ dotsys_installer () {
     fi
 
     # This is the actual installer
-    dotsys "$action" dotsys --force --confirm none
+    dotsys "$action" dotsys curl git shell --confirm default
 
     msg "\nDotsys has been ${action%e}ed
-         \rThanks for using dotsys!"
+         \rThanks for using dotsys!\n"
 
     if [ "$action" = "install" ]; then
-        # reset confirm
-        GLOBAL_CONFIRMED=""
-        TOPIC_CONFIRMED=""
-        SYMLINK_CONFIRMED=""
-        ACTIVE_REPO=
-        ACTIVE_REPO_DIR=
-        __repo=""
-        dotsys "$action"
+        dotsys "$action" from ""
     fi
 }
 

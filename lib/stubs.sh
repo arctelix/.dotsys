@@ -21,11 +21,15 @@ add_existing_dotfiles () {
         local stub_files="$(get_topic_stub_files "$topic")"
         local stub_dst
         local stub_target
-        local builtin_stub_src
-        while IFS=$'\n' read -r builtin_stub_src; do
-            debug "src = $builtin_stub_src"
-            stub_dst="$(get_symlink_dst "$builtin_stub_src")"
-            stub_target="$(get_topic_stub_target "$topic" "$builtin_stub_src")"
+        local stub_src
+        debug "  add_existing_dotfiles topic = $topic"
+        debug "  add_existing_dotfiles topic_dir = $topic_dir"
+        debug "  add_existing_dotfiles stub_files = $stub_files"
+        while IFS=$'\n' read -r stub_src; do
+            debug "src = $stub_src"
+            stub_dst="$(get_symlink_dst "$stub_src")"
+            stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
+            #user_stub_file="$(dotsys_user_stub_file "$topic" "$stub_src")"
 
             # Check for existing original file only (symlinks will be taken care of during stub process)
             if ! [ -L "$stub_dst" ] && [ -f "$stub_dst" ]; then
@@ -34,7 +38,7 @@ add_existing_dotfiles () {
                             $spacer current version: %b$stub_dst%b
                             $spacer dotsys version: %b$stub_target%b
                             $spacer Which version would you like to use with dotsys
-                            $spacer (Don't stress, we'll backup the other one)?" $green $rc $green $rc $green $rc)" \
+                            $spacer (Don't stress, we'll backup the other one)?" $thc $rc $thc $rc $thc $rc)" \
                             --true "current" --false "dotsys"
 
                     # keep system version: backup dotsys version before move
@@ -49,10 +53,13 @@ add_existing_dotfiles () {
 
                 else
                     confirm_task "move" "existing config file for" "$topic" \
-                       "$(printf "%bfrom:%b $stub_dst \n$spacer %bto:%b $stub_target" $green $rc $green $rc)"
+                       "$(printf "%bfrom:%b $stub_dst" $thc $rc )" \
+                       "$(printf "%bto:%b $stub_target" $thc $rc )"
                 fi
 
                 if ! [ $? -eq 0 ]; then continue;fi
+
+                #create_user_stub "$topic" "$stub_src"
 
                 # backup and move system version to dotsys
                 cp "$stub_dst" "${stub_dst}.dsbak"
@@ -125,9 +132,10 @@ create_topic_stubs () {
 get_topic_stub_files(){
     local topic="$1"
     #TODO: TEST stub files from repos (need to prevent duplicates in stub process)
-    local repo_dir="$(topic_dir "$topic")"
+    local topic_dir="$(topic_dir "$topic")"
     local builtin_dir="$(builtin_topic_dir "$topic")"
-    local result="$(find "$repo_dir" "$builtin_dir" -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*' | sort -u)"
+    local dirs="$topic_dir $builtin_dir"
+    local result="$(find $dirs -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*' | sort -u)"
     echo "$result"
 }
 
@@ -164,7 +172,7 @@ create_user_stub () {
     fi
 
     local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
-    local stub_dst="$(dotsys_user_stubs)/${stub_name}.${topic}.stub"
+    local stub_dst="$(dotsys_user_stub_file "$topic" "$stub_src")"
 
     local mode="create"
 
@@ -184,7 +192,7 @@ create_user_stub () {
     # catch dotsys stubs (should not be required but keeping for now)
 #    local dotsys_stub
 #    if [ "$stub_src" = "$stub_dst" ]; then
-#        stub_dst="$(dotsys_user_stubs)/${stub_name}.stub"
+#        stub_dst="$(dotsys_user_stub_dir)/${stub_name}.stub"
 #        dotsys_stub="true"
 #        debug "   create_user_stub: SOURCE AND DST ARE THE SAME"
 #        debug "   create_user_stub new stub_dst    : $stub_dst"
@@ -310,8 +318,8 @@ create_user_stub () {
 #        removed success_or_fail from here
 #    fi
 
-    success_or_fail $status "$mode" "$(printf "stub file for %b$topic $stub_name%b:
-            $spacer ->%b$stub_dst%b" $green $rc $green $rc)"
+    success_or_fail $status "$mode" "stub file for" "$(printf "%b$topic $stub_name:" $thc )" \
+            "\n$spacer ->$stub_dst"
 
 }
 

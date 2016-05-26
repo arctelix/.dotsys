@@ -63,18 +63,20 @@ is_installed () {
     usage="is_installed <state> <key> [<val>] [<option>]"
     usage_full="
         -m | --manager        Use manager warnings
+        -m | --manager        Use scripts warnings
     "
     local manager
+    local script
     while [[ $# > 0 ]]; do
         case "$1" in
         -m | --manager )      manager="$1" ;;
+        -s | --script )      script="$1" ;;
         *)  uncaught_case "$1" "state" "key" "val" ;;
         esac
         shift
     done
 
     local installed=1
-    local manager_state="$(get_topic_manager "$key")"
     local system_ok
 
     debug "-- is_installed got: $state ($key:$var) $manager"
@@ -84,11 +86,6 @@ is_installed () {
     if [ "$state" = "system" ]; then
         state="dotsys"
         system_ok="true"
-
-#    elif [ "$manager_state" ]; then
-#        state="$manager_state"
-#        val="" # managers do not track repo
-#        debug "   is_installed: MANAGER skip dotsys state & checking ${state}.state!"
     fi
 
     # test if in specified state file
@@ -97,34 +94,43 @@ is_installed () {
 
     debug "   is_installed in: $state = $installed"
 
-    # Check if installed by manager ( packages installed via package.yaml file )
-#    if [ "$state" = "dotsys" ] && ! [ "$installed" -eq 0 ]; then
-#        local manager="$(get_topic_manager "$key")"
-#        in_state "$manager" "$key" "$val"
-#        installed=$?
-#        debug "   - is_installed by manager: ${manager:-not managed} -> $installed"
-#    fi
-
     # Check if installed on system, not managed by dotsys
     if ! [ "$installed" -eq 0 ]; then
         local installed_test="$(get_topic_config_val "$key" "installed_test")"
-        # installed by other means
+
+        # installed on system
         if cmd_exists "${installed_test:-$key}"; then
 
+            # System installed is ok
             if [ "$system_ok" = "true" ]; then
                 installed=0
+
+            # manager warnings
             elif [ "$manager" ]; then
                 if [ "$action" = "uninstall" ]; then
-                    warn "$(printf "Although %b$key is installed%b, it was not installed by dotsys.
-                    $spacer You will have to %buninstall it by whatever means it was installed.%b" $green $rc $yellow $rc) "
+                    warn "Can not uninstall" "$key's" "package" "$(printf "%bit was not installed by dotsys." $red)" \
+                    "\n$spacer You will have to uninstall it by whatever means it was installed."
                     installed=1
                 elif ! [ "$force" ]; then
-                    warn "$(printf "Although %b$key%b is installed, it is %bnot managed by dotsys%b.
-                    $spacer Use %bdotsys install $key --force%b to allow dotsys to manage it." $green $rc $red $rc $yellow $rc)"
+                    warn "Although" "$key's" "package is installed," "$(printf "%bit was not installed by dotsys." $red)" \
+                    "$(printf "\n$spacer Use %bdotsys install $key --force%b to allow dotsys to manage it" $code $yellow)"
+                    installed=0
+                fi
+
+            # script warnings
+            elif [ "$script" ]; then
+                if [ "$action" = "uninstall" ]; then
+                    # not installed by dotsys so skip uninstall script
+                    installed=1
+                elif ! [ "$force" ]; then
+                    warn "It appears that" "$key" "$(printf "was already installed on this system" $red)" \
+                    "$(printf "\n$spacer Use %bdotsys install $key --force%b to run the dotsys install script" $code $yellow)"
                     installed=0
                 fi
             fi
             debug "   is_installed by other means -> $installed"
+
+        # not installed on system
         else
             installed=1
             debug "   not installed on system -> $installed"
@@ -254,7 +260,7 @@ freeze_state() {
     local file="$(state_file "$state")"
     if ! [ -s "$file" ]; then return;fi
 
-    task "Freezing" "$(printf "%b$state state%b:" $green $cyan)"
+    task "Freezing" "$(printf "%b$state state:" $thc)"
     while IFS='' read -r line || [[ -n "$line" ]]; do
         #echo " - $line"
         freeze_msg "${line%:*}" "${line#*:}"

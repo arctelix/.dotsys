@@ -3,8 +3,12 @@
 # Homebrew
 
 install () {
-  xcode-select --install
+  if ! xcode-select --install 2>&1 | grep installed 2>&1 ; then
+    xcode-select --install
+  fi
+
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
   return $?
 }
 
@@ -29,3 +33,4 @@ freeze () {
 }
 
 $@ # Required for function execution
+

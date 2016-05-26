@@ -152,7 +152,7 @@ manage_repo (){
 
             # ok to remove unused repo without confirm
             else
-               task "$(printf "Uninstall $repo_status unused repo %b$repo%b" $green $cyan)"
+               task "Uninstall $repo_status unused repo:" "$(printf "%b$repo" $thc)"
                confirmed="true"
             fi
 
@@ -162,7 +162,7 @@ manage_repo (){
 
             # Check for git and convert to install
             if ! [ -d "${local_repo}/.git" ];then
-                warn "$(printf "The local repo %b$repo$b is not initialized for git." $green $rc)"
+                warn "The local repo" "$(printf "%b$repo" $thc)" "is not initialized for git."
                 action="install"
             fi
         fi
@@ -173,7 +173,7 @@ manage_repo (){
     if [ "$complete" ]; then
         # Only show the complete message when we are installing a repo!
         if in_limits "repo" -r; then
-            task "$(printf "Already ${action%e}ed: %b$repo%b" $green $cyan)"
+            task "Already ${action%e}ed:" "$(printf "%b$repo" $thc)"
         fi
         return
     # CONFIRM
@@ -292,16 +292,14 @@ manage_repo (){
 
             # delete local repo (only if remote is pushed)
             if [ $? -eq 0 ]; then
-                get_user_input "Would you like to delete local repo $repo?" -d no -r
-                if [ $? -eq 0 ]; then
-                    rm -rf "$local_repo"
-                fi
+                get_user_input "Would you like to delete local repo $repo?" --true no --false yes --confvar "" -d no -r
+                if ! [ $? -eq 0 ]; then rm -rf "$local_repo"; fi
             fi
         fi
     fi
 
     # Success / fail message
-    success_or_fail $action_status "$action" "$(printf "$repo_status repo %b$local_repo%b" $green $rc)"
+    success_or_fail $action_status "$action" "$repo_status repo" "$(printf "%b$local_repo" $thc)"
     return $action_status
 }
 
@@ -427,26 +425,26 @@ manage_remote_repo (){
 
     # check action and status
     if [ "$status" = "diverged" ];then
-       error "$(printf "Remote repo has diverged from your local version,
-                $spacer you will have to resolve the conflicts manually.")"
+       error "Remote repo has diverged from your local version,
+                $spacer you will have to resolve the conflicts manually."
        ret_val=1
        task="diverged"
 
     elif [ "$status" = "up-to-date" ];then
-       success "$(printf "%bLocal repo is up to date with remote:%b $remote_repo" $green $rc)"
+       success "Local repo is" "$(printf "%bup to date" $thc )" "with remote:" "$remote_repo"
        # check for uncommitted changes (aborted by user)
        local status="$(git status --porcelain | indent_lines)"
        if [ -n "$status" ]; then
-          warn "$(printf "There are uncommitted local changes in your repo\n%b$status%b" $red $rc)"
+          warn "There are uncommitted local changes in your repo\n" "$(printf "%b$status" $red )"
        fi
        ret_val=0
        task="up-to-date"
 
     elif [ "$task" = "auto" ]; then
-       info "Auto determined git status: $status"
+       info "Auto determined git status:" "$(printf "%b$status" $thc )"
        task="$status"
     elif [ "$task" != "$status" ];then
-        warn "A $task was requested, but a $status is required, please resolve the conflict"
+        warn "A $task was requested, but a" "$(printf "%b$status" $thc )" "is required, please resolve the conflict"
     fi
 
 
@@ -565,12 +563,12 @@ init_remote_repo () {
 
     # Git hub will prompt for the user password
     local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
-    success_or_fail $? "create" "$(printf "%b$repo_status%b remote repo %b$remote_repo%b" $green $rc $green $rc)" \
+    success_or_fail $? "create" "$(printf "%b$repo_status" $thc)" "remote repo" "$(printf "%b$remote_repo" $thc )" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
 
     cd "$local_repo"
     git push -u origin "$branch" 2>&1 | indent_lines
-    success_or_fail $? "push" "$(printf "%b$repo_status%b repo %b$remote_repo @ $branch%b" $green $rc $green $rc)" \
+    success_or_fail $? "push" "$(printf "%b$repo_status" $thc)" "repo" "$(printf "%b$remote_repo@$branch" $thc)" \
                     "$(msg "$spacer However, The local repo is ready for topics...")"
     cd "$OWD"
 }
@@ -712,7 +710,7 @@ setup_git_config () {
             repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
             local cred="$(get_credential_helper)"
             git config "--$cfg" credential.helper "$cred"
-            success "$(printf "git %b$cfg credential%b set to: %b$cred%b" $green $rc $green $rc)"
+            success "git $cfg credential set to:" "$(printf "%b$cred" $thc)"
 
         # local config
         elif [ "$cfg" = "local" ]; then
@@ -728,15 +726,15 @@ setup_git_config () {
 
             set_state_value "user" "${state_prefix}_user_name" "$authorname"
             git config "--$cfg" user.name "$authorname"
-            success "$(printf "git %b$cfg author%b set to: %b$authorname%b" $green $rc $green $rc)"
+            success "git $cfg author set to:" "$(printf "%b$authorname" $thc )"
 
             set_state_value "user" "${state_prefix}_user_email" "$authoremail"
             git config "--$cfg" user.email "$authoremail"
-            success "$(printf "git %b$cfg email%b set to: %b$authoremail%b" $green $rc $green $rc)"
+            success "git $cfg email set to:" "$(printf "%b$authoremail" $thc )"
 
             # source users existing repo gitconfig.symlink or gitconfig.local.symlink
             git config "--$cfg" include.path "$repo_gitconfig"
-            success "$(printf "git %b$cfg include%b set to: %b$repo_gitconfig%b" $green $rc $green $rc)"
+            success "git $cfg include set to:" "$(printf "%b$repo_gitconfig" $thc)"
 
             # create stub file
             if [ "$cfg" = "global" ]; then
@@ -812,8 +810,8 @@ copy_topics_to_repo () {
 
     local question="$(printf "Would you like to %badd%b existing topics from %b%s%b
                     $spacer %b(You will be asked to confirm each topic before import)%b" \
-                    $green $rc \
-                    $green "$root_dir" $rc \
+                    $thc $rc \
+                    $thc "$root_dir" $rc \
                     $dark_gray $rc )"
 
     local hint="$(printf "\b, or %bpath/to/directory%b" $yellow $rc)"
@@ -873,16 +871,16 @@ copy_topics_to_repo () {
 
     # Importable found
     if [ "${found_dirs[*]}" ]; then
-        task "$(printf "Import topics found in %b$root_dir%b:" $green $rc)"
+        task "Import topics found in:" "$(printf "\n%b$root_dir:" $thc)"
         msg "$(echo "${found_dirs[@]}" | indent_list)"
     # noting to import
     else
-       info "$(printf "Importable topics not found in %b$root_dir%b:" $green $rc)"
+       info "Importable topics not found in:" "$(printf "\nb$root_dir:" $thc)"
        return
     fi
 
-    question="$(printf "The above possible topics were found. How would
-                $spacer you like the topics you select imported" $yellow $rc $yellow $rc $yellow $rc)"
+    question="The above possible topics were found. How would
+      $spacer you like the topics you select imported"
 
     get_user_input "${question}?" -t copy -f move -c
     if [ $? -eq 0 ]; then mode=copy; else mode=move; fi
@@ -892,7 +890,7 @@ copy_topics_to_repo () {
     # Confirm each file to move/copy
     local topic
     for topic in ${found_dirs[@]}; do
-        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:%b $root_dir \n$spacer %bto:%b $repo_dir" $green $rc $green $rc)"
+        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:" $thc ) $root_dir" "$(printf "%bto:" $thc ) $repo_dir"
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
             #local topic="${t##*/}"
@@ -904,7 +902,7 @@ copy_topics_to_repo () {
             fi
             printf "$rc"
 
-            success_or_fail $? "$mode" "$(printf "%b$topic%b -> %b$repo_dir%b" $green $rc $green $rc)"
+            success_or_fail $? "$mode" "$(printf "%b$topic%b -> %b$repo_dir%b" $thc $rc $thc $rc)"
 
         else
           clear_lines "" 2 # clear two lines of
@@ -918,11 +916,11 @@ confirm_make_primary_repo (){
     # if repo is same as state, bypass check
     if [ "$(state_primary_repo)" = "$repo" ]; then return ; fi
 
-    get_user_input "$(printf "Would you like to make this your primary repo:\n$spacer %b$(repo_dir "$repo")%b" $green $rc)" --required
+    get_user_input "$(printf "Would you like to make this your primary repo:\n$spacer %b$(repo_dir "$repo")%b" $thc $rc)" --required
     if [ $? -eq 0 ]; then
         state_primary_repo "$repo"
         set_user_vars "$repo"
-        success "$(printf "New primary repo: %b$repo%b" $green $rc)"
+        success "New primary repo:" "$(printf "%b$repo" $thc)"
     fi
 }
 
