@@ -194,9 +194,9 @@ topic_exists () {
   local ret=0
 
   # Verify user defined directories
-  if [ "$restrict" ] || [ -d "$(topic_dir $topic "user")" ]; then
+  if [ "$restrict" ] && [ -d "$(topic_dir $topic "user")" ]; then
     if ! [ "$recursive" ];then
-        fail "The topic" "$(printf "%b$topic" $thc)" ",was not found repo:
+        fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in repo:
         $spacer $(topic_dir $topic "user")"
     fi
     ret=1
