@@ -184,6 +184,9 @@ That's cool, what else does it do ?
 
 More details to come, stay tuned...
 
+![Dotsys install screen shot](https://github.com/arctelix/.dotsys/blob/master/screen%20shot%20install.png?raw=true "Dotsys install screen shot")
+
+
 WARNING!
 --------
 
