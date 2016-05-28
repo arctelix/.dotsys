@@ -224,14 +224,16 @@ indent_lines () {
 
   # Take input from pipe
   if ! [ "$input" ]; then
-
-      while IFS=$'\n' read -r line || [[ -n "$line" ]]; do
+      debug "$indent indent lines from pipe"
+      #sed "s/^/$indent/g"
+      while IFS= read -r line || [[ -n "$line" ]]; do
         # remove \r and replace with \r$indent
         echo "$indent $(echo "$line" | sed "s/$indent$(printf '\r')/$(printf '\r')$indent /g")"
       done
 
   # input from variable
   else
+      debug "$indent indent lines from input"
       while read -r line || [[ -n "$line" ]]; do
         if ! [ "$first" ];then
             first="true"
@@ -243,29 +245,52 @@ indent_lines () {
   fi
 }
 
+
+# this is a temp test function
 get_name () {
    #read() { builtin read "$@" 2>/dev/tty; }
    echo "this is a line of output 1"
    echo "this is a line of output 2"
    echo "this is a line of output 3"
    read -p "enter your name: " user_input
-   echo
    echo "$user_input is your name"
    #unset -f read
 }
 
-read_tty() {
-  debug "=========read monkey1"
-  read(){
-      debug "=========read"
-      if [[ $1 = -p ]]; then
-      set -- "$1" "$2"$'\n' "${@:3}"
+output_script() {
+#  read(){
+#      #debug "=========read"
+#      if [[ $1 = -p ]]; then
+#      set -- "$1" "$2"$'\n' "${@:3}"
+#      fi
+#      builtin read "$@"
+#  }
+#  export -f read
+#  debug "=========read_tty $@"
 
-      fi
-      builtin read "$@"
-  }
-  "$@"
-  unset -f read
+   #TODO: Tried everything imaginable to indent lines & get prompts for brew
+   #script -q /dev/null "$@" 2>&1 | indent_lines
+   #script -q /dev/null sh -i "$@" 2>&1 | indent_lines
+   #sh -i "$@" 2>&1 | indent_lines
+   #"$@" | indent_lines
+   debug "output_script $@"
+   script -q /dev/null "$@"
+   local status=$?
+   debug "   output_script status=$status"
+   return $status
+
+#  unset -f read
+#  debug "=========read_tty unset"
+  #"$@"
+}
+
+test_read_tty () {
+    #chmod +x "$(dotsys_dir)/lib/test.sh"
+    #"$(dotsys_dir)/lib/test.sh" get_name_test
+    # sed "s/^/printf
+    #read_tty script -q /dev/null ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
+    output_script "$(builtin_topic_dir)brew/topic.sh" install
+
 }
 
 indent_list () {

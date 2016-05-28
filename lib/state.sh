@@ -152,7 +152,7 @@ in_state () {
   if ! [ -f "$file" ]; then return 1;fi
   local key="$2"
   local val="$3"
-  local results
+  in_state_results=
   local not_key="$key"
   local not_val="$val"
   local not
@@ -171,13 +171,13 @@ in_state () {
     not="true"
   fi
 
-  results="$(grep "$(grep_kv)" "$file")"
+  in_state_results="$(grep "$(grep_kv)" "$file")"
   local status=$?
   debug "     in_state grep '$(grep_kv)' = $status"
-  debug "     in_state grep result:$(echo "$results" | indent_lines)"
+  debug "     in_state grep result:$(echo "$in_state_results" | indent_lines)"
 
   if [ "$not" ]; then
-      for r in $results; do
+      for r in $in_state_results; do
         if [ "$r" ] && ! [[ "$r" =~ ${not_key}:${not_val} ]]; then
             debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = 0"
             return 0
@@ -277,6 +277,8 @@ get_topic_list () {
     local topic
     local repo
 
+    debug "-- get_topic_list: from:$from_repo active_repo:$active_repo"
+
     if is_dotsys_repo "$active_repo"; then
         # no force permitted for dotsys repo
         force=
@@ -286,12 +288,15 @@ get_topic_list () {
 
     # only installed topics when not installing unless forced or from
     if [ "$action" != "install" ] && ! [ "$force" ]; then
-        while read line; do
+        while read -r line || [ "$line" ]; do
             topic=${line%:*}
             repo=${line#*:}
 
+            debug "   get_topic_list found ($topic:$repo)"
+
             # do not uninstall dotsys topics unless in limits
             if [ "$action" = "uninstall" ] && ! in_limits "dotsys" -r && is_dotsys_repo "$repo"; then continue
+
             # limit topics to from repo
             elif [ "$from_repo" ] && [ "$from_repo" != "$repo" ]; then continue;fi
 

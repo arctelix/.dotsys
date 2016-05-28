@@ -3,17 +3,19 @@
 # Homebrew
 
 install () {
-  if ! xcode-select --install 2>&1 | grep installed 2>&1 ; then
+  if ! xcode-select --install >/dev/null 2>&1 | grep installed >/dev/null 2>&1 ; then
     xcode-select --install
   fi
 
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-
   return $?
 }
 
 uninstall () {
-  ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
+  # make sure brew is empty
+  if ! [ "$(brew list)" ]; then
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
+  fi
   return $?
 }
 
@@ -32,5 +34,5 @@ freeze () {
   return $?
 }
 
-$@ # Required for function execution
+"$@" # Required for function execution
 

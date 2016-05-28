@@ -23,6 +23,7 @@ dotsys_dir () {
 # repo config -> topic config -> active repo,
 topic_dir () {
   local topic="${1:-$topic}"
+  local strict="$2" # use 'user' to only return result for user topic
   local repo=$(get_topic_config_val "$topic" "repo")
   local path
 
@@ -33,7 +34,7 @@ topic_dir () {
   path="$(repo_dir "$repo")/$topic"
 
   # catch dotsys repo or well get root not builtins
-  if is_dotsys_repo || ! [ -d "$path" ]; then
+  if is_dotsys_repo || [[ ! -d "$path" && "$strict" != "user" ]]; then
     path="$(builtin_topic_dir "$topic")"
   fi
 
@@ -44,7 +45,8 @@ topic_dir () {
          \rin $path"
     return 1
   fi
-  debug "  - topic_dir for $topic = $path"
+
+  debug "   - topic_dir: $topic = $path"
   return 0
 }
 
@@ -191,25 +193,28 @@ topic_exists () {
   local restrict="$2"
   local ret=0
 
-  # Verify built in or & user defined directories
-  if [ "$restrict" = "user" ] && ! [ -d "$(topic_dir $topic)" ]; then
+  # Verify user defined directories
+  if [ "$restrict" ] || [ -d "$(topic_dir $topic "user")" ]; then
     if ! [ "$recursive" ];then
         fail "The topic" "$(printf "%b$topic" $thc)" ",was not found repo:
-        $spacer $(topic_dir $topic)"
+        $spacer $(topic_dir $topic "user")"
     fi
     ret=1
 
   # Verify built in or & user defined directories
-  elif ! [ -d "$(builtin_topic_dir $topic)" ] && ! [ -d "$(topic_dir $topic)" ]; then
+  elif ! [ -d "$(topic_dir $topic)" ]; then
     if ! [ "$recursive" ];then
         fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in dotsys builtins or repo:
-        $spacer $(topic_dir $topic)"
+        $spacer $(topic_dir $topic "user")"
     fi
     ret=1
   fi
 
   if ! [ "$recursive" ] && [ $ret -eq 1 ];then
-    msg "$spacer Check the topic spelling and make sure it's in the repo."
+    #if ! [ "$recursive" ];then
+        #debug "  - topic_exists: ($topic) not found recursive bypass message"
+        msg "$spacer Check the topic spelling and make sure it's in the repo."
+    #fi
   fi
 
   return $ret

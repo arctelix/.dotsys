@@ -289,7 +289,6 @@ manage_repo (){
         # confirm delete if repo exists
         if [ -d "$local_repo" ] && has_remote_repo "$repo"; then
             manage_remote_repo "$repo" push
-
             # delete local repo (only if remote is pushed)
             if [ $? -eq 0 ]; then
                 get_user_input "Would you like to delete local repo $repo?" --true no --false yes --confvar "" -d no -r
@@ -533,9 +532,9 @@ git_commit () {
                 $spacer Would you like to commit the changes?" \
                 --invalid omit --default "$default" --true omit --hint "or enter a commit message\n$spacer" -r
         if ! [ $? -eq 0 ];then
-            printf "$spacer %bcommit aborted by user%b\n" $yellow $rc
-            return 0
+            msg "$spacer commit aborted by user"
             cd "$OWD"
+            return 1
         fi
     fi
 

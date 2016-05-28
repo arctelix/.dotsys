@@ -24,13 +24,15 @@ run_topic_script () {
 
   # undamaged topic scripts need to check if already installed (since there likely installing software)
   # managed topic install scripts are really post-install scripts (manager checks for prior install)
-  if ! is_managed; then
+  if ! is_managed && [ ! "$force" ]; then
       debug "   run_topic_script un-managed topic: checking install status"
       # check if already installed (not testing for repo!)
-      if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "dotsys" "$topic" --script ; then
+      if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$(get_active_repo)" --script ; then
+        debug "  aborted unmanned topic script"
         continue
       # check if already uninstalled (not testing for repo!)
-      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "dotsys" "$topic" --script; then
+      elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$(get_active_repo)" --script; then
+        debug "  aborted unmanned topic script"
         continue
       fi
       debug "   run_topic_script un-managed topic: ok to proceed with script"
@@ -173,7 +175,7 @@ run_script_func () {
   local i=0
   for script in $scripts; do
       script_src="${script_sources[$i]}"
-      debug "   run script_src: $script_src $script"
+      debug "   run_script_func_src: $script_src $script"
       if script_func_exists "$script" "$action"; then
 
           debug "   running $script $action ${params[@]}"
@@ -186,7 +188,7 @@ run_script_func () {
               return
           # run script action func
           elif ! dry_run; then
-            script -q /dev/null "$script" "$action" ${params[@]} 2>&1 | indent_lines
+            output_script "$script" "$action" ${params[@]}
             status=$?
           fi
 
@@ -234,7 +236,7 @@ get_topic_scripts () {
   local file_name="$2"
   local exists=
   local builtin_script="$(builtin_topic_dir $topic)/${file_name}"
-  local topic_script="$(topic_dir $topic)/${file_name}"
+  local topic_script="$(topic_dir $topic "user")/${file_name}"
   local scripts=("$builtin_script")
 
   # catch duplicate from topic script

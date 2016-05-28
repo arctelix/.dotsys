@@ -112,6 +112,9 @@ TOPIC_CONFIRMED=
 # persist state for symlink actions only
 SYMLINK_CONFIRMED=
 
+# Persist action confirmed for all packages
+PACKAGES_CONFIRMED=
+
 # Default dry run state is off
 # use 'dry_run 0' to toggle on
 # use 'if dry_run' to test for state
@@ -391,6 +394,7 @@ dotsys () {
         GLOBAL_CONFIRMED=""
         TOPIC_CONFIRMED=""
         SYMLINK_CONFIRMED=""
+        PACKAGES_CONFIRMED=""
         ACTIVE_REPO=
         ACTIVE_REPO_DIR=
         __repo=""
@@ -411,6 +415,7 @@ dotsys () {
 
         TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
         SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
+        PACKAGES_CONFIRMED="$GLOBAL_CONFIRMED"
     fi
 
     # DIRECT MANGER PACKAGE MANAGEMENT
@@ -675,7 +680,7 @@ dotsys () {
 
         # CONFIRM / ABORT DOTSYS UNINSTALL
 
-        if [ "$topic" == "dotsys" ] && [ "$action" = "uninstall" ]; then
+        if [ "$topic" = "core" ] && [ "$action" = "uninstall" ]; then
 
             # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
             if ! in_limits "dotsys" -r; then continue; fi
@@ -687,7 +692,7 @@ dotsys () {
         # CONFIRM TOPIC
         else
             debug "main -> call confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
-            confirm_task "$action" "" "${limits[*]} $topic"
+            confirm_task "$action" "" "${limits[*]:-\b} $topic"
             if ! [ $? -eq 0 ]; then continue; fi
             debug "main -> post confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
         fi

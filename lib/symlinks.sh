@@ -568,7 +568,7 @@ manage_topic_bin () {
     local src_bin
     local dst_bin
 
-    if [ "$topic" = "dotsys" ]; then
+    if [ "$topic" = "core" ]; then
         src="$(dotsys_dir)"
         dst_bin="${PLATFORM_USER_BIN}"
     else

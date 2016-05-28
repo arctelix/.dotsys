@@ -60,24 +60,26 @@ run_manager_task () {
   debug "-- run_manager_task: m:$manager a:$action t:$topics f:$force"
 
   # convert topic to manager (allows main to throw all topics this way)
-  if ! is_manager "$manager" || [ "$manager" = "$topic" ]; then
+  if ! is_manager "$manager"; then
     debug "   run_manager_task: got NON manager: $manager"
     manager="$(get_topic_manager "$manager")"
     debug "   run_manager_task: got NON manager found manager: $manager"
   fi
 
   # abort un-managed topics
-  if ! [ "$manager" ]; then
-    debug "   run_manager_task: aborting run_manager_task $topic not managed"
+
+  if ! [ "$manager" ] || [ "$manager" = "${topics[0]}" ]; then
+    debug "   run_manager_task: ABORT $topic not managed"
     return
   fi
 
   # make sure the topic manager is installed on system
-  if [ "$action" = "install" ] && ! is_installed "dotsys" "$manager"; then
+  if [ "$action" = "install" ] && ! is_installed "system" "$manager"; then
      info "${action}ing manager" "$(printf "%b$manager" $thc)" "for" "$(printf "%b${topics[*]}" $thc)"
      # install the manager
      dotsys "$action" "$manager" ${limits[@]} --recursive
      debug "run_manager_task -> END RECURSION continue : run_manager_task $manager $action t:$topic $force"
+     info "Manager ${action%e}ed, resuming" "$( printf "%b$action ${topics[*]}" $thc)"
   fi
 
   # abort update & freeze actions (nothing to do)
@@ -86,9 +88,6 @@ run_manager_task () {
     return
   fi
 
-  # Persist action confirmed for all packages
-  local PACKAGES_CONFIRMED
-
   # Install topics (packages)
   local topic
   for topic in ${topics[@]}; do
@@ -96,7 +95,7 @@ run_manager_task () {
      # check if already installed (not testing for repo!)
      if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic" --manager ; then
         # Only show the message if is actually installed on manager state
-        if is_installed "manager" "$topic"; then
+        if is_installed "$manager" "$topic"; then
             success "The package for" "$( printf "%b$topic" $thc)," "was already ${action}ed by dotsys"
         fi
         continue
@@ -111,7 +110,7 @@ run_manager_task () {
 
      # only confirm packages, actual topics will be confirmed by script_manager
      if [ "$packages" ]; then
-        confirm_task "$action" "${manager}'s package" "$topic" #better without --confvar "PACKAGES_CONFIRMED"
+        confirm_task "$action" "${manager}'s package" "$topic" --confvar "PACKAGES_CONFIRMED"
         if ! [ $? -eq 0 ]; then continue;fi
      fi
 
@@ -179,7 +178,6 @@ manage_dependencies () {
   for dep in $deps; do
     # filter duplicates from user topic and builtin topics
     if [[ "${done[@]}" == *"$dep"* ]];then
-        #FIXME: Topic config must be loaded twice somewhere, getting duplicates on dotsys deps
         debug "   manage_dependencies: ABORT $dep duplicate from  builtin/user topic"
         continue
     fi
@@ -197,7 +195,7 @@ manage_dependencies () {
           task_shown="true"
         fi
         # install
-        if ! is_installed "dotsys" "$dep";then
+        if ! is_installed "system" "$dep";then
           dotsys "install" "$dep" --recursive
           # Add dep to deps state
           if [ $? -eq 0 ]; then

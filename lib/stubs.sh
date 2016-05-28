@@ -92,9 +92,9 @@ manage_stubs () {
     fi
 
     # Add dotsys deps to topics when topic is dotsys
-    if [[ "${topics[@]}" =~ "dotsys" ]]; then
-        load_topic_config_vars "dotsys"
-        local deps="$(get_topic_config_val "dotsys" "deps")"
+    if [[ "${topics[@]}" =~ "core" ]]; then
+        load_topic_config_vars "core"
+        local deps="$(get_topic_config_val "core" "deps")"
         topics+=($deps)
     fi
 
