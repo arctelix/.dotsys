@@ -195,15 +195,31 @@ in_state () {
 get_state_value () {
   local file="$(state_file "$1")"
   local key="$2"
+  local match_val="$3"
   local status=0
 
-  local line="$(grep "^$key:.*$" "$file")"
+  local lines="$(grep "^$key:.*$" "$file")"
   status=$?
-  local val="${line#*:}"
+  local val="${lines#*:}"
+
+
+
+  debug "   - get_state_value found: $lines"
+
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     status=$val
   elif [ "$val" ]; then
-    echo "$val"
+      local line
+      for line in $lines; do
+          val="${line#*:}"
+          if [[ "$match_val" == "!"* ]]; then
+              if ! [[ "$val" =~ ${match_val#!} ]]; then echo "$val"; fi
+          elif [ "$match_val" ]; then
+              if [[ "$val" =~ ${match_val} ]]; then echo "$val"; fi
+          elif [ "$val" ]; then
+              echo "$val"
+          fi
+      done
   fi
   return $status
 }

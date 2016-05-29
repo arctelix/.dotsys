@@ -38,7 +38,8 @@
 
 
 #FUTURE FEATURES
-#TODO ROADMAP: When no primary repo, find existing repos and offer choices, including builtin repo..
+#TODO ROADMAP: When no primary repo, find existing repos and offer choices
+#TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
 #TODO ROADMAP: handle .settings files
 #TODO ROADMAP: FOR NEW Installs prompt for --force & --confirm options
 #TODO ROADMAP: Detect platforms like babun and linux distros that give generic uname.
@@ -356,8 +357,10 @@ dotsys () {
         -s | scripts)   limits+=("scripts") ;;
         -f | from)      from_repo="${2:-none}"; shift ;;
         -p | packages)  limits+=("packages") ;;
-        -a | app)       limits+=("packages") ;;
-        -c | cmd)       limits+=("packages") ;;
+        -a | app)       limits+=("packages")
+                        topics+=("app") ;;
+        -c | cmd)       limits+=("packages")
+                        topics+=("cmd") ;;
 
         # options
         --force)        force="$1" ;;
@@ -416,22 +419,6 @@ dotsys () {
         TOPIC_CONFIRMED="$GLOBAL_CONFIRMED"
         SYMLINK_CONFIRMED="$GLOBAL_CONFIRMED"
         PACKAGES_CONFIRMED="$GLOBAL_CONFIRMED"
-    fi
-
-    # DIRECT MANGER PACKAGE MANAGEMENT
-    # This allows dotsys to manage packages without a topic directory
-    # <manager> may be 'cmd' 'app' or specific manager name
-    # for example: 'dotsys install <manager> packages <packages>'   # specified packages
-    # for example: 'dotsys install <manager> packages file'         # all packages in package file
-    # for example: 'dotsys install <manager> packages'              # all installed packages
-    # TODO: Consider api format 'dotsys <manager> install <package>'
-    if in_limits "packages" -r && is_manager "${topics[0]}" && [ ${#topics[@]} -gt 1 ] ; then
-      local manager="$(get_default_manager "${topics[0]}")" # checks for app or cmd
-      local i=0 # just to make my syntax checker not fail (weird)
-      unset topics[$i]
-      debug "main -> ONLY $action $manager ${limits[@]} ${topics[@]} $force"
-      manage_packages "$action" "$manager" ${topics[@]} "$force"
-      return
     fi
 
     # HANDLE REPO LIMIT
@@ -517,6 +504,22 @@ dotsys () {
             debug "   new from_repo = $from_repo"
         fi
         load_config_vars "$from_repo" "$action"
+    fi
+
+    # HANDLE PACKAGE LIMIT (requires load_config_vars)
+
+    # This allows dotsys to manage packages without a topic directory
+    # <manager> may be 'cmd' 'app' or specific manager name
+    # for example: 'dotsys install <manager> packages <packages>'   # specified packages
+    # for example: 'dotsys install <manager> packages file'         # all packages in package file
+    # for example: 'dotsys install <manager> packages'              # all installed packages
+    # TODO: Consider api format 'dotsys <manager> install <package>'
+    if in_limits "packages" -r && is_manager "${topics[0]}" && [ ${#topics[@]} -gt 1 ] ; then
+      local manager="${topics[0]}"
+      topics=( "${topics[@]/${topics[0]}}" )
+      debug "main -> packages limit $action $manager ${limits[@]} ${topics[@]} $force"
+      manage_packages "$action" "$manager" packages ${topics[*]} "$force"
+      return
     fi
 
     # END REPO LIMIT if repo in limits dotsys has ended
@@ -650,24 +653,24 @@ dotsys () {
 
                # Check if topic is installed from active repo
                if is_installed "dotsys" "$topic" "$ACTIVE_REPO";then
-                    already_installed="true"
+                    already_installed="$ACTIVE_REPO"
 
                # Check if topic is installed from another repo (not dotsys)
                elif is_installed "dotsys" "$topic" "!dotsys/dotsys";then
-                    already_installed="true"
+                    already_installed="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
 
                     # Option to replace existing topic or
-                    get_user_input "$topic is installed from another repo,
-                                  \rdo you want to replace it with this version?"
+                    get_user_input "$topic is installed from $already_installed, do you want
+                            $spacer to replace it with the version from $ACTIVE_REPO?"
                     if [ $? -eq 0 ]; then
                         # No need to use manager
                         dotsys uninstall "$topic" links scripts
-                        already_installed="false"
+                        already_installed=""
                     fi
                fi
 
-               if [ "$already_installed" = "true" ]; then
-                    task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $ACTIVE_REPO"
+               if [ "$already_installed" ]; then
+                    task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $already_installed"
                     continue
                fi
 
@@ -711,16 +714,16 @@ dotsys () {
             run_manager_task "$topic" "$action" "$topic" "$force"
         fi
 
-        # 3) symlinks
-        if in_limits "links" "dotsys"; then
-            debug "main -> call symlink_topic: $action $topic confirmed? gc:$GLOBAL_CONFIRMED tc:$TOPIC_CONFIRMED"
-            symlink_topic "$action" "$topic"
-        fi
-
-        # 4) scripts
+        # 3) scripts
         if in_limits "scripts" "dotsys"; then
             debug "main -> call run_topic_script"
             run_topic_script "$action" "$topic"
+        fi
+
+        # 4) symlinks
+        if in_limits "links" "dotsys"; then
+            debug "main -> call symlink_topic: $action $topic confirmed? gc:$GLOBAL_CONFIRMED tc:$TOPIC_CONFIRMED"
+            symlink_topic "$action" "$topic"
         fi
 
         # 5) packages
@@ -733,6 +736,24 @@ dotsys () {
         if [ "$action" = "uninstall" ]; then
            UNINSTALLED_TOPICS+=(topic)
         fi
+
+        # record to state file
+        if [ "$action" = "install" ]; then
+
+            # add to state file if not there
+            state_install "dotsys" "$topic" "$(get_active_repo)"
+            INSTALLED+=($topic) # not used any more
+        # uninstalled
+        elif [ "$action" = "uninstall" ]; then
+          # remove topic form state file
+          state_uninstall "dotsys" "$topic" "$(get_active_repo)"
+          INSTALLED=( "${INSTALLED[@]/$topic}" ) # not used any more
+        fi
+
+
+
+
+
     done
 
     debug "main -> TOPIC LOOP END"

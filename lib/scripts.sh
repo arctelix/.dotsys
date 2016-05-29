@@ -26,14 +26,14 @@ run_topic_script () {
   # managed topic install scripts are really post-install scripts (manager checks for prior install)
   if ! is_managed && [ ! "$force" ]; then
       debug "   run_topic_script un-managed topic: checking install status"
+
       # check if already installed (not testing for repo!)
       if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$(get_active_repo)" --script ; then
         debug "  aborted unmanned topic script"
-        continue
+
       # check if already uninstalled (not testing for repo!)
       elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$(get_active_repo)" --script; then
         debug "  aborted unmanned topic script"
-        continue
       fi
       debug "   run_topic_script un-managed topic: ok to proceed with script"
   fi
@@ -53,21 +53,6 @@ run_topic_script () {
   if [ $status -eq 10 ]; then
      #success "$(printf "No $action script supplied $DRY_RUN for %b$topic%b" $green $rc)"
      pass
-  fi
-
-  # record success to state file (10 = not found, but not required)
-  if [ $status -le 10 ]; then # success
-      # installed
-      if [ "$action" = "install" ]; then
-            # add to state file if not there
-            state_install "dotsys" "$topic" "$(get_active_repo)"
-            INSTALLED+=($topic) # not used any more
-      # uninstalled
-      elif [ "$action" = "uninstall" ]; then
-          # remove topic form state file
-          state_uninstall "dotsys" "$topic" "$(get_active_repo)"
-          INSTALLED=( "${INSTALLED[@]/$topic}" ) # not used any more
-      fi
   fi
 
   return $status
@@ -236,7 +221,7 @@ get_topic_scripts () {
   local file_name="$2"
   local exists=
   local builtin_script="$(builtin_topic_dir $topic)/${file_name}"
-  local topic_script="$(topic_dir $topic "user")/${file_name}"
+  local topic_script="$(topic_dir $topic "active")/${file_name}"
   local scripts=("$builtin_script")
 
   # catch duplicate from topic script

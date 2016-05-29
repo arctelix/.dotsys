@@ -20,34 +20,51 @@ dotsys_dir () {
 }
 
 # Gets full path to topic based on
-# repo config -> topic config -> active repo,
+# topic config -> active repo,
+# restrict:
+# 'active' Restrict to active user repo (even when using dotsys/dotsys)
+# 'builtin' Restrict to builtin repo
+# 'primary' Restrict to primary user repo
 topic_dir () {
-  local topic="${1:-$topic}"
-  local strict="$2" # use 'user' to only return result for user topic
-  local repo=$(get_topic_config_val "$topic" "repo")
-  local path
+    local topic="${1:-$topic}"
+    local restrict="$2"
+    local return_non_exist="$3"
+    local path
 
-  if ! [ "$repo" ]; then
-      repo="$(get_active_repo)"
-  fi
+    # Check for topic alternate repo
+    local repo=$(get_topic_config_val "$topic" "repo")
 
-  path="$(repo_dir "$repo")/$topic"
+    if [ "$restrict" = "primary" ]; then
+        repo="${repo:-$(state_primary_repo)}"
+        path="$(repo_dir "$repo")/$topic"
 
-  # catch dotsys repo or well get root not builtins
-  if is_dotsys_repo || [[ ! -d "$path" && "$strict" != "user" ]]; then
-    path="$(builtin_topic_dir "$topic")"
-  fi
+    elif  [ "$restrict" = "active" ]; then
+        repo="${repo:-$(get_active_repo)}"
+        path="$(repo_dir "$repo")/$topic"
 
-  echo "$path"
+    # catch dotsys repo or well get .dotsys dir not builtins
+    elif  [ "$restrict" = "builtin" ] || is_dotsys_repo; then
+        path="$(builtin_topic_dir "$topic")"
 
-  if ! [ -d "$path" ]; then
-    debug "  - topic_dir: Directory for $topic could not be found
-         \rin $path"
-    return 1
-  fi
+    # Not restricted use active or builtin
+    else
+        repo="${repo:-$(get_active_repo)}"
+        path="$(repo_dir "$repo")/$topic"
+        if [ ! -d "$path" ]; then
+            path="$(builtin_topic_dir "$topic")"
+        fi
+    fi
 
-  debug "   - topic_dir: $topic = $path"
-  return 0
+    # Return non existing path when primary requested
+    if ! [ -d "$path" ] && ! [ "$restrict" = "primary" ]; then
+        debug "   - topic_dir ($restrict): $repo + $topic -> PATH NOT FOUND $path"
+        echo ""
+        return 1
+    else
+        debug "   - topic_dir ($restrict): $repo + $topic -> $path"
+        echo "$path"
+    fi
+    return 0
 }
 
 # converts supplied repo or active repo to full path
@@ -194,10 +211,10 @@ topic_exists () {
   local ret=0
 
   # Verify user defined directories
-  if [ "$restrict" ] && [ -d "$(topic_dir $topic "user")" ]; then
+  if [ "$restrict" ] && [ -d "$(topic_dir $topic "active")" ]; then
     if ! [ "$recursive" ];then
         fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in repo:
-        $spacer $(topic_dir $topic "user")"
+        $spacer $(topic_dir $topic "active")"
     fi
     ret=1
 
@@ -205,7 +222,7 @@ topic_exists () {
   elif ! [ -d "$(topic_dir $topic)" ]; then
     if ! [ "$recursive" ];then
         fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in dotsys builtins or repo:
-        $spacer $(topic_dir $topic "user")"
+        $spacer $(topic_dir $topic "active")"
     fi
     ret=1
   fi

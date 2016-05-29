@@ -4,7 +4,7 @@
 # SOURCED BY ALL BORNE SHELLS (ALWAYS)
 # -------------------------------------
 if [ "$shellrc" = "loaded" ]; then return; fi
-export shellrc="loaded"
+shellrc="loaded"
 
 # LOAD: .dotsysrc if it exists
 test -f "$HOME/.dotsysrc" && source "$HOME/.dotsysrc"
@@ -14,4 +14,5 @@ stub_target="{STUB_TARGET}"
 test -f "$stub_target" && source "$stub_target"
 
 # SOURCE TOPIC FILES: .shell
+echo "  - sourcing dotsys .shell files"
 {SOURCE_FILES}

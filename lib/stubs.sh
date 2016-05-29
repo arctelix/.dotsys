@@ -83,6 +83,7 @@ manage_stubs () {
     local force="$3"
     local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
     local topic
+    local deps
 
     if [ "$action" = "uninstall" ] || [ "$action" = "freeze" ]; then return;fi
 
@@ -91,10 +92,10 @@ manage_stubs () {
         return
     fi
 
-    # Add dotsys deps to topics when topic is dotsys
+    # Add dotsys deps to topics when topic is core
     if [[ "${topics[@]}" =~ "core" ]]; then
         load_topic_config_vars "core"
-        local deps="$(get_topic_config_val "core" "deps")"
+        deps="$(get_topic_config_val "core" "deps")"
         topics+=($deps)
     fi
 
@@ -107,8 +108,15 @@ manage_stubs () {
     fi
 
     for topic in $builtins; do
-        # abort if no user topic directory or if topic is not in current scope
-        if ! [ -d "$(topic_dir "$topic")" ] || ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
+        # check if topic is in current scope
+        #if ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
+        debug "   > STUBBING $topic"
+        # ABORT if not active repo topic and not core or shell
+        if ! [ -d "$(topic_dir "$topic" "primary")" ] && ! [[ "core shell" =~ "$topic" ]] ; then
+            debug "   X STUBBING $topic ABORTED (no user topic)"
+            continue
+        fi
+
         create_topic_stubs "$topic" "$action" "$force"
     done
 }
@@ -122,8 +130,9 @@ create_topic_stubs () {
 
     local stub_files="$(get_topic_stub_files "$topic")"
     if ! [ "$stub_files" ]; then return; fi
+
     while IFS=$'\n' read -r file; do
-        debug "STUBBING TOPIC: $topic file = $file"
+        debug "   stub $topic file -> $file"
         #confirm_task "create" "the stub file for" "${topic}'s $file"
         create_user_stub "$topic" "$file" "$force"
     done <<< "$stub_files"
@@ -132,7 +141,7 @@ create_topic_stubs () {
 get_topic_stub_files(){
     local topic="$1"
     #TODO: TEST stub files from repos (need to prevent duplicates in stub process)
-    local topic_dir="$(topic_dir "$topic")"
+    local topic_dir="$(topic_dir "$topic" "active")"
     local builtin_dir="$(builtin_topic_dir "$topic")"
     local dirs="$topic_dir $builtin_dir"
     local result="$(find $dirs -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*' | sort -u)"
@@ -143,7 +152,10 @@ get_topic_stub_files(){
 get_topic_stub_target(){
     local topic="$1"
     local stub_src="$2"
-    echo "$(repo_dir)/$topic/$(basename "${stub_src%.stub}.symlink")"
+    local repo="$(get_active_repo)"
+
+    # stub target should never be the builtin repo
+    echo "$(topic_dir "$topic" "primary")/$(basename "${stub_src%.stub}.symlink")"
 }
 
 # create custom stub file in user/repo/topic
@@ -177,10 +189,12 @@ create_user_stub () {
     local mode="create"
 
     # If stub exists were in update mode
-    if ! [ "$force" ]  && [ -f "$stub_dst" ]; then
-        # Abort if stub_dst is newer then source and has correct target (everything is correct)
-
-        if [ "$stub_dst" -nt "$stub_src" ] && grep -q "$stub_target" "$stub_dst" ; then return;fi
+    if ! [ "$force" ] && [ -f "$stub_dst" ]; then
+        # Abort if stub_dst is newer then source and check for correct target (everything is correct)
+        if [ "$stub_dst" -nt "$stub_src" ] && grep -q "$stub_target" "$stub_dst" ; then
+        debug "-- create_user_stub ABORTED (up to date): $stub_src"
+        return
+        fi
         mode="update"
     fi
 
@@ -225,7 +239,7 @@ create_user_stub () {
     local val
     local user_var
 
-    debug "   create_user_stub variables: $variables"
+    debug "   create_user_stub populate variables"
 
     for var in $variables; do
         # global key lower case and remove $topic_ or topic_
@@ -236,10 +250,6 @@ create_user_stub () {
         t_state_key="${topic}_${g_state_key}"
         # always use global key as text
         var_text="$(echo "$g_state_key" | tr '_' ' ')"
-
-
-
-        debug "   create_user_stub var($var) key($g_state_key) text($var_text)"
 
         # check system vars
         if [ "$var" = "DOTSYS_BIN" ]; then
@@ -282,7 +292,7 @@ create_user_stub () {
         #   if [ "$var" = "$val"  ]; then val="";fi
         # fi
 
-        debug "   create_user_stub pre user $var = $val "
+        debug "   - create_user_stub pre-user input var($var) key($g_state_key) text($var_text) = $val"
 
         # Get user input if no val found
         if ! [ "$val" ] && [ "$user_var" ]; then
