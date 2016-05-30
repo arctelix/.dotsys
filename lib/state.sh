@@ -302,7 +302,7 @@ get_topic_list () {
         repo_dir="$DOTSYS_REPOSITORY/builtins"
     fi
 
-    # only installed topics when not installing unless forced or from
+    # Not install: only installed topics unless forced
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read -r line || [ "$line" ]; do
             topic=${line%:*}
@@ -318,10 +318,23 @@ get_topic_list () {
 
             echo "$topic"
         done < "$(state_file "dotsys")"
-    # all defined topic directories
+
+    # Install only
     else
         if ! [ -d "$repo_dir" ];then return 1;fi
-        get_dir_list "$repo_dir"
+
+        # dotsys install limited to core & deps
+        if in_limits "dotsys" -r; then
+            load_topic_config_vars "core"
+            deps="$(get_topic_config_val "core" "deps")"
+            topics=( core $deps )
+
+        # all other installs take topic directory
+        else
+            get_dir_list "$repo_dir"
+        fi
+
+
     fi
 }
 

@@ -82,8 +82,6 @@ symlink_topic () {
 
   debug "   symlinks  : $symlinks"
 
-
-  local last_stub # tracks last stub found
   local linked=()
   local src
   local dst
@@ -112,24 +110,16 @@ symlink_topic () {
     fi
     linked+=("$dst_name")
 
-#    local src_no_ext="${src%.*}"
-#    # Check if stub was linked already
-#    if [ "$last_stub" = "$src_no_ext" ]; then
-#        debug "symlink_topic: already linked -> $src"
-#        continue
-#    fi
-#    # set last stub
-#    if [ "$src" = "$stub" ]; then
-#        last_stub="$src_no_ext"
-#        debug "symlink_topic: symlinking stub -> $src"
-#    fi
-
     debug "   symlink_topic dts : $dst"
 
     if [ "$action" = "link" ] ; then
       symlink "$src" "$dst"
 
     elif [ "$action" = "unlink" ]; then
+      # Do not allow stub files to be removed if dotsys requires it
+      if [[ "$src" =~ .stub ]] && ! in_limits "dotsys" -r && dotsys_in_use "$topic"; then
+        continue
+      fi
       unlink "$dst"
 
     elif [ "$action" = "upgrade" ]; then
@@ -140,7 +130,7 @@ symlink_topic () {
 
     elif [ "$action" = "freeze" ]; then
       if [ "$(drealpath "$dst")" == "$src" ]; then
-        freeze_msg "symlink" "$dst -> $src"
+        freeze_msg "symlink" "$dst \n$spacer -> $src"
       fi
     fi
 

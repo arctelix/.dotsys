@@ -36,7 +36,6 @@
 #TODO URGENT: Add to manager.state when packages added to manager via 'dotsys action cmd package'
 
 
-
 #FUTURE FEATURES
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
@@ -459,8 +458,10 @@ dotsys () {
     # HANDLE DOTSYS LIMIT
 
     if in_limits "dotsys" -r; then
+
         debug "main -> DOTSYS IN LIMITS"
         from_repo="dotsys/dotsys"
+
         if [ "$action" = "uninstall" ]; then
             # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
             if dotsys_in_use; then
@@ -469,18 +470,11 @@ dotsys () {
                 get_user_input "Would you like to uninstall everything, including dotsys, now?" --required
                 if ! [ $? -eq 0 ]; then exit; fi
             fi
-            # Clear topics so that all installed topics are removed
-            topics=()
-
-        # add dotsys to topics
-        else
-            topics=( core ${topics[*]} )
         fi
     fi
 
     verbose_mode
 
-    # Verbose, logo, user
     if ! [ "$recursive" ]; then
         set_user_vars
         print_logo
@@ -527,8 +521,8 @@ dotsys () {
         return
     fi
 
+    # TOPIC LIST
 
-    # get all topics if not specified
     if ! [ "$topics" ]; then
 
         if ! [ "$ACTIVE_REPO_DIR" ]; then
@@ -538,9 +532,12 @@ dotsys () {
             msg "$( printf "Run %bdotsys install%b to configure a repo%s" $code $yellow "\n")"
             return 1
         fi
-        debug "main -> get_topic_list $(get_active_repo) $force"
+
         # Use from repo to limit actions to toppic from a specific repo
+        debug "main -> get_topic_list $(get_active_repo) $force"
         local list="$(get_topic_list "$(get_active_repo)" "$force")"
+
+        # Handle no topics found
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
                 msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" $thc)"
@@ -554,12 +551,17 @@ dotsys () {
                 list="$(get_topic_list "$from_repo" "$force")"
             fi
         fi
+
         topics=( $list )
+
+        # Uninstall is more efficient with reversed order
         if [ "$action" = "uninstall" ]; then
             reverse_array topics
         fi
+
         debug "main -> topics list:\n\r${topics[*]}"
     fi
+
 
     # We stub here rather then during symlink process
     # to get all user info up front for auto install
@@ -661,11 +663,14 @@ dotsys () {
 
                     # Option to replace existing topic or
                     get_user_input "$topic is installed from $already_installed, do you want
-                            $spacer to replace it with the version from $ACTIVE_REPO?"
+                            $spacer to replace it with the version from $ACTIVE_REPO?" -r
                     if [ $? -eq 0 ]; then
-                        # No need to use manager
-                        dotsys uninstall "$topic" links scripts
+                        #TODO URGENT: ACTIVE_REPO should not be global, just pass from $(get_active_repo) to recursive calls
+                        prev_active_repo="$ACTIVE_REPO"
+                        dotsys uninstall "$topic" links scripts from "$already_installed"
+                        #limits=(${linits[*]:-links scripts})
                         already_installed=""
+                        load_config_vars "$prev_active_repo" "$action"
                     fi
                fi
 
@@ -808,8 +813,9 @@ uninstall_inactive () {
 }
 
 dotsys_in_use () {
-    # if anything is in dotsys state file it's in use
-    in_state "dotsys" "" "!dotsys/dotsys"
+    # no arguments will test if any topic is used by dotsys
+    # use topic as first arg to test if that is used by dotsys
+    in_state "dotsys" "$1" "!dotsys/dotsys"
     local r=$?
     debug "   - dotsys_in_use = $r"
     return $r

@@ -93,23 +93,24 @@ manage_stubs () {
     fi
 
     # Add dotsys deps to topics when topic is core
-    if [[ "${topics[@]}" =~ "core" ]]; then
-        load_topic_config_vars "core"
-        deps="$(get_topic_config_val "core" "deps")"
-        topics+=($deps)
-    fi
+    # done in main now
+#    if [[ "${topics[@]}" =~ "core" ]]; then
+#        load_topic_config_vars "core"
+#        deps="$(get_topic_config_val "core" "deps")"
+#        topics+=($deps)
+#    fi
 
     debug "-- manage_stubs: $action ${topics[@]} $force"
 
     # Confirming stubs seems unnecessary since we get permission during user config
-    if verbose_mode; then
+    if verbose_mode || in_limits "dotsys" -r; then
         #confirm_task "create" "stub files for" "\n$(echo "${topics[@]}" | indent_list)"
         task "Managing stub files"
     fi
 
     for topic in $builtins; do
         # check if topic is in current scope
-        #if ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
+        if ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
         debug "   > STUBBING $topic"
         # ABORT if not active repo topic and not core or shell
         if ! [ -d "$(topic_dir "$topic" "primary")" ] && ! [[ "core shell" =~ "$topic" ]] ; then
@@ -132,7 +133,7 @@ create_topic_stubs () {
     if ! [ "$stub_files" ]; then return; fi
 
     while IFS=$'\n' read -r file; do
-        debug "   stub $topic file -> $file"
+        debug "   found stub file for $topic -> $file"
         #confirm_task "create" "the stub file for" "${topic}'s $file"
         create_user_stub "$topic" "$file" "$force"
     done <<< "$stub_files"

@@ -80,7 +80,7 @@ dotsys_installer () {
     fi
 
     # This is the actual installer
-    dotsys "$action" dotsys curl git shell --confirm default
+    dotsys "$action" dotsys --confirm default
 
     msg "\nDotsys has been ${action%e}ed
          \rThanks for using dotsys!\n"

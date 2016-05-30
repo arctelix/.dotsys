@@ -22,9 +22,9 @@ dotsys_dir () {
 # Gets full path to topic based on
 # topic config -> active repo,
 # restrict:
-# 'active' Restrict to active user repo (even when using dotsys/dotsys)
+# 'active'  Restrict to active user repo (do not check builtins)
 # 'builtin' Restrict to builtin repo
-# 'primary' Restrict to primary user repo
+# 'primary' Restrict to primary repo if dotsys/dotsys is active
 topic_dir () {
     local topic="${1:-$topic}"
     local restrict="$2"
@@ -33,29 +33,32 @@ topic_dir () {
 
     # Check for topic alternate repo
     local repo=$(get_topic_config_val "$topic" "repo")
+    repo="${repo:-$(get_active_repo)}"
 
+
+    # use active or primary or none (never dotsys)
     if [ "$restrict" = "primary" ]; then
-        repo="${repo:-$(state_primary_repo)}"
-        path="$(repo_dir "$repo")/$topic"
+        if is_dotsys_repo; then
+            repo="$(state_primary_repo)"
+        fi
 
-    elif  [ "$restrict" = "active" ]; then
-        repo="${repo:-$(get_active_repo)}"
-        path="$(repo_dir "$repo")/$topic"
-
-    # catch dotsys repo or well get .dotsys dir not builtins
-    elif  [ "$restrict" = "builtin" ] || is_dotsys_repo; then
-        path="$(builtin_topic_dir "$topic")"
-
-    # Not restricted use active or builtin
-    else
-        repo="${repo:-$(get_active_repo)}"
+    # use active or builtin if not found
+    elif [ "$restrict" != "active" ]; then
         path="$(repo_dir "$repo")/$topic"
         if [ ! -d "$path" ]; then
             path="$(builtin_topic_dir "$topic")"
         fi
     fi
 
-    # Return non existing path when primary requested
+    # catch dotsys repo or well get .dotsys dir not builtins
+    if is_dotsys_repo || [ "$restrict" = "builtin" ]; then
+        path="$(builtin_topic_dir "$topic")"
+
+    elif ! [ "$path" ]; then
+        path="$(repo_dir "$repo")/$topic"
+    fi
+
+    # Return bad path when primary requested
     if ! [ -d "$path" ] && ! [ "$restrict" = "primary" ]; then
         debug "   - topic_dir ($restrict): $repo + $topic -> PATH NOT FOUND $path"
         echo ""
@@ -117,7 +120,7 @@ get_active_repo () {
 
 is_dotsys_repo () {
     local repo="${1:-$repo}"
-    [ "$repo" = "dotsys/dotsys" ]
+    [ "$repo" = "dotsys/dotsys" ] || [ "$repo" = "$(dotsys_dir)/builtins" ]
     return $?
 }
 
@@ -211,10 +214,10 @@ topic_exists () {
   local ret=0
 
   # Verify user defined directories
-  if [ "$restrict" ] && [ -d "$(topic_dir $topic "active")" ]; then
+  if [ "$restrict" ] && ! [ -d "$(topic_dir $topic "$restrict")" ]; then
     if ! [ "$recursive" ];then
         fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in repo:
-        $spacer $(topic_dir $topic "active")"
+        $spacer $(topic_dir $topic "$restrict")"
     fi
     ret=1
 
@@ -222,7 +225,7 @@ topic_exists () {
   elif ! [ -d "$(topic_dir $topic)" ]; then
     if ! [ "$recursive" ];then
         fail "The topic" "$(printf "%b$topic" $thc)" ",was not found in dotsys builtins or repo:
-        $spacer $(topic_dir $topic "active")"
+        $spacer $(topic_dir $topic "active") $ACTIVE_REPO"
     fi
     ret=1
   fi
