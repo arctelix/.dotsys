@@ -3,6 +3,8 @@
 # Platform specific functions
 # Author: arctelix
 
+PLATFORMS="linux windows mac freebsd openbsd ubuntu debian archlinux cygwin msys babun"
+
 get_platform () {
   if [ -n "$PLATFORM" ]; then
     printf "$PLATFORM"
@@ -155,9 +157,9 @@ generic_platform () {
 
 if_platform () {
   local platform="${1:-$PLATFORM}"
-  if [ "$(specific_platform)" = "$platform" ]; then
+  if [ "$(specific_platform "$platform")" = "$platform" ]; then
     return 0
-  elif [ "$(generic_platform)" = "$platform" ]; then
+  elif [ "$(generic_platform "$platform")" = "$platform" ]; then
     return 0
   fi
 

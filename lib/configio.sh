@@ -32,32 +32,46 @@ _cfg_yaml_last_node=""
 CFG_MODES="user topic default full"
 # Output topic config to yaml file
 create_config_yaml() {
-    local repo="$1"
-    local level="$2"
-    local cfg_mode="$3"
-    local parent="$4"
-    # "user"    : prints only user settings
-    # "topic"   : prints topic $ user settings
-    # "default" : prints all non blank keys (user, topic, default)
-    # "full"    : prints all keys
+
+    usage="create_config_yaml [<option>]"
+    usage_full="
+        -c | --cfg      Specify config mode
+                        user    : prints only user settings
+                        topic   : prints topic $ user settings
+                        default : prints all non blank keys (user, topic, default)
+                        full    : prints all keys
+    "
+
+    local repo="$1"; shift
+    local levels=()
+    local parent=
+
+    local cfg_mode="${3:-$cfg_mode}"
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -c | --cfg )      cfg_mode="$2";shift ;;
+        *)                levels+=("$1") ;;
+        esac
+        shift
+    done
 
     local repo_d="$(repo_dir "$repo")"
-
     NODES=("$repo_d"/*)
 
     # FIRST CALL ONLY (non recursive)
     if ! [ "$_cfg_yaml_last_node" ];then
 
-        debug "-- create_config_yaml r:$repo l:$level m:$cfg_mode"
+        debug "-- create_config_yaml r:$repo m:$cfg_mode levels:${levels[*]}"
 
         load_repo_config_vars "$(get_config_file_from_repo "$repo")"
 
         _cfg_yaml_last_node="${NODES[${#NODES[@]}-1]}"
 
-        cfg_mode="${3:-default}"
+        cfg_mode="${cfg_mode:-default}"
         if ! [[ "$CFG_MODES" =~ "$cfg_mode" ]];then
-           error "$(printf "Not a valid freeze mode '${mode}'.
-           $spacer try: user, topic, default, full")"
+           error "$(printf "Not a valid cfg mode '${cfg_mode}'.
+                    $spacer try: $CFG_MODES")"
            exit
         fi
 
@@ -65,38 +79,43 @@ create_config_yaml() {
         local yaml_file="${repo_d}/.dotsys-${cfg_mode}.cfg"
 
         # root level config
-        echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > $yaml_file
-        echo "date: $(date '+%d/%m/%Y %H:%M:%S')"
+        echo "$cfg_mode date:$(date '+%d/%m/%Y %H:%M:%S')" > $yaml_file
+        echo "$cfg_mode date:$(date '+%d/%m/%Y %H:%M:%S')"
 
-        cfg_list_to_file "" ""
-
+        cfg_list_to_file
     fi
 
     local i
-    for i in ${NODES[@]};do
+    for i in "${NODES[@]}";do
         local n="${i##*/}"
         local node="${n%.*}"
         local fnode="$(echo "$n" | tr . _ )"
 
+        debug "START NEW NODE: $n"
+
         # node is topic
         if [ -d "$i" ];then
             load_topic_config_vars "$node"
-            cfg_val_to_file "$level" "$parent$node" "" " "
-            cfg_list_to_file "$level" "$node"
-
+            cfg_val_to_file ${levels[@]} "$node"
+            cfg_list_to_file ${levels[@]} "$node"
             # go to next level
-            level+="  "
-            parent="$parent${node}_"
-            create_config_yaml "$i" "$level" "$cfg_mode" "$parent"
-            # go to previous level
-            parent="${parent%${node}_}"
-            level="${level%  }"
+            debug "NEX LEVEL IN -> ${levels[*]} $node"
+            create_config_yaml "$i" ${levels[*]} "$node" --cfg "$cfg_mode"
 
         # node is file
         elif [ -f "$i" ]; then
             # ignore files list
             if ! [[ "$node" =~ (install|uninstall|update|freeze|upgrade|dotsys|topic|manager) ]]; then
-                cfg_val_to_file "$level" "$parent$fnode" ""
+                cfg_val_to_file ${levels[*]} "$fnode"
+                # Get settings from inside settings file
+                if [ "$fnode" != "${fnode%_settings}" ];then
+                    local settings="$(grep '^[^#].*()' "$i")"
+                    local s
+                    for s in "$settings"; do
+                        s="${s% ()*}"
+                        cfg_val_to_file ${levels[*]} "$fnode" "$s"
+                    done
+                fi
             fi
         fi
 
@@ -112,29 +131,27 @@ create_config_yaml() {
 
 # each node including root should process this function
 cfg_list_to_file () {
-    local level="$1"
-    local base="$2"
+
     local plat
-    local req
 
     # All level general settings
-    cfg_all_levels "$level" "$base"
+    cfg_all_levels $@
 
     # Platform configs
     for plat in $PLATFORMS; do
-        if ! [ "$base" ]; then req=" ";fi
+
         # make platform entry
-        cfg_val_to_file "$level" "$base" "$plat" "$req"
+        cfg_val_to_file $@ "$plat"
 
         # root level only
-        if ! [ "$base" ]; then
-            cfg_val_to_file "$level" "$plat" "cmd_manager" "$req"
-            cfg_val_to_file "$level" "$plat" "app_manager" "$req"
-            cfg_all_levels "$level" "$plat"
+        if ! [ "$1"  ]; then
+            cfg_val_to_file "$plat" "cmd_manager"
+            cfg_val_to_file "$plat" "app_manager"
+            cfg_all_levels "$plat"
 
         # all other levels
         else
-            cfg_all_levels "$level  " "${base}_${plat}"
+            cfg_all_levels $@ "$plat"
         fi
     done
 }
@@ -142,41 +159,76 @@ cfg_list_to_file () {
 # std list of settings for all levels
 cfg_all_levels () {
     # All level general settings
-    cfg_val_to_file "$1" "$2" "repo"
-    cfg_val_to_file "$1" "$2" "manager"
-    cfg_val_to_file "$1" "$2" "deps"
-    cfg_val_to_file "$1" "$2" "symlinks"
+    cfg_val_to_file $@ "repo"
+    cfg_val_to_file $@ "manager"
+    cfg_val_to_file $@ "deps"
+    cfg_val_to_file $@ "symlinks"
 }
 
+last_value_root=
 # actually looks up value and directs to file
 cfg_val_to_file (){
-    local level="$1"
-    local base="$2"
-    local sub="$3"
-    local req="$4"
+
+    usage="cfg_to_file [<option>]"
+    usage_full="
+        -r | --required        Key is required, even without value                     
+    "
+
+    local req
+    local base=()
+    local cfg_mode="$cfg_mode"
+    
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -r | --required )    req=" ";;
+        *)  if [ "$1" ]; then base+=("$1"); fi;;
+        esac
+        shift
+    done
+
+    local len=$((${#base[@]} - 1))
+    local level=$(printf '%*s' $((len * 2)))
+
+    local sub=(${base[$len]})
+    base=(${base[@]:0:$len})
 
     local val=
-    local u_val=$(get_config_val "_$base" "$sub")
-    local t_val=$(get_config_val "$base" "$sub")
-    local d_val=$(get_config_val "__$base" "$sub")
+    local u_val=$(get_config_val "_" ${base[*]} "$sub")
+    local t_val=$(get_config_val ${base[*]} "$sub")
+    local d_val=$(get_config_val "__" ${base[*]} "$sub")
+
 
 
     # user config val
     if [ "$u_val" ]; then
         val="$u_val"
     # topic config val
-    elif [ "$t_val" ] && [ "$freeze_mode" != "user" ]; then
+    elif [ "$t_val" ] && [ "$cfg_mode" != "user" ]; then
         val="$t_val"
     # default val
-    elif [ "$d_val" ] && ! [[ "$freeze_mode" =~ (user|topic) ]]; then
+    elif [ "$d_val" ] && ! [[ "$cfg_mode" =~ (user|topic) ]]; then
         val="$d_val"
     fi
 
-    # increase level for sub
-    if [ "$base" ] && [ "$sub" ]; then level+="  ";fi
+    debug "$level${base[*]}|${sub[*]}=$val"
+    if [[ "${val:-$req}" && "$base" ]]; then
+        if [ "$req" ] || [[ "$last_value_root" != "${base[0]}" ]];then
+            if [ "${val}" ]; then
+                last_value_root="${base[0]}"
+            fi
+            local n_len=$((${#base[@]} - 1))
+            local n_sub=(${base[$n_len]})
+            local n_base
+            if [ $n_len -gt 0 ];then
+                n_base=(${base[@]:0:$n_len})
+            fi
+            debug " -> get parent |${n_base[*]}|$n_sub|"
+            cfg_val_to_file ${n_base[*]} ${n_sub[*]} -r
+        fi
+    fi
 
     # Mode detection
-    if ! [ "${val:-$req}" ] && ! [ "$freeze_mode" = "full" ] ; then return; fi
+    if ! [ "${val:-$req}" ] && ! [ "$cfg_mode" = "full" ] ; then return; fi
 
     # detect list outputs
     if [[ "$sub" =~ (symlinks|deps) ]]; then

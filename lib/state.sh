@@ -319,7 +319,7 @@ get_topic_list () {
             echo "$topic"
         done < "$(state_file "dotsys")"
 
-    # Install only
+    # Install only (use  repo directory)
     else
         if ! [ -d "$repo_dir" ];then return 1;fi
 
@@ -327,7 +327,7 @@ get_topic_list () {
         if in_limits "dotsys" -r; then
             load_topic_config_vars "core"
             deps="$(get_topic_config_val "core" "deps")"
-            topics=( core $deps )
+            echo "core $deps"
 
         # all other installs take topic directory
         else

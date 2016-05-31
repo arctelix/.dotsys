@@ -5,13 +5,15 @@ manage_repo (){
 
     local usage="manage_repo <action> <repo> [<branch> <options>]"
     local usage_full="Installs and uninstalls dotsys.
-    --force            Force the repo management
-    --silent | -s      Manage repo without confirmations or messages
+    --force           Force the repo management
+    --confirmed       Pre-confirm repo action
+    --cfg             Specify config file output mode
     "
     local action
     local repo
     local force
     local confirmed
+    local cfg_mode="${cfg_mode}"
 
     if [ "${TOPIC_CONFIRMED:-"$GLOBAL_CONFIRMED"}" ]; then
         confirmed="--confirmed"
@@ -21,6 +23,7 @@ manage_repo (){
         case "$1" in
         --force )       force="$1" ;;
         --confirmed )   confirmed="--confirmed" ;;
+        --cfg )         cfg_mode="$2"; shift ;;
         *)  uncaught_case "$1" "action" "repo";;
         esac
         shift
