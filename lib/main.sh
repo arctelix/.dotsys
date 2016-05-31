@@ -176,6 +176,7 @@ dotsys () {
     -l | links              Limit action to symlinks
     -m | managers           Limit action to package managers
     -s | scripts            Limit action to scripts
+    -t | stubs              Limit action to stubs
     -f | from <user/repo>   Apply action to topics from specified repo master branch
                             optional alternate branch: <user/repo:branch>
     -p | packages           Limit action to package manager's packages
@@ -354,6 +355,7 @@ dotsys () {
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
         -s | scripts)   limits+=("scripts") ;;
+        -t | stubs)     limits+=("stubs") ;;
         -f | from)      from_repo="${2:-none}"; shift ;;
         -p | packages)  limits+=("packages") ;;
         -a | app)       limits+=("packages")
@@ -565,7 +567,7 @@ dotsys () {
 
     # We stub here rather then during symlink process
     # to get all user info up front for auto install
-    if [ "$action" != "uninstall" ] || in_limits "stubs" "dotsys"; then
+    if [ "$action" != "uninstall" ] || in_limits "stubs" "links" "dotsys"; then
         manage_stubs "$action" "${topics[*]}" "$force"
     fi
 
@@ -665,9 +667,9 @@ dotsys () {
                     get_user_input "$topic is installed from $already_installed, do you want
                             $spacer to replace it with the version from $ACTIVE_REPO?" -r
                     if [ $? -eq 0 ]; then
-                        #TODO URGENT: ACTIVE_REPO should not be global, just pass from $(get_active_repo) to recursive calls
+                        #TODO URGENT: ACTIVE_REPO should not be global, just pass to recursive calls
                         prev_active_repo="$ACTIVE_REPO"
-                        dotsys uninstall "$topic" links scripts from "$already_installed"
+                        dotsys uninstall "$topic" links scripts stubs from "$already_installed"
                         #limits=(${linits[*]:-links scripts})
                         already_installed=""
                         load_config_vars "$prev_active_repo" "$action"

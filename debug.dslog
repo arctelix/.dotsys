@@ -88,4 +88,4 @@ ERROR: Directory for package_include could not be found
            [K         try: user, topic, default, fullERROR: Not a valid freeze mode 'cfg_mode'.
            [K         try: user topic default fullERROR: Too many params:
    levels=babun
-have been set and got value: user
+have been set and got value: userERROR: Invalid action: unisntall

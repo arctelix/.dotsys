@@ -92,21 +92,13 @@ manage_stubs () {
         return
     fi
 
-    # Add dotsys deps to topics when topic is core
-    # done in main now
-#    if [[ "${topics[@]}" =~ "core" ]]; then
-#        load_topic_config_vars "core"
-#        deps="$(get_topic_config_val "core" "deps")"
-#        topics+=($deps)
-#    fi
-
     debug "-- manage_stubs: $action ${topics[@]} $force"
 
     # Confirming stubs seems unnecessary since we get permission during user config
-    if verbose_mode || in_limits "dotsys" -r; then
+    #if verbose_mode || in_limits "dotsys" -r; then
         #confirm_task "create" "stub files for" "\n$(echo "${topics[@]}" | indent_list)"
-        task "Managing stub files"
-    fi
+    task "Managing stub files"
+    #fi
 
     for topic in $builtins; do
         # check if topic is in current scope
@@ -168,9 +160,8 @@ create_user_stub () {
 
     local topic="$1"
     local stub_src="$2"
-    local stub_name="$(basename "${stub_src%.*}")"
-    shift; shift
     local force="$3"
+    local stub_name="$(basename "${stub_src%.*}")"
 
     # Convert stub_name to stub_src if required
     # This allows: create_user_stub "git" "gitconfig"
@@ -325,10 +316,6 @@ create_user_stub () {
     mv -f "$stub_out" "$stub_dst"
     local status=$?
 
-#    if ! is_installed "dotsys" "$topic" --silent; then
-#        removed success_or_fail from here
-#    fi
-
     success_or_fail $status "$mode" "stub file for" "$(printf "%b$topic $stub_name:" $thc )" \
             "\n$spacer ->$stub_dst"
 
@@ -359,6 +346,8 @@ source_topic_files () {
     local order="path functions aliases"
 
     local files
+
+    debug "source_topic_files: $topic"
 
     for topic_dir in $installed_paths; do
         local sourced=()

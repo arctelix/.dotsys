@@ -275,7 +275,7 @@ manage_repo (){
 
     elif [ "$action" = "freeze" ]; then
         # list installed repos
-        create_config_yaml "$repo"
+        create_config_yaml "$repo" | indent_lines
         return
     elif [ "$action" = "uninstall" ]; then
         if repo_in_use "$repo" && ! [ "$force" ]; then
