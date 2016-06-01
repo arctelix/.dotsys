@@ -525,7 +525,11 @@ dotsys () {
 
     # TOPIC LIST
 
+    local pre_stub
     if ! [ "$topics" ]; then
+
+        # Set pre-stub when no topics and action is install
+        if [ "$action" = "install" ];then pre_stub="true";fi
 
         if ! [ "$ACTIVE_REPO_DIR" ]; then
             error "Could not resolve active repo directory
@@ -564,11 +568,10 @@ dotsys () {
         debug "main -> topics list:\n\r${topics[*]}"
     fi
 
-
-    # We stub here rather then during symlink process
-    # to get all user info up front for auto install
-    if [ "$action" != "uninstall" ] || in_limits "stubs" "links" "dotsys"; then
-        manage_stubs "$action" "${topics[*]}" "$force"
+    # We stub here for hands free install
+    if [ "$pre_stub" ] && in_limits "stubs" "links" "dotsys"; then
+        debug "main -> manage_stubs --data"
+        manage_stubs "$action" "${topics[*]}" --data "$force"
     fi
 
     # ITERATE TOPICS
@@ -727,13 +730,19 @@ dotsys () {
             run_topic_script "$action" "$topic"
         fi
 
-        # 4) symlinks
+        # 4)manage stubs (only when not pre-stubbed)
+        if ! [ "$pre_stub" ] && in_limits "stubs" "links" "dotsys"; then
+             debug "main -> manage_topic_stubs"
+             manage_topic_stubs "$action" "$topic" "$force"
+        fi
+
+        # 5) symlinks
         if in_limits "links" "dotsys"; then
             debug "main -> call symlink_topic: $action $topic confirmed? gc:$GLOBAL_CONFIRMED tc:$TOPIC_CONFIRMED"
             symlink_topic "$action" "$topic"
         fi
 
-        # 5) packages
+        # 6) packages
         if is_manager  && [ "$action" != "uninstall" ] && in_limits "packages"; then
             debug "main -> call manage_packages"
             manage_packages "$action" "$topic" file "$force"
@@ -757,13 +766,15 @@ dotsys () {
           INSTALLED=( "${INSTALLED[@]/$topic}" ) # not used any more
         fi
 
-
-
-
-
     done
 
     debug "main -> TOPIC LOOP END"
+
+    # Source all topic files after topic run on install
+    if [ "$pre_stub" ] && in_limits "stubs" "links" "dotsys"; then
+        debug "main -> manage_stubs --sources"
+        manage_stubs "$action" "${topics[*]}" --sources "$force"
+    fi
 
     # Finally check for repos, managers, & topics that still need to be uninstalled
     if [ "$action" = "uninstall" ]; then

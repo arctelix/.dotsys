@@ -73,17 +73,37 @@ add_existing_dotfiles () {
 }
 
 # Collects all required user data at start of process
+# Sources topic files
 # Creates stub file in .dotsys/user/stub directory
 # Stubs do not get symlinked untill topic is installed.
 # However, since stubs are symlinked to user directory
 # changes are instant and do not need to be relinked!
 manage_stubs () {
+    usage="manage_stubs [<option>]"
+    usage_full="
+        -f | --force        Force stub updates
+        -d | --data         Collect user data
+        -s | --source       Source topic files
+    "
+
     local action="$1"
     local topics=("$2")
-    local force="$3"
-    local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
+    shift; shift
+
+    #local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
     local topic
-    local deps
+    local force
+    local mode
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -f | --force )      force="$1" ;;
+        -d | --data )       mode="$1" ;;
+        -s | --sources )     mode="$1" ;;
+        *)  invalid_option ;;
+        esac
+        shift
+    done
 
     if [ "$action" = "uninstall" ] || [ "$action" = "freeze" ]; then return;fi
 
@@ -92,50 +112,91 @@ manage_stubs () {
         return
     fi
 
-    debug "-- manage_stubs: $action ${topics[@]} $force"
+    debug "-- manage_stubs: $action ${topics[@]} $mode $force"
 
-    # Confirming stubs seems unnecessary since we get permission during user config
-    #if verbose_mode || in_limits "dotsys" -r; then
-        #confirm_task "create" "stub files for" "\n$(echo "${topics[@]}" | indent_list)"
-    task "Managing stub files"
-    #fi
+    if [ "$mode" = "--data" ]; then
+        task "Populating user data"
+    elif [ "$mode" = "--sources" ]; then
+        task "Sourcing topic files"
+    else
+        task "Managing stub files"
+    fi
 
-    for topic in $builtins; do
-        # check if topic is in current scope
-        if ! [[ "${topics[@]}" =~ "$topic" ]]; then continue; fi
-        debug "   > STUBBING $topic"
-        # ABORT if not active repo topic and not core or shell
-        if ! [ -d "$(topic_dir "$topic" "primary")" ] && ! [[ "core shell" =~ "$topic" ]] ; then
-            debug "   X STUBBING $topic ABORTED (no user topic)"
-            continue
-        fi
-
-        create_topic_stubs "$topic" "$action" "$force"
+    for topic in ${topics[@]}; do
+        # Abort core & shell till end
+        if [[ "${topics[@]}" =~ (core|shell) ]]; then continue; fi
+        # Abort if no user topic
+        if ! [ -d "$(topic_dir "$topic" "primary")" ]; then continue; fi
+        manage_topic_stubs "$action" "$topic" "$mode" "$force"
     done
+
+    if [ "$action" = "uninstall" ] && ! in_limits "dotsys" -r; then
+        action="update"
+    fi
+
+    # Core Always gets updated
+    manage_topic_stubs "update" "core" "$mode"
+    # Shell always gets updated for sourcing topic .shell files
+    manage_topic_stubs "update" "shell" "$mode"
+
 }
 
 # Create all stubs for a topic
-create_topic_stubs () {
-    local topic="$1"
-    local action="$2"
-    local force="$3"
+manage_topic_stubs () {
+    usage="manage_topic_stubs [<option>]"
+    usage_full="
+        -f | --force        Force stub updates
+        -d | --data         Collect user data
+        -s | --source       Source topic files
+    "
+    local action="$1"
+    local topic="$2"
+
+    shift; shift
+
+    local mode
+    local force
     local file
+    local task
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -f | --force )      force="$1" ;;
+        -t | --task )       task="true" ;;
+        -d | --data )       mode="data" ;;
+        -s | --sources )     mode="sources" ;;
+        *)  invalid_option ;;
+        esac
+        shift
+    done
+
+    # Make sure user topic exits or topic is core or shell
+    if ! [ "$force" ] && ! [ -d "$(topic_dir "$topic" "primary")" ] && ! [[ "$topic" =~ (core|shell) ]]; then return; fi
 
     local stub_files="$(get_topic_stub_files "$topic")"
     if ! [ "$stub_files" ]; then return; fi
 
+    if [ "$task" ]; then
+        task "Stubbing $topic $mode"
+    fi
+
+    debug "-- manage_topic_stubs: $action $topic $mode $force"
+
     while IFS=$'\n' read -r file; do
         debug "   found stub file for $topic -> $file"
-        #confirm_task "create" "the stub file for" "${topic}'s $file"
-        create_user_stub "$topic" "$file" "$force"
+        if [ "$action" = "uninstall" ]; then
+            remove_user_stub "$topic" "$file" "$force"
+        elif [ "$action" != "freeze" ]; then
+            create_user_stub "$topic" "$file" "$mode" "$force"
+        fi
+
     done <<< "$stub_files"
 }
 
 get_topic_stub_files(){
     local topic="$1"
-    #TODO: TEST stub files from repos (need to prevent duplicates in stub process)
     local topic_dir="$(topic_dir "$topic" "active")"
-    local builtin_dir="$(builtin_topic_dir "$topic")"
+    local builtin_dir="$(topic_dir "$topic" "builtin")"
     local dirs="$topic_dir $builtin_dir"
     local result="$(find $dirs -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*' | sort -u)"
     echo "$result"
@@ -151,6 +212,16 @@ get_topic_stub_target(){
     echo "$(topic_dir "$topic" "primary")/$(basename "${stub_src%.stub}.symlink")"
 }
 
+remove_user_stub () {
+
+    local topic="$1"
+    local stub_src="$2"
+    local force="$3"
+    local stub_dst="$(dotsys_user_stub_file "$topic" "$stub_src")"
+    rm "$stub_dst"
+    success_or_fail "Removed sub file for" "$topic" ":\n$spacer ->$stub_dst"
+}
+
 # create custom stub file in user/repo/topic
 create_user_stub () {
 
@@ -160,8 +231,12 @@ create_user_stub () {
 
     local topic="$1"
     local stub_src="$2"
-    local force="$3"
+    local mode="$3"
+    local force="$4"
     local stub_name="$(basename "${stub_src%.*}")"
+    local file_state="update"
+    local variables
+    local val
 
     # Convert stub_name to stub_src if required
     # This allows: create_user_stub "git" "gitconfig"
@@ -178,21 +253,21 @@ create_user_stub () {
     local stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
     local stub_dst="$(dotsys_user_stub_file "$topic" "$stub_src")"
 
-    local mode="create"
-
     # If stub exists were in update mode
-    if ! [ "$force" ] && [ -f "$stub_dst" ]; then
+    if ! [ "$force" ] && [ -f "$stub_dst" ] && [ "$mode" = "data" ]; then
         # Abort if stub_dst is newer then source and check for correct target (everything is correct)
-        if [ "$stub_dst" -nt "$stub_src" ] && grep -q "$stub_target" "$stub_dst" ; then
-        debug "-- create_user_stub ABORTED (up to date): $stub_src"
-        return
+        if [ "$stub_dst" -nt "$stub_src" ] && grep -q "$stub_tar" "$stub_dst" ; then
+            debug "-- create_user_stub ABORTED (up to date): $stub_src"
+            return
         fi
-        mode="update"
+
+    elif ! [ -f "$stub_dst" ]; then
+        file_state="create"
     fi
 
     debug "-- create_user_stub stub_src : $stub_src"
     debug "   create_user_stub stub_dst : $stub_dst"
-    debug "   create_user_stub stub_target : $stub_target"
+    debug "   create_user_stub stub_tar : $stub_tar"
 
 
     # catch dotsys stubs (should not be required but keeping for now)
@@ -205,19 +280,34 @@ create_user_stub () {
 #    fi
 
     # create temp files
-    local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
     local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
+    local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
 
     # Create output file
     cp -f "$stub_src" "$stub_out"
 
     # set required stub target (for portability no -i option)
-    sed  -e "s|{STUB_TARGET}|$stub_target|g" "$stub_out" > "$stub_tmp"
-    mv -f "$stub_tmp" "$stub_out"
+#    sed  -e "s|{SOURCE_FILES}|$stub_target|g" "$stub_out" > "$stub_tmp"
+#    mv -f "$stub_tmp" "$stub_out"
 
-    #source_topic_files "$topic" "$stub_out"
+    # populate variables
+    if [ "$mode" ] || [ "$mode" = "data" ]; then
+        variables="$(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
+    fi
 
-    local variables="$(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_out")"
+    # populate source files
+    if ! [ "$mode" ] || [ "$mode" = "sources" ]; then
+        sed -e "s|{SOURCE_FILES}|${val}|g" "$stub_out" > "$stub_tmp"
+        if [ $? -eq 0 ]; then
+            mv -f "$stub_tmp" "$stub_out"
+            source_topic_files "$topic" "$stub_out"
+        fi
+    fi
+
+    if ! [ "$mode" ]; then
+        mode="sources and data"
+    fi
+
 
     # TODO (IF NEEDED): IF more topic specific variables become common implement topic/*.stub.vars scripts
     # implement topic/*.stub.vars script to provide custom values.
@@ -228,7 +318,6 @@ create_user_stub () {
     local var
     local var_text
     local g_state_key
-    local val
     local user_var
 
     debug "   create_user_stub populate variables"
@@ -243,8 +332,11 @@ create_user_stub () {
         # always use global key as text
         var_text="$(echo "$g_state_key" | tr '_' ' ')"
 
+        if [ "$var" = "STUB_TARGET" ]; then
+            val="$stub_tar"
+
         # check system vars
-        if [ "$var" = "DOTSYS_BIN" ]; then
+        elif [ "$var" = "DOTSYS_BIN" ]; then
             val="$(dotsys_user_bin)"
 
         elif [ "$var" = "USER_NAME" ]; then
@@ -252,10 +344,6 @@ create_user_stub () {
 
         elif [ "$var" = "CREDENTIAL_HELPER" ]; then
             val="$(get_credential_helper)"
-
-        elif [ "$var" = "SOURCE_FILES" ]; then
-            val=""
-            source_topic_files "$topic" "$stub_out"
 
         elif [ "$var" = "DOTFILES_DIR" ]; then
             val="$(dotfiles_dir)"
@@ -316,7 +404,7 @@ create_user_stub () {
     mv -f "$stub_out" "$stub_dst"
     local status=$?
 
-    success_or_fail $status "$mode" "stub file for" "$(printf "%b$topic $stub_name:" $thc )" \
+    success_or_fail $status "$file_state" "$mode for stub file" "$(printf "%b$topic $stub_name:" $thc )" \
             "\n$spacer ->$stub_dst"
 
 }
@@ -353,8 +441,6 @@ source_topic_files () {
         local sourced=()
         local o
 
-        #cd "$topic_dir"
-
         # source ordered files
         for o in $order; do
             file="$(find "$topic_dir" -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
@@ -373,9 +459,6 @@ source_topic_files () {
         done <<< "$topic_files"
     done
 
-    #echo $(echo "$files" | tr '\n' "\\n")
-
-    #cd "$OWD"
 }
 
 SYSTEM_SH_FILES="manager.sh topic.sh install.sh update.sh upgrade.sh freeze.sh uninstall.sh"
