@@ -528,9 +528,6 @@ dotsys () {
     local pre_stub
     if ! [ "$topics" ]; then
 
-        # Set pre-stub when no topics and action is install
-        if [ "$action" = "install" ];then pre_stub="true";fi
-
         if ! [ "$ACTIVE_REPO_DIR" ]; then
             error "Could not resolve active repo directory
                  \rrepository : $ACTIVE_REPO
@@ -569,8 +566,8 @@ dotsys () {
     fi
 
     # We stub here for hands free install
-    if [ "$pre_stub" ] && in_limits "stubs" "links" "dotsys"; then
-        debug "main -> manage_stubs --data"
+    if [ "$action" = "install" ] && in_limits "stubs" "dotsys"; then
+        debug "main -> collect_user_data"
         manage_stubs "$action" "${topics[*]}" --data "$force"
     fi
 
@@ -655,39 +652,59 @@ dotsys () {
         debug "main -> check is_installed for $topic $ACTIVE_REPO"
 
         if ! [ "$force" ]; then
-            local already_installed
+
+            local action_done_already
             if [ "$action" = "install" ] && is_installed "dotsys" "$topic"; then
 
                # Check if topic is installed from active repo
                if is_installed "dotsys" "$topic" "$ACTIVE_REPO";then
-                    already_installed="$ACTIVE_REPO"
+                    action_done_already="$ACTIVE_REPO"
 
                # Check if topic is installed from another repo (not dotsys)
                elif is_installed "dotsys" "$topic" "!dotsys/dotsys";then
-                    already_installed="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
+                    action_done_already="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
 
                     # Option to replace existing topic or
-                    get_user_input "$topic is installed from $already_installed, do you want
+                    get_user_input "$topic is installed from $action_done_already, do you want
                             $spacer to replace it with the version from $ACTIVE_REPO?" -r
                     if [ $? -eq 0 ]; then
                         #TODO URGENT: ACTIVE_REPO should not be global, just pass to recursive calls
                         prev_active_repo="$ACTIVE_REPO"
-                        dotsys uninstall "$topic" links scripts stubs from "$already_installed"
+                        dotsys uninstall "$topic" links scripts stubs from "$action_done_already"
                         #limits=(${linits[*]:-links scripts})
-                        already_installed=""
+                        pre_stub=""
                         load_config_vars "$prev_active_repo" "$action"
+                        action_done_already=""
                     fi
                fi
 
-               if [ "$already_installed" ]; then
-                    task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $already_installed"
-                    continue
-               fi
 
-            # ABORT: on uninstall if not installed (any repo) (override --force)
-            elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic"; then
-               task "Already ${action}ed" "$(printf "%b$topic" $thc )"
-               continue
+            elif [ "$action" = "uninstall" ]; then
+
+                # ABORT: on uninstall if not installed by active repo (override --force)
+                if ! is_installed "dotsys" "$topic" "$ACTIVE_REPO"; then
+                    action_done_already="$ACTIVE_REPO"
+                    continue
+
+                # Catch uninstall from alternate repo when topic exists in primary repo
+                elif ! [ "$limits" ] && [ "$ACTIVE_REPO" != "$(state_primary_repo)" ] && [ -d "$(topic_dir "$topic" "primary")" ];then
+
+                    # Option to reinstall from primary repo
+                    get_user_input "After $topic is uninstalled from $ACTIVE_REPO, Would you like to
+                            $spacer reinstall it from your primary repo $(state_primary_repo)?" -r
+                    if [ $? -eq 0 ]; then
+                        prev_active_repo="$ACTIVE_REPO"
+                        dotsys uninstall "$topic" links scripts stubs from "$ACTIVE_REPO"
+                        dotsys install "$topic" links scripts stubs from $(state_primary_repo)
+                        load_config_vars "$prev_active_repo" "$action"
+                        continue
+                    fi
+                fi
+            fi
+
+            if [ "$action_done_already" ]; then
+                task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $action_done_already"
+                continue
             fi
         fi
 
@@ -771,10 +788,10 @@ dotsys () {
     debug "main -> TOPIC LOOP END"
 
     # Source all topic files after topic run on install
-    if [ "$pre_stub" ] && in_limits "stubs" "links" "dotsys"; then
-        debug "main -> manage_stubs --sources"
-        manage_stubs "$action" "${topics[*]}" --sources "$force"
-    fi
+#    if [ "$action" = "install" ] && in_limits "stubs" "links" "dotsys"; then
+#        debug "main -> manage_stubs"
+#        manage_stubs "$action" "${topics[*]}" "$force"
+#    fi
 
     # Finally check for repos, managers, & topics that still need to be uninstalled
     if [ "$action" = "uninstall" ]; then

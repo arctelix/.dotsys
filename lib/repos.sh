@@ -155,7 +155,8 @@ manage_repo (){
 
             # ok to remove unused repo without confirm
             else
-               task "Uninstall $repo_status unused repo:" "$(printf "%b$repo" $thc)"
+               repo_status="unused"
+               task "Uninstall $repo_status repo:" "$(printf "%b$repo" $thc)"
                confirmed="true"
             fi
 

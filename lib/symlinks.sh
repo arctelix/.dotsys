@@ -300,7 +300,7 @@ symlink () {
   if [ "$action" != "skip" ]; then
     # Create native symlinks on Windows.
     export CYGWIN=winsymlinks:nativestrict
-    ln -s "$src" "$dst"
+    ln -fs "$src" "$dst"
     success_or_fail $? "link" "$type" "$(printf "%b$dst" $thc)" "\n$spacer -> $src"
   fi
 }
@@ -452,13 +452,17 @@ unlink(){
 
   action=${action:-$SYMLINK_CONFIRMED}
 
-  # Remove the file (if not skip)
+
   if [ "$action" != "skip" ]; then
+
+    # Remove the symlink
     rm -rf "$link_file"
     success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" $thc )"
+
+    # Remove the stub file
     if [ "$link_stub" ]; then
         rm -rf "$link_stub"
-        success_or_none $? "remove" "stub $type for" "$(printf "%b$topic's $link_name" $thc )"
+        success_or_none $? "remove" "stub file for" "$(printf "%b$topic's $link_name" $thc )"
     fi
   fi
 

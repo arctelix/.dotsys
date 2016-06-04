@@ -219,8 +219,15 @@ func_or_func_msg () {
 # adds indent to all but first line
 indent_lines () {
   local first
-  local input="$1"
   local line
+
+  if [ "$1" == "--prefix" ]; then
+    local prefix="$2"
+    shift
+    shift
+  fi
+
+  local input="$1"
 
   # Take input from pipe
   if ! [ "$input" ]; then
@@ -228,7 +235,7 @@ indent_lines () {
       #sed "s/^/$indent/g"
       while IFS= read -r line || [[ -n "$line" ]]; do
         # remove \r and replace with \r$indent
-        echo "$indent $(echo "$line" | sed "s/$indent$(printf '\r')/$(printf '\r')$indent /g")"
+        echo "$indent $prefix$(echo "$line" | sed "s/$indent$(printf '\r')/$(printf '\r')$indent /g")"
       done
 
   # input from variable
@@ -239,7 +246,7 @@ indent_lines () {
             first="true"
             printf "%b\n" "$line"
         else
-            printf "$indent %b\n" "$line"
+            printf "$indent $prefix%b\n" "$line"
         fi
       done <<< $input
   fi

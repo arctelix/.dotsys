@@ -19,12 +19,12 @@ dotsys_dir () {
 
 }
 
-# Gets full path to topic based on
-# topic config -> active repo,
+# Gets full path to topic based on topic config repo or active repo
 # restrict:
 # 'active'  Restrict to active user repo (do not check builtins)
 # 'builtin' Restrict to builtin repo
-# 'primary' Restrict to primary repo if dotsys/dotsys is active
+# 'primary' Restrict to primary repo
+# 'user'    Restrict to any user repo topic config repo or active repo or primary repo
 topic_dir () {
     local topic="${1:-$topic}"
     local restrict="$2"
@@ -35,14 +35,17 @@ topic_dir () {
     local repo=$(get_topic_config_val "$topic" "repo")
     repo="${repo:-$(get_active_repo)}"
 
-
-    # use active or primary or none (never dotsys)
-    if [ "$restrict" = "primary" ]; then
+    # use active or primary when dotsys is active
+    if [ "$restrict" = "user" ]; then
         if is_dotsys_repo; then
-            repo="$(state_primary_repo)"
+           repo="$(state_primary_repo)"
         fi
 
-    # use active or builtin if not found
+    # Always use primary repo
+    elif [ "$restrict" = "primary" ]; then
+        repo="$(state_primary_repo)"
+
+    # use active or builtin if active does not exist
     elif [ "$restrict" != "active" ]; then
         path="$(repo_dir "$repo")/$topic"
         if [ ! -d "$path" ]; then
@@ -58,8 +61,8 @@ topic_dir () {
         path="$(repo_dir "$repo")/$topic"
     fi
 
-    # Return bad path when primary requested
-    if ! [ -d "$path" ] && ! [ "$restrict" = "primary" ]; then
+    # Return bad path when user requested and does not exist
+    if ! [ -d "$path" ] && ! [ "$restrict" = "user" ]; then
         debug "   - topic_dir ($restrict): $repo + $topic -> PATH NOT FOUND $path"
         echo ""
         return 1
@@ -299,6 +302,8 @@ path_type () {
     type="$type directory"
   elif [ -f "$1" ];then
     type="$type file"
+  elif [ -L "$1" ];then
+    type="unused symlink"
   fi
 
   echo "$type"
