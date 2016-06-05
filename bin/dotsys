@@ -62,7 +62,8 @@ if [ "$1" = "ds_test" ]; then
   echo
   warn "You have entered dotsys test mode!"
   echo
-  eval "$1"
+  #eval "$1"
+  "$@"
 
 # allows access to all common.sh funcs
 # (not sure yet if this will be needed)

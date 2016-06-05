@@ -226,15 +226,20 @@ create_user_stub () {
     local stub_tar="$(get_topic_stub_target "$topic" "$stub_src")"
     local stub_dst="$(dotsys_user_stub_file "$topic" "$stub_src")"
     local has_source_files="$(grep '{SOURCE_FILES}' "$stub_src")"
+    local target_ok
+
+    if [ -f "$stub_dst" ]; then
+        target_ok="$(grep "$stub_tar" "$stub_dst")"
 
     # Create mode
-    if ! [ -f "$stub_dst" ]; then
+    elif ! [ -f "$stub_dst" ]; then
         file_action="create"
+    fi
 
-    # Update mode
-    elif ! [ "$force" ] && ! [ "$has_source_files" ]; then
-        # Abort if stub_dst is newer then source and correct target
-        if [ "$stub_dst" -nt "$stub_src" ] && grep -q "$stub_tar" "$stub_dst" ; then
+    # Abort update if up to date & not force & does not have source files
+    if [ "$file_action" = "update" ] && ! [ "$force" ] && ! [ "$has_source_files" ]; then
+        # Abort if stub_dst is newer then source and has correct target
+        if [ "$stub_dst" -nt "$stub_src" ] && [ "$target_ok" ]; then
             debug "-- create_user_stub ABORTED (up to date): $stub_src"
             return
         fi
@@ -249,21 +254,24 @@ create_user_stub () {
     local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
     cp -f "$stub_src" "$stub_out"
 
+
     # update target
     debug "   create_user_stub update target"
     grep -q '{STUB_TARGET}' "$stub_out"
     if [ $? -eq 0 ]; then
         sed -e "s|{STUB_TARGET}|$stub_tar|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
-        output="
-        $spacer Stub Target : $stub_tar"
+        if ! [ "$target_ok" ];then
+            output="
+            $spacer Stub Target :$stub_tar)"
+        fi
     fi
 
-    # record sourced files
+    # remove source files var
     if [ "$has_source_files" ]; then
         sed -e "s|{SOURCE_FILES}|${val}|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
-        local sources="$(source_topic_files "$topic" "$stub_out" "true" | indent_lines --prefix "sourced : ")"
+        sources="$(source_topic_files "$topic" "$stub_out" "true" | indent_lines --prefix "sourced : ")"
         if [ "$sources" ];then
             output="$output\n$sources"
         fi

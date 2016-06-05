@@ -252,6 +252,15 @@ indent_lines () {
   fi
 }
 
+abs_to_rel_path () {
+    debug "$@"
+    local paths="$1"
+    local file="$(basename "$path")"
+    local topic="$(basename "${path%/*}")"
+    local repo="$(basename "${path%/*/*}")"
+    local user="$(basename "${path%/*/*/*}")"
+    echo "$user/$repo/$topic/$file"
+}
 
 # this is a temp test function
 get_name () {

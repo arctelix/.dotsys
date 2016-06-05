@@ -787,11 +787,11 @@ dotsys () {
 
     debug "main -> TOPIC LOOP END"
 
-    # Source all topic files after topic run on install
-#    if [ "$action" = "install" ] && in_limits "stubs" "links" "dotsys"; then
-#        debug "main -> manage_stubs"
-#        manage_stubs "$action" "${topics[*]}" "$force"
-#    fi
+    # Update dotsys sources
+    if [ "$action" = "install" ] && in_limits "stubs" "links"; then
+        debug "main -> update sources for core & shell after install"
+        manage_stubs "$action" "core shell" "$force"
+    fi
 
     # Finally check for repos, managers, & topics that still need to be uninstalled
     if [ "$action" = "uninstall" ]; then
