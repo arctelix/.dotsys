@@ -18,7 +18,7 @@ add_existing_dotfiles () {
 
         # iterate topic sub files
         local topic_dir="$(repo_dir "$repo")/$topic"
-        local stub_files="$(get_topic_stub_files "$topic")"
+        local stub_files="$(get_topic_stub_sources "$topic")"
         local stub_dst
         local stub_target
         local stub_src
@@ -82,7 +82,8 @@ manage_stubs () {
     usage="manage_stubs [<option>]"
     usage_full="
         -f | --force        Force stub updates
-        -d | --data         Collect user data
+        -d | --data         Collect user data only
+        -t | --task         Show task messages
     "
 
     local action="$1"
@@ -98,6 +99,7 @@ manage_stubs () {
         case "$1" in
         -f | --force )      force="$1" ;;
         -d | --data )       mode="$1" ;;
+        -t | --task )       mode="$1" ;;
         *)  invalid_option ;;
         esac
         shift
@@ -114,26 +116,20 @@ manage_stubs () {
 
     if [ "$mode" = "--data" ]; then
         task "Collecting user data"
-    else
-        task "Sourcing topic files"
+    elif [ "$mode" = "--task" ];then
+        task "Managing stub files"
     fi
 
     for topic in ${topics[@]}; do
-        # Abort core & shell till end
-        #if [[ "${topics[*]}" =~ (core|shell) ]]; then continue; fi
-        # Abort if not core or shell and no user topic
+        # Abort if no user topic unless topic is core or shell
         if ! [[ "${topics[*]}" =~ (core|shell) ]] && ! [ -d "$(topic_dir "$topic" "user")" ]; then continue; fi
         manage_topic_stubs "$action" "$topic" "$mode" "$force"
     done
 
-    if [ "$action" = "uninstall" ] && ! in_limits "dotsys" -r; then
-        action="update"
-    fi
-
-#    # Core Always gets updated
-#    manage_topic_stubs "$action" "core" "$mode"
-#    # Shell always gets updated for sourcing topic .shell files
-#    manage_topic_stubs "$action" "shell" "$mode"
+    # Core Always gets updated
+    manage_topic_stubs "$action" "core" "$mode"
+    # Shell always gets updated for sourcing topic .shell files
+    manage_topic_stubs "$action" "shell" "$mode"
 
 }
 
@@ -142,7 +138,8 @@ manage_topic_stubs () {
     usage="manage_topic_stubs [<option>]"
     usage_full="
         -f | --force        Force stub updates
-        -d | --data         Collect user data
+        -d | --data         Collect user data only
+        -t | --task         Show task messages
     "
     local action="$1"
     local topic="$2"
@@ -152,44 +149,38 @@ manage_topic_stubs () {
     local force
     local mode
     local stub_file
-    local task
 
     while [[ $# > 0 ]]; do
         case "$1" in
         -f | --force )      force="$1" ;;
-        -t | --task )       task="true" ;;
+        -t | --task )       mode="task" ;;
         -d | --data )       mode="data" ;;
         *)  invalid_option ;;
         esac
         shift
     done
 
-    # Nothing to do on freeze or uninstall
-    if [ "$action" = "freeze" ] || [ "$action" = "uninstall" ]; then
-         return
-    fi
-
-    # Make sure user topic exits unless topic is core or shell
-    if ! [[ "$topic" =~ (core|shell) ]] && ! [ -d "$(topic_dir "$topic" "user")" ]; then return; fi
+    # check if user accepted subs
+    if ! get_state_value "user" "use_stub_files"; then return; fi
 
     # Check for topic stub files
-    local stub_files="$(get_topic_stub_files "$topic")"
-    if ! [ "$stub_files" ]; then return; fi
+    local stub_files="$(get_topic_stub_sources "$topic")"
+    if [ "$stub_files" ] && [ "$action" = "install" ];then
+        debug "-- manage_topic_stubs: $action $topic $mode $force"
 
-    debug "-- manage_topic_stubs: $action $topic $mode $force"
-
-    if [ "$task" ]; then
-        task "Stubbing $topic $mode"
-    fi
-
-    while IFS=$'\n' read -r stub_file; do
-        debug "   found stub file for $topic -> $stub_file"
-        if [ "$mode" = "data" ]; then
-            collect_user_data "$stub_file" "" "$force"
-        else
-            create_user_stub "$topic" "$stub_file" "$force"
+        if [ "$mode" = "task" ]; then
+            task "Stubbing $topic $mode"
         fi
-    done <<< "$stub_files"
+
+        while IFS=$'\n' read -r stub_file; do
+            debug "   found stub file for $topic -> $stub_file"
+            if [ "$mode" = "data" ]; then
+                collect_user_data "$stub_file" "" "$force"
+            elif [ "$action" = install ];then
+                create_user_stub "$topic" "$stub_file" "$mode" "$force"
+            fi
+        done <<< "$stub_files"
+    fi
 }
 
 
@@ -207,14 +198,11 @@ create_user_stub () {
 
     local stub_name="$(basename "${stub_src%.*}")"
     local file_action="update"
-    local has_source_files
-    local variables
-    local val
 
     # Convert stub_name to stub_src if required
     # This allows: create_user_stub "git" "gitconfig"
     if [ "$stub_src" = "$stub_name" ] ; then
-        stub_src="$(builtin_topic_dir "$topic")/${stub_name}.stub"
+        stub_src="$(get_topic_or_builtin_file "$topic" "${stub_name}.stub")"
     fi
 
     # abort if there is no stub for topic
@@ -224,38 +212,34 @@ create_user_stub () {
     fi
 
     local stub_tar="$(get_topic_stub_target "$topic" "$stub_src")"
-    local stub_dst="$(dotsys_user_stub_file "$topic" "$stub_src")"
-    local has_source_files="$(grep '{SOURCE_FILES}' "$stub_src")"
+    local stub_dst="$(get_user_stub_file "$topic" "$stub_src")"
     local target_ok
-
-    if [ -f "$stub_dst" ]; then
-        target_ok="$(grep "$stub_tar" "$stub_dst")"
-
-    # Create mode
-    elif ! [ -f "$stub_dst" ]; then
-        file_action="create"
-    fi
-
-    # Abort update if up to date & not force & does not have source files
-    if [ "$file_action" = "update" ] && ! [ "$force" ] && ! [ "$has_source_files" ]; then
-        # Abort if stub_dst is newer then source and has correct target
-        if [ "$stub_dst" -nt "$stub_src" ] && [ "$target_ok" ]; then
-            debug "-- create_user_stub ABORTED (up to date): $stub_src"
-            return
-        fi
-    fi
 
     debug "-- create_user_stub stub_src : $stub_src"
     debug "   create_user_stub stub_dst : $stub_dst"
     debug "   create_user_stub stub_tar : $stub_tar"
 
+    # Create mode (no user stub or stub src is newer)
+    if ! [ -f "$stub_dst" ]; then
+        file_action="create"
+
+    # Update mode (collect modified sources & modified target)
+    else
+        local target_ok="$(grep "$stub_tar" "$stub_dst")"
+        # Abort if stub_dst is newer then source and has correct target
+        if ! [ "$force" ] && [ "$stub_src" -nt "$stub_dst" ] && [ "$target_ok" ]; then
+            debug "-- create_user_stub ABORTED (up to date): $stub_src"
+            return
+        fi
+    fi
+
     # Create output file
-    local stub_tmp="$(builtin_topic_dir "$topic")/${stub_name}.stub.tmp"
-    local stub_out="$(builtin_topic_dir "$topic")/${stub_name}.stub.out"
+    local stub_tmp="${stub_src}.tmp"
+    local stub_out="${stub_src}.out"
     cp -f "$stub_src" "$stub_out"
 
 
-    # update target
+    # STUB_TARGET
     debug "   create_user_stub update target"
     grep -q '{STUB_TARGET}' "$stub_out"
     if [ $? -eq 0 ]; then
@@ -263,27 +247,26 @@ create_user_stub () {
         mv -f "$stub_tmp" "$stub_out"
         if ! [ "$target_ok" ];then
             output="
-            $spacer Stub Target :$stub_tar)"
+            $spacer Stub Target :$stub_tar"
         fi
     fi
 
-    # remove source files var
-    if [ "$has_source_files" ]; then
-        sed -e "s|{SOURCE_FILES}|${val}|g" "$stub_out" > "$stub_tmp"
-        mv -f "$stub_tmp" "$stub_out"
-        sources="$(source_topic_files "$topic" "$stub_out" "true" | indent_lines --prefix "sourced : ")"
-        if [ "$sources" ];then
-            output="$output\n$sources"
-        fi
-    fi
-
+    # USER VARS
     collect_user_data "$stub_out" "$stub_tmp"
 
     # move to .dotsys/user/stubs/stubname.topic.stub
     mv -f "$stub_out" "$stub_dst"
     local status=$?
 
-    success_or_fail $status "$file_action" "stub file:" "$(printf "%b$topic $stub_name:" $thc )" "$output"
+    local sources
+    sources="$(add_topic_sources "$topic" "$stub_name")"
+
+    # remove source files var
+    if [ "$sources" ]; then
+        output="$output\n$sources"
+    fi
+
+    success_or_fail $status "$file_action" "stub file:" "${topic}/$stub_name" "$output"
 }
 
 collect_user_data () {
@@ -359,7 +342,7 @@ collect_user_data () {
             set_state_value "user" "${topic}_state_key" "$val"
 
         elif ! [ "$stub_tmp" ];then
-            success "$topic $var_text=$val"
+            success "$topic $var_text = $val"
         fi
 
         if [ "$stub_tmp" ]; then
@@ -371,7 +354,7 @@ collect_user_data () {
     done
 }
 
-get_topic_stub_files(){
+get_topic_stub_sources(){
     local topic="$1"
     local topic_dir="$(topic_dir "$topic" "active")"
     local builtin_dir="$(topic_dir "$topic" "builtin")"
@@ -380,24 +363,14 @@ get_topic_stub_files(){
     echo "$result"
 }
 
+
 # returns the stub file symlink target
 get_topic_stub_target(){
     local topic="$1"
     local stub_src="$2"
-    local repo="$(get_active_repo)"
 
     # stub target should never be the builtin repo
     echo "$(topic_dir "$topic" "user")/$(basename "${stub_src%.stub}.symlink")"
-}
-
-remove_user_stub () {
-
-    local topic="$1"
-    local stub_src="$2"
-    local force="$3"
-    local stub_dst="$(dotsys_user_stub_file "$topic" "$stub_src")"
-    rm "$stub_dst"
-    success_or_fail $? "Remove" "sub file for" "$topic" ":\n$spacer ->$stub_dst"
 }
 
 
@@ -410,53 +383,109 @@ get_credential_helper () {
     echo "$helper"
 }
 
-# TODO: topic/stubfile.sh will likely be needed
-# this works for shell script config files
-# need solution for topics like vim with own lang
-# use shell script to append source_topic_files to stub..
-source_topic_files () {
+# Check all installed topics for *.$topic files
+add_topic_sources () {
     local topic="$1"
-    local stub_file="$2"
-    local return_files="$3"
-    local installed_paths="$(get_installed_topic_paths)"
-    local file
-    local topic_dir
-    local OWD="$PWD"
+    local file_name="$2"
 
+    # check if topic has a .sources file
+    local topic_sources_script="$(get_topic_or_builtin_file "$topic" "${file_name}.sources")"
+    if ! [ "$topic_sources_script" ]; then continue;fi
+
+    local installed_topic_dirs="$(get_installed_topics "dir")"
     local order="path functions aliases"
+    local src_file
+    local dir
 
-    local files
+    debug "-- add_topic_sources to: $topic/$file_name"
 
-    debug "   source_topic_files for stub file: $stub_file"
-
-    for topic_dir in $installed_paths; do
+    # Source topic extensions from all installed topics
+    for dir in $installed_topic_dirs; do
         local sourced=()
         local o
-
-        # source ordered files
+        debug "   - checking dir for sources: $dir"
+        # source ordered files with topic extension
         for o in $order; do
-            file="$(find "$topic_dir" -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
-            if ! [ "$file" ]; then continue; fi
-            echo source "$file" >> $stub_file
-            if [ "$return_files" ]; then
-                echo "$file"
-            fi
-            sourced+=("$file")
+            src_file="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
+            if ! [ -f "$src_file" ]; then continue; fi
+            manage_source install "$topic" "$src_file"
+            sourced+=("$src_file")
         done
 
-        # source topic files of any name
-        local topic_files="$(find "$topic_dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
-        while IFS=$'\n' read -r file; do
-            if ! [ "$file" ] || [[ ${sourced[@]} =~ $file ]]; then continue;fi
-            echo source "$file" >> $stub_file
-            if [ "$return_files" ]; then
-                echo "$file"
-            fi
+        # source topic extension with any name
+        local files="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
+        while IFS=$'\n' read -r src_file; do
+            if ! [ -f "$src_file" ] || [[ ${sourced[@]} =~ $src_file ]]; then continue;fi
+            debug "   - unordered files"
+            manage_source install "$topic" "$src_file"
+        done <<< "$files"
 
-
-        done <<< "$topic_files"
     done
+}
+
+# Check topic for other topic sources
+manage_topic_source_files () {
+    local action="$1"
+    local topic="$2"
+    #TODO: manage_topic_source_files append builtin sources to user sources
+    local topic_files="$(find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -not -name '\.*' )"
+    local src_file
+
+    debug "-- manage_topic_source_files: $action $topic"
+
+    # iterate all files in topic dir
+    while IFS=$'\n' read -r src_file; do
+        local src_topic="${src_file##*.}"
+
+        # Skip system extensions
+        if [[ "$SYSTEM_FILE_EXTENSIONS" =~ $src_topic ]]; then continue;fi
+
+        # make sure topic is installed
+        if ! in_state "dotsys" "$src_topic"; then continue;fi
+
+        debug "   manage_topic_source_file: $src_topic $src_file"
+        manage_source "$action" "$src_topic" "$src_file"
+
+    done <<< "$topic_files"
+}
+
+
+manage_source () {
+    local action="$1"
+    local topic="$2"
+    local src_file="$3"
+    local src_file_name="$(basename "${src_file%.*}")"
+    local status
+
+    # check if src_file_name has a .sources file
+    local format_script="$(get_topic_or_builtin_file "$topic" "*.sources")"
+    if ! [ $? ]; then return; fi
+
+    debug "   - manage_source for: $topic/$format_script"
+
+    local write_target="$(get_user_stub_file "$topic" "$format_script")"
+    local formatted_source="$($format_script format_source_file "$src_file")"
+
+    # remove source on uninstall
+    if [ "$action" = "uninstall" ];then
+        ex "+g/$formatted_source/d" -cwq "$write_target"
+        success_or_fail $? "remove" "$src_file_name" "from $(basename "$write_target")"
+        return
+    fi
+
+    # Abort if source is already added
+    if grep -q "$src_file" "$write_target"; then
+        debug "   - manage_source: ABORT already sourced $src_file"
+        return
+    fi
+
+    # Add source to target file
+    echo "$formatted_source" >> $write_target
+    if [ "$action" != "install" ];then
+        success_or_fail $? "add" "source $src_file_name" "to $(basename "$write_target")"
+    else
+        echo "$spacer Sourced:$src_file"
+    fi
 
 }
 
-SYSTEM_SH_FILES="manager.sh topic.sh install.sh update.sh upgrade.sh freeze.sh uninstall.sh"

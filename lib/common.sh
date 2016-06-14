@@ -31,21 +31,29 @@ topic_dir () {
     local return_non_exist="$3"
     local path
 
-    # Check for topic alternate repo
-    local repo=$(get_topic_config_val "$topic" "repo")
-    repo="${repo:-$(get_active_repo)}"
+    #debug "   - topic_dir $restrict:"
 
-    # use active or primary when dotsys is active
+    # Installed repo (not dotsys)
+    local repo="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
+
+    if ! [ "$repo" ]; then
+        # Check for topic alternate repo
+        repo=$(get_topic_config_val "$topic" "repo")
+        # use active repo if topic repo not found
+        repo="${repo:-$(get_active_repo)}"
+    fi
+
+    # Do not use dotsys repo (default to primary repo)
     if [ "$restrict" = "user" ]; then
         if is_dotsys_repo; then
            repo="$(state_primary_repo)"
         fi
 
-    # Always use primary repo
+    # Restrict to primary
     elif [ "$restrict" = "primary" ]; then
         repo="$(state_primary_repo)"
 
-    # use active or builtin if active does not exist
+    # Non restricted (installed, topic cfg, active, builtin)
     elif [ "$restrict" != "active" ]; then
         path="$(repo_dir "$repo")/$topic"
         if [ ! -d "$path" ]; then
@@ -63,11 +71,11 @@ topic_dir () {
 
     # Return bad path when user requested and does not exist
     if ! [ -d "$path" ] && ! [ "$restrict" = "user" ]; then
-        debug "   - topic_dir ($restrict): $repo + $topic -> PATH NOT FOUND $path"
+        #debug "   -> PATH NOT FOUND $repo + $topic = $path"
         echo ""
         return 1
     else
-        debug "   - topic_dir ($restrict): $repo + $topic -> $path"
+        #debug "   -> FOUND $repo + $topic = $path"
         echo "$path"
     fi
     return 0
@@ -138,24 +146,47 @@ _split_repo_branch () {
 }
 
 builtin_topic_dir () {
-  echo "$(dotsys_dir)/builtins/$1"
+    echo "$(dotsys_dir)/builtins/$1"
 }
 
 dotsys_user_bin () {
-  echo "$(dotsys_dir)/user/bin"
+    echo "$(dotsys_dir)/user/bin"
 }
 
-dotsys_user_stub_file() {
-  local topic="$1"
-  local stub_src="$2"
-  local stub_name="$(basename "${stub_src%.*}")"
-
-  echo "$(dotsys_user_stub_dir)/${stub_name}.${topic}.stub"
+get_user_stub_file() {
+    local topic="$1"
+    local stub_src="$2"
+    local stub_name="$(basename "${stub_src%.*}")"
+    echo "$(user_stub_dir)/${stub_name}.${topic}.stub"
 }
 
-dotsys_user_stub_dir() {
-  echo "$(dotsys_dir)/user/stubs"
+user_stub_dir() {
+    echo "$(dotsys_dir)/user/stubs"
 }
+
+get_topic_or_builtin_file () {
+    local topic="$1"
+    local find_file="$2"
+    local t_dir="$(topic_dir "$topic")"
+
+    # check user directory for file
+    if [ -d "$t_dir" ]; then
+        file="$(find "$t_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" )"
+    fi
+
+    # check builtin directory for file
+    if ! [ "$file" ];then
+        local b_dir="$(topic_dir "$topic" "builtin")"
+        if [ -d "$b_dir" ]; then
+            file="$(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" )"
+        fi
+    fi
+
+    echo "$file"
+    script_exists "$file"
+    return $?
+}
+
 
 # MISC TESTS
 

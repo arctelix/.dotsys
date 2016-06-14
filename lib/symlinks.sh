@@ -70,8 +70,8 @@ symlink_topic () {
   manage_topic_bin "$action" "$topic" "$silent"
 
   symlinks=()
-  # find .dotsys/user stubs
-  symlinks+=( $(/usr/bin/find "$(dotsys_user_stub_dir)" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name "*${topic}.stub" -not -name '\.*') )
+  # find .dotsys/user stub files
+  symlinks+=( $(/usr/bin/find "$(user_stub_dir)" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name "*${topic}.stub" -not -name '\.*') )
 
   # add topic symlinks & stubs
   local topic_dir="$(topic_dir "$topic")"

@@ -93,6 +93,9 @@ debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 
 #GLOBALS
 STATE_SYSTEM_KEYS="installed_repo"
+SYSTEM_FILES="install.sh uninstall.sh update.sh upgrade.sh freeze.sh manager.sh topic.sh dotsys.cfg"
+SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml"
+
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
 
@@ -525,7 +528,6 @@ dotsys () {
 
     # TOPIC LIST
 
-    local pre_stub
     if ! [ "$topics" ]; then
 
         if ! [ "$ACTIVE_REPO_DIR" ]; then
@@ -747,10 +749,12 @@ dotsys () {
             run_topic_script "$action" "$topic"
         fi
 
-        # 4)manage stubs (only when not pre-stubbed)
-        if ! [ "$pre_stub" ] && in_limits "stubs" "links" "dotsys"; then
+        # 4) Stubs (before symlinks)
+        if in_limits "stubs" "links" "dotsys"; then
              debug "main -> manage_topic_stubs"
              manage_topic_stubs "$action" "$topic" "$force"
+             debug "main -> manage_topic_source_files"
+             manage_topic_source_files "$action" "$topic"
         fi
 
         # 5) symlinks
@@ -787,11 +791,11 @@ dotsys () {
 
     debug "main -> TOPIC LOOP END"
 
-    # Update dotsys sources
-    if [ "$action" = "install" ] && in_limits "stubs" "links"; then
-        debug "main -> update sources for core & shell after install"
-        manage_stubs "$action" "core shell" "$force"
-    fi
+#    # When installing we have to manage the stubs last and add shell to topics
+#    if [ "$action" = "install" ] && in_limits "stubs" "links"; then
+#        debug "main -> manage stub files for installed topics"
+#        manage_stubs "$action" "${topics[*]}" --task "$force"
+#    fi
 
     # Finally check for repos, managers, & topics that still need to be uninstalled
     if [ "$action" = "uninstall" ]; then

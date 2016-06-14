@@ -1,0 +1,7 @@
+#!/bin/sh
+
+format_source_file() {
+    local source_file="$1"
+    echo "execute 'source $source_file'"
+}
+

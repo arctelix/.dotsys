@@ -191,7 +191,8 @@ in_state () {
   return $status
 }
 
-# gets value for unique key
+# gets value for provided key
+# optionally restrict to value or ! match value
 get_state_value () {
   local file="$(state_file "$1")"
   local key="$2"
@@ -202,18 +203,18 @@ get_state_value () {
   status=$?
   local val="${lines#*:}"
 
-
-
-  debug "   - get_state_value found: $lines"
-
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     status=$val
   elif [ "$val" ]; then
       local line
       for line in $lines; do
           val="${line#*:}"
+
+          # do not match the provided value
           if [[ "$match_val" == "!"* ]]; then
               if ! [[ "$val" =~ ${match_val#!} ]]; then echo "$val"; fi
+
+          # only match the provided value
           elif [ "$match_val" ]; then
               if [[ "$val" =~ ${match_val} ]]; then echo "$val"; fi
           elif [ "$val" ]; then
@@ -221,6 +222,9 @@ get_state_value () {
           fi
       done
   fi
+
+  #debug "   - get_state_value found: $val"
+
   return $status
 }
 
@@ -333,12 +337,14 @@ get_topic_list () {
         else
             get_dir_list "$repo_dir"
         fi
-
-
     fi
 }
 
-get_installed_topic_paths () {
+# returns list of installed topics
+# format options:
+#   dir : absoute path to topic directory
+get_installed_topics () {
+    local format="$1"
     local list
     local topic
     local repo
@@ -357,7 +363,12 @@ get_installed_topic_paths () {
         fi
 
         if [ -d "$repo/$topic" ]; then
-            echo "$repo/$topic"
+            if [ "$format" = "dir" ]; then
+                echo "$repo/$topic"
+            else
+                echo "$topic"
+            fi
+
         fi
 
     done < "$(state_file "dotsys")"
