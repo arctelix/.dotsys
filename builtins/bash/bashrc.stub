@@ -4,8 +4,11 @@
 # SOURCED BY BASH (ALWAYS)
 # ---------------------------------------
 
-# LOAD: .dotsysrc if it exists (required for dotsys)
-test -f $HOME/.dotsysrc && source "$HOME/.dotsysrc"
+#set architecture flags
+export ARCHFLAGS="-arch x86_64"
+
+# LOAD: .shellrc if it exists (required for dotsys)
+test -f $HOME/.shellrc && source "$HOME/.shellrc"
 
 # LOAD TOPIC SYMLINK: CUSTOMIZE THE FILE NAMED BELOW
 stub_target="{STUB_TARGET}"

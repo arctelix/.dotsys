@@ -289,12 +289,10 @@ freeze_state() {
 }
 
 get_topic_list () {
-    local from_repo="${1}"
+    local from_repo="$1"
     local active_repo="$(get_active_repo)"
     local repo_dir="$(repo_dir "${from_repo:-$active_repo}")"
     local force="$2"
-    local list
-    local topic
     local repo
 
     debug "-- get_topic_list: from:$from_repo active_repo:$active_repo"
@@ -308,19 +306,36 @@ get_topic_list () {
 
     # Return all installed topics for all other actions
     if [ "$action" != "install" ] && ! [ "$force" ]; then
+        local topics=()
+        local line
+        local topic
+        local skip
         while read -r line || [ "$line" ]; do
             topic=${line%:*}
             repo=${line#*:}
+            skip=""
 
-            debug "   get_topic_list found ($topic:$repo)"
+            # Check for duplicate topic from dotsys & user repo
+            if [[ "${topics[*]}" =~ $topic ]];then
+                skip="topic redundant"
 
             # do not uninstall dotsys topics unless in limits
-            if [ "$action" = "uninstall" ] && ! in_limits "dotsys" -r && is_dotsys_repo "$repo"; then continue
+            elif [ "$action" = "uninstall" ] && ! in_limits "dotsys" -r && is_dotsys_repo "$repo"; then
+                skip="dotsys repo"
 
             # limit topics to from repo
-            elif [ "$from_repo" ] && [ "$from_repo" != "$repo" ]; then continue;fi
+            elif [ "$from_repo" ] && [ "$from_repo" != "$repo" ]; then
+                skip="other repo"
+            fi
 
+            if [ "$skip" ]; then
+                debug "   get_topic_list: skipped $skip ($topic:$repo)"
+                continue
+            fi
+
+            debug "   get_topic_list: added ($topic:$repo)"
             echo "$topic"
+            topics+=("$topic")
         done < "$(state_file "dotsys")"
 
     # Catch no repo directory

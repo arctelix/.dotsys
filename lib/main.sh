@@ -539,8 +539,8 @@ dotsys () {
         fi
 
         # Use from repo to limit actions to toppic from a specific repo
-        debug "main -> get_topic_list $(get_active_repo) $force"
-        local list="$(get_topic_list "$(get_active_repo)" "$force")"
+        debug "main -> get_topic_list $from_repo $force"
+        local list="$(get_topic_list "$from_repo" "$force")"
 
         # Handle no topics found
         if ! [ "$list" ]; then
@@ -564,7 +564,7 @@ dotsys () {
             reverse_array topics
         fi
 
-        debug "main -> topics list:\n\r${topics[*]}"
+        debug "main -> final topics list: ${topics[*]}"
     fi
 
     # We stub here for hands free install
@@ -652,41 +652,40 @@ dotsys () {
 
         # ABORT: on install if already installed (override --force)
         debug "main -> check is_installed for $topic $ACTIVE_REPO"
+        local action_complete=
 
         if ! [ "$force" ]; then
 
-            local action_done_already
             if [ "$action" = "install" ] && is_installed "dotsys" "$topic"; then
 
                # Check if topic is installed from active repo
                if is_installed "dotsys" "$topic" "$ACTIVE_REPO";then
-                    action_done_already="$ACTIVE_REPO"
+                    action_complete="$ACTIVE_REPO"
 
                # Check if topic is installed from another repo (not dotsys)
                elif is_installed "dotsys" "$topic" "!dotsys/dotsys";then
-                    action_done_already="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
+                    action_complete="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
 
                     # Option to replace existing topic or
-                    get_user_input "$topic is installed from $action_done_already, do you want
+                    get_user_input "$topic is installed from $action_complete, do you want
                             $spacer to replace it with the version from $ACTIVE_REPO?" -r
                     if [ $? -eq 0 ]; then
                         #TODO URGENT: ACTIVE_REPO should not be global, just pass to recursive calls
                         prev_active_repo="$ACTIVE_REPO"
-                        dotsys uninstall "$topic" links scripts stubs from "$action_done_already"
+                        dotsys uninstall "$topic" links scripts stubs from "$action_complete"
                         #limits=(${linits[*]:-links scripts})
                         pre_stub=""
                         load_config_vars "$prev_active_repo" "$action"
-                        action_done_already=""
+                        action_complete=""
                     fi
                fi
 
 
             elif [ "$action" = "uninstall" ]; then
 
-                # ABORT: on uninstall if not installed by active repo (override --force)
+                # ABORT: if not installed for active repo
                 if ! is_installed "dotsys" "$topic" "$ACTIVE_REPO"; then
-                    action_done_already="$ACTIVE_REPO"
-                    continue
+                    action_complete="$ACTIVE_REPO"
 
                 # Catch uninstall from alternate repo when topic exists in primary repo
                 elif ! [ "$limits" ] && [ "$ACTIVE_REPO" != "$(state_primary_repo)" ] && [ -d "$(topic_dir "$topic" "primary")" ];then
@@ -704,8 +703,8 @@ dotsys () {
                 fi
             fi
 
-            if [ "$action_done_already" ]; then
-                task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $action_done_already"
+            if [ "$action_complete" ]; then
+                task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $action_complete"
                 continue
             fi
         fi

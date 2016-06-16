@@ -300,8 +300,6 @@ in_limits () {
         return 0
     fi
 
-    debug "-- in_limits $@"
-
     local t
     for t in $tests; do
         if [[ ${limits[@]} =~ "$t" ]]; then

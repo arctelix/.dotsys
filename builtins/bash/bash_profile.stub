@@ -4,14 +4,11 @@
 # SOURCED BY BASH (LOGIN)
 # ---------------------------------------
 
-#set architecture flags
-export ARCHFLAGS="-arch x86_64"
-
 # LOAD: .bashrc if it exists
 test -f $HOME/.bashrc  && source $HOME/.bashrc
 
-# LOAD: .dotsys_profile if it exists
-test -f $HOME/.dotsys_profile  && source $HOME/.dotsys_profile
+# LOAD: .profile if it exists
+test -f $HOME/.profile  && source $HOME/.profile
 
 # LOAD TOPIC SYMLINK: CUSTOMIZE THE FILE NAMED BELOW
 stub_target="{STUB_TARGET}"

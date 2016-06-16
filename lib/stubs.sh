@@ -121,15 +121,17 @@ manage_stubs () {
     fi
 
     for topic in ${topics[@]}; do
-        # Abort if no user topic unless topic is core or shell
-        if ! [[ "${topics[*]}" =~ (core|shell) ]] && ! [ -d "$(topic_dir "$topic" "user")" ]; then continue; fi
+        # Abort if no user topic unless topic required by dotsys
+        if ! dotsys_in_use "$topic" && ! [ -d "$(topic_dir "$topic" "user")" ]; then
+            continue
+        fi
         manage_topic_stubs "$action" "$topic" "$mode" "$force"
     done
 
-    # Core Always gets updated
-    manage_topic_stubs "$action" "core" "$mode"
-    # Shell always gets updated for sourcing topic .shell files
-    manage_topic_stubs "$action" "shell" "$mode"
+#    # Core Always gets updated
+#    manage_topic_stubs "$action" "core" "$mode"
+#    # Shell always gets updated for sourcing topic .shell files
+#    manage_topic_stubs "$action" "shell" "$mode"
 
 }
 
@@ -182,7 +184,7 @@ manage_topic_stubs () {
                 collect_topic_sources "$action" "$topic" "$(basename "${stub_file%.*}")"
             else
                 # Create/Update stub file with target, user data, and source files
-                manage_user_stub "$topic" "$stub_file" "$mode" "$force"
+                manage_user_stub "$action" "$topic" "$stub_file" "$mode" "$force"
             fi
         done <<< "$stub_files"
     fi
@@ -199,10 +201,11 @@ manage_user_stub () {
     # ex: {GIT_USER_EMAIL} checks for git_user_email ins state defaults to global user_email
     # ex: {USER_EMAIL} uses global user_email (does not check for topic specif value)
 
-    local topic="$1"
-    local stub_src="$2"
-    local mode="$3"
-    local force="$4"
+    local action="$1"
+    local topic="$2"
+    local stub_src="$3"
+    local mode="$4"
+    local force="$5"
 
     local stub_name="$(basename "${stub_src%.*}")"
     local file_action="update"
@@ -223,31 +226,45 @@ manage_user_stub () {
     local stub_dst="$(get_user_stub_file "$topic" "$stub_src")"
     local target_ok
 
-    debug "-- create_user_stub stub_src : $stub_src"
-    debug "   create_user_stub stub_dst : $stub_dst"
-    debug "   create_user_stub stub_tar : $stub_tar"
+    debug "-- manage_user_stub stub_src : $stub_src"
+    debug "   manage_user_stub stub_dst : $stub_dst"
+    debug "   manage_user_stub stub_tar : $stub_tar"
 
-    # Create mode (no user stub or stub src is newer)
-    if ! [ -f "$stub_dst" ]; then
-        file_action="create"
+    if [ "$action" = uninstall ]; then
 
-    # Update mode (collect modified sources & modified target)
-    else
-        local target_ok="$(grep "$stub_tar" "$stub_dst")"
-        # Abort if stub_dst is newer then source and has correct target
-        if ! [ "$force" ] && [ "$stub_src" -nt "$stub_dst" ] && [ "$target_ok" ]; then
-            debug "-- create_user_stub ABORTED (up to date): $stub_src"
+        # DO NOT DELETE if dotsys requires the stub
+        if ! in_limits "dotsys" -r && dotsys_in_use "$topic"; then
+            stub_tar=""
+
+        # delete the stub file
+        elif [ -f "$stub_dst" ]; then
+            rm "$stub_dst"
             return
         fi
     fi
 
-    # Create output file
+    # Create mode (no user stub)
+    if ! [ -f "$stub_dst" ]; then
+        file_action="create"
+
+    # Update mode (ABORT if up to date)
+    else
+        local target_ok="$( [ "$stub_tar" ] && grep "$stub_tar" "$stub_dst" )"
+        # Abort if stub_dst is newer then source and has correct target
+        if ! [ "$force" ] && [ "$stub_dst" -nt "$stub_src" ] && [ "$target_ok" ]; then
+            debug "-- create_user_stub ABORTED (up to date): $stub_src"
+            success "Stub file up to date:" "${topic}/$stub_name"
+            return
+        fi
+    fi
+
+    # CREATE output file & temp file
     local stub_tmp="${stub_src}.tmp"
     local stub_out="${stub_src}.out"
     cp -f "$stub_src" "$stub_out"
 
-
-    # STUB_TARGET
+    local output
+    # ADD STUB_TARGET
     debug "   create_user_stub update target"
     grep -q '{STUB_TARGET}' "$stub_out"
     if [ $? -eq 0 ]; then
@@ -259,17 +276,16 @@ manage_user_stub () {
         fi
     fi
 
-    # USER VARS
+    # ADD USER VARS
     collect_user_data "$action" "$stub_out" "$stub_tmp"
 
     # move to .dotsys/user/stubs/stubname.topic.stub
     mv -f "$stub_out" "$stub_dst"
     local status=$?
 
+    # ADD SOURCES
     local sources
     sources="$(collect_topic_sources "install" "$topic" "$stub_name")"
-
-    # remove source files var
     if [ "$sources" ]; then
         output="$output\n$sources"
     fi
@@ -332,7 +348,7 @@ collect_user_data () {
         debug "   - collect_user_data: var($var) key($g_state_key) text($var_text) = $val"
 
         # Get user input if no val found
-        if [[ ! "$val" && "$user_var" ]] || [ "$force" ]; then
+        if [ "$user_var" ] && [[ ! "$val" || "$force" ]]; then
             # use global_state_key value as default
             debug "   create_user_stub get default: $g_state_key"
             local def

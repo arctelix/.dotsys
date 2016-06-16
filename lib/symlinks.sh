@@ -116,7 +116,7 @@ symlink_topic () {
       symlink "$src" "$dst"
 
     elif [ "$action" = "unlink" ]; then
-      # Do not allow stub files to be removed if dotsys requires it
+      # Do not allow stub file links to be removed if dotsys requires it
       if [[ "$src" =~ .stub ]] && ! in_limits "dotsys" -r && dotsys_in_use "$topic"; then
         continue
       fi
