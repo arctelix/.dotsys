@@ -753,8 +753,6 @@ dotsys () {
         if in_limits "stubs" "links" "dotsys"; then
              debug "main -> manage_topic_stubs"
              manage_topic_stubs "$action" "$topic" "$force"
-             debug "main -> manage_topic_source_files"
-             manage_topic_source_files "$action" "$topic"
         fi
 
         # 5) symlinks

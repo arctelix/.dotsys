@@ -136,7 +136,7 @@ freeze_msg () {
     log "$indent $task" "$desc"
 
     if ! [ "$items" ]; then return;fi
-
+    local item
     while IFS=$'\n' read -r item; do
         printf  "$spacer - %b$item%b\n" $green $rc
         log "$indent - $item"

@@ -165,7 +165,7 @@ manage_topic_stubs () {
 
     # Check for topic stub files
     local stub_files="$(get_topic_stub_sources "$topic")"
-    if [ "$stub_files" ] && [ "$action" = "install" ];then
+    if [ "$stub_files" ];then
         debug "-- manage_topic_stubs: $action $topic $mode $force"
 
         if [ "$mode" = "task" ]; then
@@ -174,18 +174,26 @@ manage_topic_stubs () {
 
         while IFS=$'\n' read -r stub_file; do
             debug "   found stub file for $topic -> $stub_file"
+
             if [ "$mode" = "data" ]; then
-                collect_user_data "$stub_file" "" "$force"
-            elif [ "$action" = install ];then
-                create_user_stub "$topic" "$stub_file" "$mode" "$force"
+                collect_user_data "$action" "$stub_file" "" "$force"
+            elif [ "$action" = freeze ];then
+                collect_user_data "$action" "$stub_file" "" "$force"
+                collect_topic_sources "$action" "$topic" "$(basename "${stub_file%.*}")"
+            else
+                # Create/Update stub file with target, user data, and source files
+                manage_user_stub "$topic" "$stub_file" "$mode" "$force"
             fi
         done <<< "$stub_files"
     fi
+
+    # Make sure source files from topic are added to the appropriate stub file
+    manage_topic_source_files "$action" "$topic"
 }
 
 
-# create custom stub file in user/repo/topic
-create_user_stub () {
+# creates custom stub file in user/repo/topic
+manage_user_stub () {
 
     # stub file variables are defined as {TOPIC_VARIABLE_NAME}
     # ex: {GIT_USER_EMAIL} checks for git_user_email ins state defaults to global user_email
@@ -252,14 +260,14 @@ create_user_stub () {
     fi
 
     # USER VARS
-    collect_user_data "$stub_out" "$stub_tmp"
+    collect_user_data "$action" "$stub_out" "$stub_tmp"
 
     # move to .dotsys/user/stubs/stubname.topic.stub
     mv -f "$stub_out" "$stub_dst"
     local status=$?
 
     local sources
-    sources="$(add_topic_sources "$topic" "$stub_name")"
+    sources="$(collect_topic_sources "install" "$topic" "$stub_name")"
 
     # remove source files var
     if [ "$sources" ]; then
@@ -276,16 +284,17 @@ collect_user_data () {
     # variables+="$@"               # add "VARIABLE=value" pairs to variables
 
     debug "-- collect user data variables"
-    local stub_out="$1"
-    local stub_tmp="$2"
-    local force="$3"
+    local action="$1"
+    local stub_in="$2"
+    local stub_out="$3"
+    local force="$4"
     local var
     local val
     local var_text
     local g_state_key
     local t_state_key
     local user_var
-    local variables=($(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_out"))
+    local variables=($(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_in"))
 
     for var in ${variables[@]}; do
         # global key lower case and remove $topic_ or topic_
@@ -320,7 +329,7 @@ collect_user_data () {
         #   if [ "$var" = "$val"  ]; then val="";fi   # clear value if none provided
         # fi
 
-        debug "   - create_user_stub pre-user input var($var) key($g_state_key) text($var_text) = $val"
+        debug "   - collect_user_data: var($var) key($g_state_key) text($var_text) = $val"
 
         # Get user input if no val found
         if [[ ! "$val" && "$user_var" ]] || [ "$force" ]; then
@@ -340,15 +349,20 @@ collect_user_data () {
 
             # record user val to state
             set_state_value "user" "${topic}_state_key" "$val"
-
-        elif ! [ "$stub_tmp" ];then
-            success "$topic $var_text = $val"
         fi
 
-        if [ "$stub_tmp" ]; then
-            # modify the stub variable
-            sed -e "s|{$var}|${val}|g" "$stub_out" > "$stub_tmp"
-            mv -f "$stub_tmp" "$stub_out"
+        # Replace stub variable with value
+        if [ "$stub_out" ]; then
+            sed -e "s|{$var}|${val}|g" "$stub_in" > "$stub_out"
+            mv -f "$stub_out" "$stub_in"
+
+        # Freeze user data
+        elif [ "$action" = "freeze" ];then
+            freeze_msg "user data" "$var_text = $val"
+
+        # Output user data
+        else
+            success "$topic $var_text = $val"
         fi
 
     done
@@ -383,47 +397,54 @@ get_credential_helper () {
     echo "$helper"
 }
 
-# Check all installed topics for *.$topic files
-add_topic_sources () {
-    local topic="$1"
-    local file_name="$2"
+# Check all installed topics for current topic stub file
+collect_topic_sources () {
+    local action="$1"
+    local topic="$2"
+    local stub_file_name="$3"
 
     # check if topic has a .sources file
-    local topic_sources_script="$(get_topic_or_builtin_file "$topic" "${file_name}.sources")"
+    local topic_sources_script="$(get_topic_or_builtin_file "$topic" "${stub_file_name}.sources")"
     if ! [ "$topic_sources_script" ]; then continue;fi
 
     local installed_topic_dirs="$(get_installed_topics "dir")"
     local order="path functions aliases"
     local src_file
     local dir
+    local all_sourced_files=()
 
-    debug "-- add_topic_sources to: $topic/$file_name"
+    debug "-- add_topic_sources to: $topic/$stub_file_name"
 
     # Source topic extensions from all installed topics
     for dir in $installed_topic_dirs; do
         local sourced=()
         local o
-        debug "   - checking dir for sources: $dir"
+        debug "   - checking $topic for sources: $dir"
         # source ordered files with topic extension
         for o in $order; do
             src_file="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
             if ! [ -f "$src_file" ]; then continue; fi
-            manage_source install "$topic" "$src_file"
+            manage_source "$action" "$topic" "$src_file"
             sourced+=("$src_file")
+            all_sourced_files+=("$src_file")
         done
 
         # source topic extension with any name
         local files="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
         while IFS=$'\n' read -r src_file; do
             if ! [ -f "$src_file" ] || [[ ${sourced[@]} =~ $src_file ]]; then continue;fi
-            debug "   - unordered files"
-            manage_source install "$topic" "$src_file"
+            manage_source "$action" "$topic" "$src_file"
+            all_sourced_files+=("$src_file")
         done <<< "$files"
-
     done
+
+    # Freeze all source files
+    if [ "$action" = "freeze" ] && [ "$all_sourced_files" ];then
+        freeze_msg "sourced files" "$stub_file_name" "$(printf "%s\n" "${all_sourced_files[@]}")"
+    fi
 }
 
-# Check topic for other topic sources
+# Check current topic for other topic sources
 manage_topic_source_files () {
     local action="$1"
     local topic="$2"
@@ -443,27 +464,27 @@ manage_topic_source_files () {
         # make sure topic is installed
         if ! in_state "dotsys" "$src_topic"; then continue;fi
 
-        debug "   manage_topic_source_file: $src_topic $src_file"
-        manage_source "$action" "$src_topic" "$src_file"
+        manage_source "$action" "$src_topic" "$src_file" "output_status"
 
     done <<< "$topic_files"
 }
 
-
+# Add/remove source from stub file
 manage_source () {
     local action="$1"
-    local topic="$2"
+    local src_file_topic="$2"
     local src_file="$3"
+    local output_status="$4"
     local src_file_name="$(basename "${src_file%.*}")"
-    local status
 
     # check if src_file_name has a .sources file
-    local format_script="$(get_topic_or_builtin_file "$topic" "*.sources")"
+    local format_script="$(get_topic_or_builtin_file "$src_file_topic" "*.sources")"
     if ! [ $? ]; then return; fi
 
-    debug "   - manage_source for: $topic/$format_script"
+    debug "   - manage_source for: $src_file_topic/$src_file_name
+        $spacer with script: $format_script"
 
-    local write_target="$(get_user_stub_file "$topic" "$format_script")"
+    local write_target="$(get_user_stub_file "$src_file_topic" "$format_script")"
     local formatted_source="$($format_script format_source_file "$src_file")"
 
     # remove source on uninstall
@@ -476,15 +497,24 @@ manage_source () {
     # Abort if source is already added
     if grep -q "$src_file" "$write_target"; then
         debug "   - manage_source: ABORT already sourced $src_file"
+
+        if [ "$action" = "freeze" ] && [ "$output_status" ];then
+            freeze_msg "source" "$src_file"
+        fi
+        return
+
+    elif [ "$action" = "freeze" ] && [ "$output_status" ];then
+        freeze_msg "source (un-sourced)" "$src_file"
         return
     fi
 
     # Add source to target file
     echo "$formatted_source" >> $write_target
-    if [ "$action" != "install" ];then
-        success_or_fail $? "add" "source $src_file_name" "to $(basename "$write_target")"
+
+    if [ "$output_status" ];then
+        success_or_fail $? "add" "source $src_file \n$spacer -> $write_target"
     else
-        echo "$spacer Sourced:$src_file"
+        echo "$spacer Sourced : $src_file"
     fi
 
 }

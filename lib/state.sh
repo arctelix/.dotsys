@@ -306,7 +306,7 @@ get_topic_list () {
         repo_dir="$DOTSYS_REPOSITORY/builtins"
     fi
 
-    # Not install: only installed topics unless forced
+    # Return all installed topics for all other actions
     if [ "$action" != "install" ] && ! [ "$force" ]; then
         while read -r line || [ "$line" ]; do
             topic=${line%:*}
@@ -323,7 +323,11 @@ get_topic_list () {
             echo "$topic"
         done < "$(state_file "dotsys")"
 
-    # Install only (use  repo directory)
+    # Catch no repo directory
+    elif ! [ -d "$repo_dir" ];then
+        return 1
+
+    # Install from repo directory
     else
         if ! [ -d "$repo_dir" ];then return 1;fi
 
