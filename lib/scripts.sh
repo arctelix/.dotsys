@@ -25,15 +25,16 @@ run_topic_script () {
   # undamaged topic scripts need to check if already installed (since there likely installing software)
   # managed topic install scripts are really post-install scripts (manager checks for prior install)
   if ! is_managed && [ ! "$force" ]; then
-      debug "   run_topic_script un-managed topic: checking install status"
 
       # check if already installed (not testing for repo!)
       if [ "$action" = "install" ] && is_installed "dotsys" "$topic" "$(get_active_repo)" --script ; then
-        debug "  aborted unmanned topic script"
+        debug "  aborted unmanaged topic script"
+        return
 
       # check if already uninstalled (not testing for repo!)
       elif [ "$action" = "uninstall" ] && ! is_installed "dotsys" "$topic" "$(get_active_repo)" --script; then
-        debug "  aborted unmanned topic script"
+        debug "  aborted unmanaged topic script"
+        return
       fi
       debug "   run_topic_script un-managed topic: ok to proceed with script"
   fi

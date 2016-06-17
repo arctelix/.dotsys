@@ -3,10 +3,7 @@
 # Homebrew
 
 install () {
-  if ! xcode-select --install >/dev/null 2>&1 | grep installed >/dev/null 2>&1 ; then
-    xcode-select --install
-  fi
-
+  xcode-select --install
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
   return $?
 }
