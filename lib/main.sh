@@ -149,6 +149,7 @@ SHOW_STATS=0
 
 
 dotsys () {
+
     local usage="dotsys <action> [<topics> <limits> <options>]"
     local usage_full="
     <action> required:  Primary action to take on one or more topics.
@@ -186,25 +187,25 @@ dotsys () {
     -c | cmd                Limit action to cmd manager's packages
     -a | app                Limit action to app manager's packages
 
-    <options> optional: use to bypass confirmations.
-    --force             force action even if already completed
-    --tlogo             Toggle logo for this run only
-    --tstats            Toggle stats for this run only
-    --debug             Turn on debug mode
-    --dryrun            Runs through all tasks, but no changes are actually made (must confirm each task)
-    --confirm           bypass topic confirmations and confirm symlinks for each topic
-    --confirm default   install: repo
-                        uninstall: original
-    --confirm repo      install: use repo's dotfile and backup original version
-                        uninstall: restore original or keep a copy of repo version
-    --confirm original  install: use original dotfile and backup repo version
-                        uninstall: restore original or none
-    --confirm none      install: make the symlink, make no backup
-                        uninstall: remove the symlink, do not restore backup
+    <options> optional:     use to bypass confirmations.
+    --force                 force action even if already completed
+    --tlogo                 Toggle logo for this run only
+    --tstats                Toggle stats for this run only
+    --debug                 Turn on debug mode
+    --dryrun                Runs through all tasks, but no changes are actually made (must confirm each task)
+    --confirm               bypass topic confirmations and confirm symlinks for each topic
+    --confirm default       install: repo
+                            uninstall: original
+    --confirm repo          install: use repo's dotfile and backup original version
+                            uninstall: restore original or keep a copy of repo version
+    --confirm original      install: use original dotfile and backup repo version
+                            uninstall: restore original or none
+    --confirm none          install: make the symlink, make no backup
+                            uninstall: remove the symlink, do not restore backup
 
-    --confirm dryrun    Same as dryrun option but bypasses confirmations
-    --log               Print everything to file located in .dotfiles/user/repo/<date>.dslog
-    --cfg <mode>        Set mode for config output <default, user, topic, full>
+    --confirm dryrun        Same as dryrun option but bypasses confirmations
+    --log                   Print everything to file located in .dotfiles/user/repo/<date>.dslog
+    --cfg <mode>            Set mode for config output <default, user, topic, full>
 
     Usage Examples:
 
@@ -234,9 +235,9 @@ dotsys () {
 
     Package Management:
 
-    Packages do not require topics! The advantage managing packages
-    through dotsys insures that they will be added / remove from your
-    repo configuration the next time you install or uninstall with dotsys.
+    Packages do not require topics! The advantage of managing packages
+    through dotsys insures that changes to your system are tracked by
+    your repo.
 
     - Manage a command line utilities with default manager
       $ dotsys <action> cmd vim tmux
@@ -299,20 +300,20 @@ dotsys () {
 
       script functions: The rules below are important (please follow them strictly)
 
-        install:          Makes permanent changes that only require running on initial install (run once)!
+        install:        Makes permanent changes that only require running on initial install (run once)!
 
-        uninstall         Must undo everything done by install (run once)!
+        uninstall       Must undo everything done by install (run once)!
 
-        upgrade           Only use for changes that bump the installed component version!
-                          Topics with a manager typically wont need this, the manager will handle it.
+        upgrade         Only use for changes that bump the installed component version!
+                        Topics with a manager typically wont need this, the manager will handle it.
 
-        update:           Only use to update dotsys with local changes or data (DO NOT BUMP VERSIONS)!
-                          ex: reload a local config file so changes are available in the current session
-                          ex: refresh data from a webservice
+        update:         Only use to update dotsys with local changes or data (DO NOT BUMP VERSIONS)!
+                        ex: reload a local config file so changes are available in the current session
+                        ex: refresh data from a webservice
 
-        freeze:           Output the current state of the topic
-                          ex: A manager would list installed topics
-                          ex: git will show the current status
+        freeze:         Output the current state of the topic
+                        ex: A manager would list installed topics
+                        ex: git will show the current status
 
     depreciated scripts:use topic.sh functions
       install.sh        see action function definitions
@@ -345,6 +346,7 @@ dotsys () {
     local LOG_FILE
     local recursive
     local topic
+    local confirmed
 
     while [[ $# > 0 ]]; do
     case $1 in
@@ -374,14 +376,14 @@ dotsys () {
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       dry_run 0 ;;
         --confirm)      if [[ "$2" =~ (default|original|repo|none|skip) ]]; then
-                            GLOBAL_CONFIRMED="$2"
+                            confirmed="$2"
                             if [ "$2" = "dryrun" ]; then
                                 dry_run 0
-                                GLOBAL_CONFIRMED="skip"
+                                confirmed="skip"
                             fi
                             shift
                         else
-                            GLOBAL_CONFIRMED=true
+                            confirmed=true
                         fi ;;
         --log)          LOG_FILE="true";;
         --cfg)          cfg_mode="$2"; shift;;
@@ -394,9 +396,9 @@ dotsys () {
 
     required_vars "action"
 
-    debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$GLOBAL_CONFIRMED r:$recursive from:$from_repo"
+    debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$confirmed r:$recursive from:$from_repo"
 
-     # reset globals if non recursive call
+    # reset globals if non recursive call
     if ! [ "$recursive" ]; then
         GLOBAL_CONFIRMED=""
         TOPIC_CONFIRMED=""
@@ -404,11 +406,11 @@ dotsys () {
         PACKAGES_CONFIRMED=""
         ACTIVE_REPO=
         ACTIVE_REPO_DIR=
-        __repo=""
     fi
 
     # SET CONFIRMATIONS
     if ! [ "$recursive" ]; then
+        GLOBAL_CONFIRMED="$confirmed"
         # Set global if topics provided by user
         if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
             debug "main -> Set GLOBAL_CONFIRMED = backup (Topics specified or not install/uninstall)"
@@ -567,13 +569,14 @@ dotsys () {
         debug "main -> final topics list: ${topics[*]}"
     fi
 
-    # We stub here for hands free install
-    if [ "$action" = "install" ] && in_limits "stubs" "dotsys"; then
+    # Collect user data
+    if ! [ "$recursive" ] && [ "$action" = "install" ] && in_limits "stubs" "dotsys"; then
         debug "main -> collect_user_data"
         manage_stubs "$action" "${topics[*]}" --data "$force"
     fi
 
     # ITERATE TOPICS
+
     debug "main -> TOPIC LOOP START"
 
     for topic in ${topics[@]};do

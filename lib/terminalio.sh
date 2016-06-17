@@ -394,7 +394,7 @@ get_user_input () {
     local true_all
     local false_all
 
-    local hint="\b"
+    local hint=""
     local extra=()
     # default TOPIC_CONFIRMED allows bypass of yes no questions pertaining to topic
     # non yes/no questions should be --required or there could be problems!
@@ -478,6 +478,13 @@ get_user_input () {
        options="\n$spacer $options"
     fi
 
+    # put options on new line
+    if [ "$hint" ]; then
+       hint="$hint "
+    else
+       hint="\b"
+    fi
+
     # format extra options
     local opt
     local extra_regex
@@ -492,7 +499,7 @@ get_user_input () {
 
     # Get user input
     default="${default:-$true}"
-    question=$(printf "$question $options $hint [%b${default}%b]" $dark_gray $rc)
+    question=$(printf "$question $options ${hint}[%b${default}%b]" $dark_gray $rc)
 
     user "${question}: "
 

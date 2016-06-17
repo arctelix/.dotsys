@@ -290,6 +290,11 @@ freeze_state() {
 
 get_topic_list () {
     local from_repo="$1"
+
+    if [ "$from_repo" = "none" ]; then
+        from_repo=""
+    fi
+
     local active_repo="$(get_active_repo)"
     local repo_dir="$(repo_dir "${from_repo:-$active_repo}")"
     local force="$2"
@@ -350,7 +355,7 @@ get_topic_list () {
         if in_limits "dotsys" -r; then
             load_topic_config_vars "core"
             deps="$(get_topic_config_val "core" "deps")"
-            echo "core $deps"
+            echo "$deps core"
 
         # all other installs take topic directory
         else

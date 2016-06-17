@@ -55,7 +55,7 @@ dotsys_installer () {
            \rand you are welcome to redistribute it under certain conditions\n"
     fi
 
-    confirm_task "$action" "" "dotsys"
+    get_user_input "Would you like to install dotsys?" --confvar ""
     if ! [ $? -eq 0 ]; then  exit; fi
 
     # make sure PLATFORM_USER_BIN is on path

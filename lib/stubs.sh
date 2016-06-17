@@ -190,7 +190,9 @@ manage_topic_stubs () {
     fi
 
     # Make sure source files from topic are added to the appropriate stub file
-    manage_topic_source_files "$action" "$topic"
+    if [ "$mode" != "data" ]; then
+        manage_topic_source_files "$action" "$topic"
+    fi
 }
 
 
