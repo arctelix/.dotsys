@@ -377,7 +377,7 @@ collect_user_data () {
             freeze_msg "user data" "$var_text = $val"
 
         # Output user data
-        else
+        elif [ "$user_var" ];then
             success "$topic $var_text = $val"
         fi
 
