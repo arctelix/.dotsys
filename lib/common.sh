@@ -357,6 +357,7 @@ external_func () {
   return 1 # file not found
 }
 
+# Returns a list directory names in a directory
 get_dir_list () {
     local dir="$1"
     local force="$2"
@@ -371,6 +372,7 @@ get_dir_list () {
     done
 }
 
+# rename all files in a directory matching a name
 rename_all() {
     local files="$(find "$1" -type f -name "$2")"
     local file
@@ -402,6 +404,23 @@ reverse_array() {
     eval "$arrayname=( \"\${revarray[@]}\" )"
 }
 
+
+#Test if value is in an array
+#USAGE: array_contains arrayname
+array_contains () {
+    local array="$1[@]"
+    local seeking=$2
+    local in=1
+    for element in "${!array}"; do
+        if [[ $element == $seeking ]]; then
+            in=0
+            break
+        fi
+    done
+    return $in
+}
+
+# return a list of unique values
 unique_list () {
     local var="$1"
     local seen
@@ -420,5 +439,10 @@ unique_list () {
     echo $seen
 }
 
+remove_from_file () {
+    local file="$1"
+    local remove="$2"
+    ex "+g|$remove|d" -cwq "$file"
+}
 
 

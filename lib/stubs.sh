@@ -135,7 +135,7 @@ manage_stubs () {
 
 }
 
-# Create all stubs for a topic
+# Manage all stubs for a topic
 manage_topic_stubs () {
     usage="manage_topic_stubs [<option>]"
     usage_full="
@@ -386,6 +386,7 @@ collect_user_data () {
     done
 }
 
+# Collect stub files for a topic
 get_topic_stub_sources(){
     local topic="$1"
     local topic_dir="$(topic_dir "$topic" "active")"
@@ -415,7 +416,7 @@ get_credential_helper () {
     echo "$helper"
 }
 
-# Check all installed topics for current topic stub file
+# Check all installed topics for files with topic extension
 collect_topic_sources () {
     local action="$1"
     local topic="$2"
@@ -472,6 +473,8 @@ manage_topic_source_files () {
 
     debug "-- manage_topic_source_files: $action $topic"
 
+    local src_files=()
+
     # iterate all files in topic dir
     while IFS=$'\n' read -r src_file; do
         local src_topic="${src_file##*.}"
@@ -483,8 +486,30 @@ manage_topic_source_files () {
         if ! in_state "dotsys" "$src_topic"; then continue;fi
 
         manage_source "$action" "$src_topic" "$src_file" "output_status"
-
+        src_files+=("$src_file")
     done <<< "$topic_files"
+
+    local prev_sourced_file="$(user_stub_dir)/sources_from_${topic}"
+
+    if [ "$action" = uninstall ] || ! [ "$src_files" ] ;then
+        if [ -f "$prev_sourced_file" ]; then
+            rm "$prev_sourced_file"
+        fi
+        return
+    fi
+
+    # Remove any deleted source files from active sources
+    while IFS='' read -r src_file || [[ -n "$src_file" ]]; do
+        local src_topic="${src_file##*.}"
+        debug "   - checking array contains $src_topic $src_file "
+        if ! array_contains src_files "$src_file";then
+            manage_source uninstall "$src_topic" "$src_file" "output_status"
+        fi
+    done <"$prev_sourced_file"
+
+    # Create new prev_sourced_file
+    printf "%s\n" "${src_files[@]}" > "$prev_sourced_file"
+
 }
 
 # Add/remove source from stub file
@@ -507,8 +532,8 @@ manage_source () {
 
     # remove source on uninstall
     if [ "$action" = "uninstall" ];then
-        ex "+g/$formatted_source/d" -cwq "$write_target"
-        success_or_fail $? "remove" "$src_file_name" "from $(basename "$write_target")"
+        remove_from_file "$write_target" "$formatted_source"
+        success_or_fail $? "remove" "source $src_file \n$spacer from -> $write_target"
         return
     fi
 
@@ -530,10 +555,12 @@ manage_source () {
     echo "$formatted_source" >> $write_target
 
     if [ "$output_status" ];then
-        success_or_fail $? "add" "source $src_file \n$spacer -> $write_target"
+        success_or_fail $? "add" "source $src_file \n$spacer to -> $write_target"
     else
         echo "$spacer Sourced : $src_file"
     fi
 
 }
+
+
 
