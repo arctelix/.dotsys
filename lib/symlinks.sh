@@ -105,7 +105,7 @@ symlink_topic () {
 
     # Check if stub was already linked
     if [[ "${linked[@]}" =~ "$dst_name" ]]; then
-        debug "   symlink_topic ABORT stub already linked"
+        debug "   symlink_topic ABORT stub already ${action#e}ed"
         continue
     fi
     linked+=("$dst_name")
@@ -117,7 +117,8 @@ symlink_topic () {
 
     elif [ "$action" = "unlink" ]; then
       # Do not allow stub file links to be removed if dotsys requires it
-      if [[ "$src" =~ .stub ]] && ! in_limits "dotsys" -r && dotsys_in_use "$topic"; then
+      if [[ "$src" =~ .stub ]] && is_required_topic; then
+        debug "   symlink_topic: ABORT unlink (stub required by dotsys) $src"
         continue
       fi
       unlink "$dst"
@@ -361,7 +362,7 @@ unlink(){
   if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="original";fi
 
   # File does not exits
-  if [ ! -e "$link_file" ]; then
+  if [ ! -f "$link_file" ] && [ ! -L "$link_file" ]; then
     success "$(printf "Nothing to unlink at %s %b%s%b" "$DRY_RUN" $light_green $link_file $rc)"
     return
   fi

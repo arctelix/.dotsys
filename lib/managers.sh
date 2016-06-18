@@ -312,10 +312,9 @@ manage_packages () {
 is_manager () {
     local topic="${1:-$topic}"
     local r=1
-    debug "   - is_manager1: $topic"
+
     # accept app and cmd
     topic="$(get_default_manager "$topic")"
-    debug "   - is_manager2: $topic"
     if [ -f "$(topic_dir "$topic")/manager.sh" ]; then r=0;
     elif [ -f "$(builtin_topic_dir "$topic")/manager.sh" ]; then r=0; fi
 

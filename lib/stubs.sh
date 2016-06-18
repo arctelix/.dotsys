@@ -121,8 +121,8 @@ manage_stubs () {
     fi
 
     for topic in ${topics[@]}; do
-        # Abort if no user topic unless topic required by dotsys
-        if ! dotsys_in_use "$topic" && ! [ -d "$(topic_dir "$topic" "user")" ]; then
+        # Abort if not user topic and not required by dotsys
+        if ! user_topics_installed "$topic" && ! is_required_topic; then
             continue
         fi
         manage_topic_stubs "$action" "$topic" "$mode" "$force"
@@ -235,12 +235,13 @@ manage_user_stub () {
     if [ "$action" = uninstall ]; then
 
         # DO NOT DELETE if dotsys requires the stub
-        if ! in_limits "dotsys" -r && dotsys_in_use "$topic"; then
+        if is_required_topic "$topic"; then
             stub_tar=""
 
         # delete the stub file
         elif [ -f "$stub_dst" ]; then
             rm "$stub_dst"
+            success_or_fail $? "remove" "stub file:" "${topic}/$stub_name"
             return
         fi
     fi
@@ -274,7 +275,7 @@ manage_user_stub () {
         mv -f "$stub_tmp" "$stub_out"
         if ! [ "$target_ok" ];then
             output="
-            $spacer Stub Target :$stub_tar"
+            $spacer Stub Target : ${stub_tar:-uninstalled}"
         fi
     fi
 

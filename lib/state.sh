@@ -155,39 +155,41 @@ in_state () {
   in_state_results=
   local not_key="$key"
   local not_val="$val"
+  local query="$key:$val"
   local not
   local r
 
-  debug "   - in_state check '$state' for '$key:$val'"
+  #debug "   - in_state check '$state' for '$key:$val'"
 
   if [[ "$key" == "!"* ]]; then
+    not="not"
     not_key="${key#!}.*"
     key=""
-    not="true"
   fi
   if [[ "$val" == "!"* ]]; then
+    not="not"
     not_val=".*${val#!}"
     val=""
-    not="true"
   fi
 
   in_state_results="$(grep "$(grep_kv)" "$file")"
   local status=$?
-  debug "     in_state grep '$(grep_kv)' = $status"
-  debug "     in_state grep result:$(echo "$in_state_results" | indent_lines)"
 
+  local found
   if [ "$not" ]; then
+      status=1
       for r in $in_state_results; do
+        #debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = $status"
         if [ "$r" ] && ! [[ "$r" =~ ${not_key}:${not_val} ]]; then
-            debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = 0"
-            return 0
+            status=0
+            in_state_results="$r"
+            #debug "$indent -> found $r"
+            break
         fi
-        debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = 1"
       done
-      return 1
   fi
 
-  debug "$indent -> in_state = $status"
+  debug "   - in_state ($query) = $status $in_state_results"
   return $status
 }
 

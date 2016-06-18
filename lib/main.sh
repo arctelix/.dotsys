@@ -471,7 +471,7 @@ dotsys () {
 
         if [ "$action" = "uninstall" ]; then
             # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
-            if dotsys_in_use; then
+            if user_topics_installed; then
                 warn "Dotsys is still in use and cannot be uninstalled until
               $spacer all topics, packages, & repos are uninstalled\n"
                 get_user_input "Would you like to uninstall everything, including dotsys, now?" --required
@@ -846,11 +846,20 @@ uninstall_inactive () {
     fi
 }
 
-dotsys_in_use () {
-    # no arguments will test if any topic is used by dotsys
-    # use topic as first arg to test if that is used by dotsys
+# no args : checks if there there any user installed topics
+# topic as first arg : test if topic is user installed
+user_topics_installed () {
     in_state "dotsys" "$1" "!dotsys/dotsys"
     local r=$?
-    debug "   - dotsys_in_use = $r"
+    debug "   - user_topics_installed = $r"
+    return $r
+}
+
+# Check if topic is required by dotsys
+is_required_topic () {
+    local topic="${1:-$topic}"
+    ! in_limits "dotsys" -r && in_state "dotsys" "$topic" "dotsys/dotsys"
+    local r=$?
+    debug "   - is_required_topic = $r"
     return $r
 }
