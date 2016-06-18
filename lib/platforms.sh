@@ -23,6 +23,7 @@ get_platform () {
     platform="linux"
   elif [ "$(uname -o)" == "Cygwin" ]; then
     platform="windows-cygwin"
+    babun >/dev/null 2>&1 && platform="windows-babun"
   elif [ "$(uname -o)" == "Msys" ]; then
     platform="windows-msys"
   else
