@@ -96,7 +96,7 @@ debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 # All files names used by system
 SYSTEM_FILES="install.sh uninstall.sh update.sh upgrade.sh freeze.sh manager.sh topic.sh dotsys.cfg"
 # All file extensions used by system
-SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml vars"
+SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml vars dslog"
 
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
