@@ -71,6 +71,7 @@ load_config_vars (){
         else
             prompt_config_or_repo "$action" --error "A repo must be specified!"
         fi
+
     fi
 
     # MANAGE REPO Make sure repo is installed updated
@@ -228,7 +229,7 @@ prompt_config_or_repo () {
         fi
     fi
 
-    local help="$(msg_help "$(printf "Use can type %bhelp%b for more info or %babort%b to exit" $blue $dark_gray $blue $dark_gray)")"
+    local help="$(msg_help "$(printf "Type %bhelp%b for more details or %babort%b to exit" $_code $_help $_code $_help)")"
     local question="Enter a repo or config file to ${action}"
     local prompt="$(printf "${help}\n${question}")"
 
@@ -298,42 +299,6 @@ prompt_config_or_repo () {
     return $?
 }
 
-
-# USER CONFIG
-
-is_new_user () {
-    # Empty user state file is new user
-    #! [ -s "$(state_file "user")" ]
-    get_state_value "user" "user_repo"
-    return $?
-}
-
-new_user_config () {
-    local repo="$1"
-
-    print_logo "$repo"
-
-    printf "\n"
-    msg "$(printf "Before getting started we have a few questions.")"
-    printf "\n"
-
-    prompt_config_or_repo "$action"
-
-    user_config_logo
-
-    user_config_stats
-
-    user_config_stubs
-
-    msg "\nCongratulations ${USER_NAME}, your preferences are set!\n"
-    msg "Now were going to configure your repo.\n"
-}
-
-set_user_vars () {
-    local repo="$1"
-    USER_NAME="$(cap_first "$(whoami)")"
-}
-
 get_config_file_from_repo () {
   if ! [ "$1" ]; then return 1;fi
   echo "$(repo_dir "$1")/dotsys.cfg"
@@ -347,19 +312,90 @@ get_repo_from_config_file () {
     fi
 }
 
-user_config_logo () {
-    get_user_input "Would you like to see the dotsys logo when
-            $spacer working on multiple topics (it's helpful)?"
+# USER CONFIG
+
+is_new_user () {
+    # Empty user state file is new user
+    #! [ -s "$(state_file "user")" ]
+    get_state_value "user" "user_repo"
+    return $?
+}
+
+new_user_config () {
+
+    print_logo
+
+    printf "\n"
+    msg "Before getting started lets set some common default values."
+    printf "\n"
+
+    config_user_var "user_name" "$(get_user_name)"
+
+    config_user_var "user_email" "$(get_state_value "user" "git_author_email")"
+
+    printf "\n"
+    msg "Now just a few more configuration options."
+    printf "\n"
+
+    config_user_logo
+
+    config_user_stats
+
+    config_user_stubs
+
+    printf "\n"
+    msg "The last step is to set a primary repo.  This will
+    \rbe the default repo used when you run dotsys commands.
+    \rUse the format $(code "github_user_name/repo_name")"
+    printf "\n"
+
+    config_user_primary_repo
+
+    printf "\n"
+    msg "\nCongratulations $(get_user_name), your preferences are set!\n"
+    printf "\n"
+}
+
+config_user_var () {
+    local var="$1"
+    local var_text="$(echo "$var" | tr '_' ' ')"
+
+    local state_val="$(get_state_value "user" "$var")"
+    local default="${state_val:-$2}"
+
+    local user_input
+    get_user_input "Provide a default $var_text " --options omit --default "$default"
+    set_state_value "user" "$var" "$user_input"
+}
+
+get_user_name () {
+    local val
+    val="$(get_state_value "user" "user_name")"
+    if ! [ "$val" ]; then
+        val="$(cap_first "$(whoami)")"
+    fi
+    echo "$val"
+}
+
+config_user_primary_repo () {
+    local user_input
+    prompt_config_or_repo "set as your primary repo"
+    state_primary_repo "$user_input"
+}
+
+config_user_logo () {
+    get_user_input "Show the dotsys logo when working on multiple topics?
+            $spacer (it's helpful)"
     set_state_value "user" "SHOW_LOGO" $?
 }
 
-user_config_stats () {
-    get_user_input "Would you like to see the dotsys stats when
-            $spacer working on multiple topics (it's helpful)?"
+config_user_stats () {
+    get_user_input "Show the dotsys stats when working on multiple topics?
+            $spacer (it's helpful)?"
     set_state_value "user" "SHOW_STATS" $?
 }
 
-user_config_stubs () {
+config_user_stubs () {
     info "The stub file process allows topics to collect user specific
   $spacer information and sources topic related files from other topics
   $spacer such as *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"

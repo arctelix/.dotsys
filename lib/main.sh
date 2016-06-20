@@ -32,11 +32,10 @@
 
 #GENERAL FIXES:
 #TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
-#TODO URGENT: topic and builtin array type configs get duplicated (deps already done) need to filter symlinks.
-#TODO URGENT: Add to manager.state when packages added to manager via 'dotsys action cmd package'
-
+#TODO URGENT: When packages are added to manager via 'dotsys action cmd package' update manager.state
 
 #FUTURE FEATURES
+#TODO ROADMAP: Implement config action for topics user data rather then running update --force
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
 #TODO ROADMAP: handle .settings files
@@ -74,6 +73,7 @@ if ! [ "$DOTSYS_LIBRARY" ];then
 fi
 
 #echo "main DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
+SOURCED="true"
 . "$DOTSYS_LIBRARY/common.sh"
 . "$DOTSYS_LIBRARY/configio.sh"
 . "$DOTSYS_LIBRARY/terminalio.sh"
@@ -85,6 +85,7 @@ fi
 . "$DOTSYS_LIBRARY/config.sh"
 . "$DOTSYS_LIBRARY/repos.sh"
 . "$DOTSYS_LIBRARY/stubs.sh"
+SOURCED=""
 
 DOTSYS_REPOSITORY="$(drealpath "$DOTSYS_REPOSITORY")"
 DOTSYS_LIBRARY="$(drealpath "$DOTSYS_LIBRARY")"
@@ -92,9 +93,10 @@ debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
 debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 
 #GLOBALS
-STATE_SYSTEM_KEYS="installed_repo"
+# All files names used by system
 SYSTEM_FILES="install.sh uninstall.sh update.sh upgrade.sh freeze.sh manager.sh topic.sh dotsys.cfg"
-SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml"
+# All file extensions used by system
+SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml vars"
 
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
@@ -164,6 +166,7 @@ dotsys () {
                     re-sources bin, re-sources stubs
     freeze          Output installed state to terminal
                     use --log option to freeze to file
+    config          Set configuration options
 
     <topics> optional:
 
@@ -258,35 +261,33 @@ dotsys () {
     Organization:       NOTE: Any file or directory prefixed with a "." will be ignored by dotsys
 
 
-      repos:            .dotfiels/user_name/repo_name
+      repos:            - .dotfiels/user_name/repo_name
                         A repo contains a set of topics and correlates to a github repository
                         You can install topics from as many repos as you like.
 
-      symlinks:         topic/*.symlink
+      symlinks:         - topic/*.symlink
                         Symlinked to home or specified directory
 
-
-      bins:             topic/bin
+      bins:             - topic/bin
                         All files inside a topic bin will be available
                         on the command line by simlinking to dotsys/bin
 
-      managers:         topic/manager.sh
+      managers:         - topic/manager.sh
                         Manages packages of some type, such as brew,
                         pip, npm, etc.. (see script manager.sh for details)
 
-      configs:          Configs are yaml like configuration files that tell
+      configs:          - repo/dotsys.cfg repo level config file
+                        - topic/dotsys.cfg topic level config file
+                        Configs are yaml like configuration files that tell
                         dotsys how to handle a repo and or topics.  You can
                         customize almost everything about a repo and topic
                         behavior with dotsys.cfg file.
-                        repo/dotsys.cfg repo level config file
-                        topic/dotsys.cfg topic level config file
 
-      stubs:            topic/file.stub
-                        Stubs allow topics to collect user information and to add
-                        functionality to each other. For example: The stub for
-                        .vimrc is symlinked to your $HOME
-                        directory where vim will read it.  The stub will then source
-                        your vim/vimrc.symlink and search for other topic/*.vim files.
+      stubs:            - topic/file_name.stub
+                        Provides common boilerplate functionality, collect user information,
+                        sources your personalized settings, and sources *.topic files.
+                        - topic/file_name.vars
+                        Provides values for stub file variables.
 
     scripts:            scripts are optional and placed in each topic root directory
 
@@ -332,6 +333,7 @@ dotsys () {
         upgrade )   action="upgrade" ;;
         update )    action="update" ;;
         freeze)     action="freeze" ;;
+        config)     action="config" ;;
         * )  error "Invalid action: $1"
            show_usage ;;
     esac
@@ -427,6 +429,13 @@ dotsys () {
         PACKAGES_CONFIRMED="$GLOBAL_CONFIRMED"
     fi
 
+    # HANDLE CONFIG ACTION
+
+    if [ "$action" = "config" ]; then
+        new_user_config
+        return
+    fi
+
     # HANDLE REPO LIMIT
 
     # First topic "repo" or "xx/xx" is equivalent to setting limits="repo"
@@ -483,7 +492,6 @@ dotsys () {
     verbose_mode
 
     if ! [ "$recursive" ]; then
-        set_user_vars
         print_logo
     fi
 
@@ -492,7 +500,7 @@ dotsys () {
 
 
     # freeze dotsys state files
-    if [ "$action" = "freeze" ] && in_limits "dotsys"; then
+    if [ "$action" = "freeze" ] && [ ! "$topics" ] && in_limits "dotsys"; then
         freeze_states "${limits[@]}"
     fi
 
@@ -528,7 +536,7 @@ dotsys () {
         return
     fi
 
-    # TOPIC LIST
+    # GET TOPIC LIST
 
     if ! [ "$topics" ]; then
 
@@ -571,7 +579,7 @@ dotsys () {
 
     # Collect user data
     if ! [ "$recursive" ] && [ "$action" = "install" ] && in_limits "stubs" "dotsys"; then
-        debug "main -> collect_user_data"
+        debug "main -> collect_user_data for ${topics[*]}"
         manage_stubs "$action" "${topics[*]}" --data "$force"
     fi
 
@@ -861,5 +869,14 @@ is_required_topic () {
     ! in_limits "dotsys" -r && in_state "dotsys" "$topic" "dotsys/dotsys"
     local r=$?
     debug "   - is_required_topic = $r"
+    return $r
+}
+
+# Check if topic has required stub file
+is_required_stub () {
+    local topic="${1:-$topic}"
+    ! in_limits "dotsys" -r && [ "$topic" = shell ]
+    local r=$?
+    debug "   - is_required_stub = $r"
     return $r
 }

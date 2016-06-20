@@ -207,9 +207,8 @@ manage_repo (){
         fi
 
         # GIT CONFIG (after remote: need existing configs)
-        if ! in_state "user" "git_user_name"; then
-            setup_git_config "$repo"
-        fi
+        setup_git_config "$repo" "local"
+
 
         # make sure repo is git!
         if ! is_git; then
@@ -650,24 +649,34 @@ install_required_repo_files () {
 
 setup_git_config () {
     local repo="$1"
+    local options="${2:-global local}"
     local template="$(builtin_topic_dir "git")/gitconfig.template"
     local repo_dir="$(repo_dir "$repo")"
     local OWD="$PWD"
 
-    confirm_task "configure" "git for" "$repo"
-
-    if [ $? -eq 1 ]; then return; fi
+    if [ "$options" != global ]; then
+        confirm_task "configure" "git for" "$repo"
+        if [ $? -eq 1 ]; then return; fi
+    fi
 
     cd "$repo_dir"
 
     local cfg
+    local global_prefix="git"
+    local local_prefix="git_${repo%/*}_${repo##*/}"
+    local state_prefix
 
-    for cfg in "global" "local"; do
+    for cfg in $options; do
 
         # state prifx for cfg
-        local state_prefix="git"
         if [ "$cfg" = "local" ]; then
-            state_prefix+="_$cfg"
+            state_prefix="$local_prefix"
+        else
+            state_prefix="$global_prefix"
+        fi
+
+        if in_state "user" "$state_prefix"; then
+            continue
         fi
 
         # check for global as local default
@@ -685,7 +694,7 @@ setup_git_config () {
 
         if [ "$cfg" = "local" ]; then
             if ! [ "$authorname" ] || ! [ "$authoremail" ]; then
-                get_user_input "Use the global settings for your repo?"
+                get_user_input "Use the global author settings for your repo?"
                 if [ $? -eq 0 ]; then
                     continue
                 fi
@@ -745,13 +754,15 @@ setup_git_config () {
             fi
         fi
 
-
+        local
+        if [ "$cfg" = "local" ]; then
+            success "A local .gitconfig has been created for $repo"
+        else
+            success "A global .gitconfig has been created for $authorname"
+        fi
     done
 
     cd "$OWD"
-
-    success "Git has been configured for $repo"
-
 }
 
 has_remote_repo (){
@@ -922,7 +933,6 @@ confirm_make_primary_repo (){
     get_user_input "$(printf "Would you like to make this your primary repo:\n$spacer %b$(repo_dir "$repo")%b" $thc $rc)" --required
     if [ $? -eq 0 ]; then
         state_primary_repo "$repo"
-        set_user_vars "$repo"
         success "New primary repo:" "$(printf "%b$repo" $thc)"
     fi
 }

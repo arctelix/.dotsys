@@ -164,26 +164,42 @@ user_stub_dir() {
     echo "$(dotsys_dir)/user/stubs"
 }
 
-get_topic_or_builtin_file () {
+# returns a file from user directory or builtin directory
+get_user_or_builtin_file () {
     local topic="$1"
     local find_file="$2"
-    local t_dir="$(topic_dir "$topic")"
+    local u_dir="$(topic_dir "$topic" "user")"
+    local u_files=()
+    local b_dir="$(topic_dir "$topic" "builtin")"
+    local b_files=()
+
 
     # check user directory for file
-    if [ -d "$t_dir" ]; then
-        file="$(find "$t_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" )"
+    if [ -d "$u_dir" ]; then
+        u_files=( $(find "$u_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" -not -name '\.*') )
     fi
 
     # check builtin directory for file
-    if ! [ "$file" ];then
-        local b_dir="$(topic_dir "$topic" "builtin")"
-        if [ -d "$b_dir" ]; then
-            file="$(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" )"
-        fi
+    if ! [ "$file" ] && [ -d "$b_dir" ];then
+        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file") )
     fi
 
-    echo "$file"
-    script_exists "$file"
+    local file
+    # Add any builtin file name not already in user files
+    for file in "${b_files[@]}";do
+        if ! array_contains u_files "*$(basename "$file")"; then
+            u_files+=( "$file" )
+        fi
+    done
+
+    # Set permissions for all files
+    for file in "${u_files[@]}";do
+        script_exists "$file"
+    done
+
+    # return line separated array
+    printf '%s\n' "${u_files[@]}"
+
     return $?
 }
 
@@ -439,10 +455,10 @@ unique_list () {
     echo $seen
 }
 
-remove_from_file () {
+remove_string_from_file () {
     local file="$1"
-    local remove="$2"
-    ex "+g|$remove|d" -cwq "$file"
+    local string="$2"
+    ex "+g|$string|d" -cwq "$file"
 }
 
-
+[ ! "$SOURCED" ] && "$@"

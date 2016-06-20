@@ -121,8 +121,8 @@ manage_stubs () {
     fi
 
     for topic in ${topics[@]}; do
-        # Abort if not user topic and not required by dotsys
-        if ! user_topics_installed "$topic" && ! is_required_topic; then
+        # Abort no user topic and not a required stub file topic
+        if ! [ "$(topic_dir "$topic" "user")" ] && ! is_required_stub; then
             continue
         fi
         manage_topic_stubs "$action" "$topic" "$mode" "$force"
@@ -178,9 +178,9 @@ manage_topic_stubs () {
             debug "   found stub file for $topic -> $stub_file"
 
             if [ "$mode" = "data" ]; then
-                collect_user_data "$action" "$stub_file" "" "$force"
+                collect_user_data "$action" "$topic" "$stub_file" "" "$force"
             elif [ "$action" = freeze ];then
-                collect_user_data "$action" "$stub_file" "" "$force"
+                collect_user_data "$action" "$topic" "$stub_file" "" "$force"
                 collect_topic_sources "$action" "$topic" "$(basename "${stub_file%.*}")"
             else
                 # Create/Update stub file with target, user data, and source files
@@ -215,7 +215,7 @@ manage_user_stub () {
     # Convert stub_name to stub_src if required
     # This allows: create_user_stub "git" "gitconfig"
     if [ "$stub_src" = "$stub_name" ] ; then
-        stub_src="$(get_topic_or_builtin_file "$topic" "${stub_name}.stub")"
+        stub_src="$(get_user_or_builtin_file "$topic" "${stub_name}.stub")"
     fi
 
     # abort if there is no stub for topic
@@ -234,8 +234,8 @@ manage_user_stub () {
 
     if [ "$action" = uninstall ]; then
 
-        # DO NOT DELETE if dotsys requires the stub
-        if is_required_topic "$topic"; then
+        # DO NOT DELETE shell stub
+        if is_required_stub "$topic"; then
             stub_tar=""
 
         # delete the stub file
@@ -280,7 +280,10 @@ manage_user_stub () {
     fi
 
     # ADD USER VARS
-    collect_user_data "$action" "$stub_out" "$stub_tmp"
+    local user_vars="$(collect_user_data "$action" "$topic" "$stub_out" "$stub_tmp")"
+    if [ "$user_vars" ]; then
+        output="$output\n$user_vars"
+    fi
 
     # move to .dotsys/user/stubs/stubname.topic.stub
     mv -f "$stub_out" "$stub_dst"
@@ -304,33 +307,35 @@ collect_user_data () {
 
     debug "-- collect user data variables"
     local action="$1"
-    local stub_in="$2"
-    local stub_out="$3"
-    local force="$4"
-    local var
-    local val
-    local var_text
-    local g_state_key
-    local t_state_key
-    local user_var
-    local variables=($(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_in"))
+    local topic="$2"
+    local stub_in="$3"
+    local stub_out="$4"
+    local force="$5"
+    local stub_name="$(basename ${stub_in%.stub*})"
 
+    local var
+    local variables=($(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_in"))
     for var in ${variables[@]}; do
-        # global key lower case and remove $topic_ or topic_
-        g_state_key="$(echo "$var" | tr '[:upper:]' '[:lower:]')"
-        g_state_key="${g_state_key#topic_}"
-        g_state_key="${g_state_key#$topic_}"
-        # topic key
-        t_state_key="${topic}_${g_state_key}"
-        # always use global key as text
-        var_text="$(echo "$g_state_key" | tr '_' ' ')"
+        local val
+        local user_input
+        local user_var
+        local default_val
+        local script_val
+        local values_script
+        local output
+        # generic key allows for default values from state ie: user_name vs topic_user_name
+        local gen_state_key="$(echo "$var" | tr '[:upper:]' '[:lower:]')"
+        gen_state_key="${gen_state_key#topic_}"
+        gen_state_key="${gen_state_key#$topic_}"
+        # topic specific key
+        local t_state_key="${topic}_${gen_state_key}"
+        # always use generic key as text
+        local var_text="$(echo "$gen_state_key" | tr '_' ' ')"
 
         case "$var" in
             SOURCE_FILES )              continue ;;
             STUB_TARGET )               continue;;
             DOTSYS_BIN )                val="$(dotsys_user_bin)";;
-            USER_NAME )                 val="$USER_NAME";;
-            CREDENTIAL_HELPER )         val="$(get_credential_helper)";;
             DOTFILES_DIR )              val="$(dotfiles_dir)" ;;
             DOTSYS_DIR )                val="$(dotsys_dir)" ;;
             DOTSYS_PLATFORM )           val="$(get_platform)" ;;
@@ -340,45 +345,54 @@ collect_user_data () {
                                         user_var="true" ;;
         esac
 
-        # DO NOT REMOVE: If required for complex custom values
-        # check for "VARIABLE=some value"
-        # if ! [ "$val" ]; then
-        #   val="${var%=}"                            # split value from "VARIABLE=value"
-        #   var="${var#=}"                            # split variable from "VARIABLE=value"
-        #   if [ "$var" = "$val"  ]; then val="";fi   # clear value if none provided
-        # fi
+        debug "   - collect_user_data: var($var) key($gen_state_key) text($var_text) = $val"
 
-        debug "   - collect_user_data: var($var) key($g_state_key) text($var_text) = $val"
+        # Check if stubfile.vars supplies values
+        if ! [ "$val" ]; then
+            values_script="$(get_user_or_builtin_file "$topic" "${stub_name}.vars")"
+            if script_exists "$values_script"; then
+
+                script_val="$($values_script $gen_state_key)"
+
+                # value was obtained and no user confirm required
+                if [ $? -eq 0 ]; then
+                    user_var=""
+                    val="$script_val"
+                # no value or value requires user confirm
+                else
+                    default_val="$script_val"
+                fi
+            fi
+        fi
 
         # Get user input if no val found
         if [ "$user_var" ] && [[ ! "$val" || "$force" ]]; then
-            # use global_state_key value as default
-            debug "   create_user_stub get default: $g_state_key"
-            local def
-            def="$(get_state_value "user" "${g_state_key}")"
 
-            local user_input
-            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${def:-none}" -r
+            # use gen_state_key value as default
+            if ! [ "$default_val" ]; then
+                debug "   create_user_stub get default: $gen_state_key"
+                default_val="$(get_state_value "user" "${gen_state_key}")"
+            fi
 
-            # abort stub process
+            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${default_val:-none}" -r
             if ! [ $? -eq 0 ]; then return;fi
-
+            user_input="${user_input:-$def}"
             # set user provided value
             val="${user_input:-$def}"
 
             # record user val to state
-            set_state_value "user" "${topic}_state_key" "$val"
+            set_state_value "user" "$t_state_key" "$val"
         fi
 
-        # Replace stub variable with value
-        if [ "$stub_out" ]; then
-            sed -e "s|{$var}|${val}|g" "$stub_in" > "$stub_out"
-            mv -f "$stub_out" "$stub_in"
-
         # Freeze user data
-        elif [ "$action" = "freeze" ];then
+        if [ "$action" = "freeze" ];then
             freeze_msg "user data" "$var_text = $val"
 
+        # Replace stub variable with value
+        elif [ "$stub_out" ]; then
+            sed -e "s|{$var}|${val}|g" "$stub_in" > "$stub_out"
+            mv -f "$stub_out" "$stub_in"
+            echo "$spacer user variable : $var_text=$val"
         # Output user data
         elif [ "$user_var" ];then
             success "$topic $var_text = $val"
@@ -390,11 +404,7 @@ collect_user_data () {
 # Collect stub files for a topic
 get_topic_stub_sources(){
     local topic="$1"
-    local topic_dir="$(topic_dir "$topic" "active")"
-    local builtin_dir="$(topic_dir "$topic" "builtin")"
-    local dirs="$topic_dir $builtin_dir"
-    local result="$(find $dirs -mindepth 1 -maxdepth 1 -type f -name '*.stub' -not -name '\.*' | sort -u)"
-    echo "$result"
+    echo "$(get_user_or_builtin_file "$topic" "*.stub")"
 }
 
 
@@ -424,7 +434,7 @@ collect_topic_sources () {
     local stub_file_name="$3"
 
     # check if topic has a .sources file
-    local topic_sources_script="$(get_topic_or_builtin_file "$topic" "${stub_file_name}.sources")"
+    local topic_sources_script="$(get_user_or_builtin_file "$topic" "${stub_file_name}.sources")"
     if ! [ "$topic_sources_script" ]; then continue;fi
 
     local installed_topic_dirs="$(get_installed_topics "dir")"
@@ -478,6 +488,7 @@ manage_topic_source_files () {
 
     # iterate all files in topic dir
     while IFS=$'\n' read -r src_file; do
+        # source topic is the file extension
         local src_topic="${src_file##*.}"
 
         # Skip system extensions
@@ -522,7 +533,7 @@ manage_source () {
     local src_file_name="$(basename "${src_file%.*}")"
 
     # check if src_file_name has a .sources file
-    local format_script="$(get_topic_or_builtin_file "$src_file_topic" "*.sources")"
+    local format_script="$(get_user_or_builtin_file "$src_file_topic" "*.sources")"
     if ! [ $? ]; then return; fi
 
     debug "   - manage_source for: $src_file_topic/$src_file_name
@@ -533,7 +544,7 @@ manage_source () {
 
     # remove source on uninstall
     if [ "$action" = "uninstall" ];then
-        remove_from_file "$write_target" "$formatted_source"
+        remove_string_from_file "$write_target" "$formatted_source"
         success_or_fail $? "remove" "source $src_file \n$spacer from -> $write_target"
         return
     fi

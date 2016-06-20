@@ -3,8 +3,8 @@
 # Customize repo/git/gitconfig.symlink
 # -------------------------------------
 [user]
-    name = {TOPIC_USER_NAME}
-    email = {TOPIC_USER_EMAIL}
+    name = {TOPIC_GLOBAL_AUTHOR_NAME}
+    email = {TOPIC_GLOBAL_AUTHOR_EMAIL}
 [credential]
     helper = {CREDENTIAL_HELPER}
 

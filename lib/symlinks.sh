@@ -59,7 +59,7 @@ symlink_topic () {
 
   required_vars "action" "topic"
 
-  local symlinks
+  local files
   local dst_path
 
   debug "-- symlink_topic $action $topic SYMLINK_CONFIRMED=$SYMLINK_CONFIRMED"
@@ -69,24 +69,18 @@ symlink_topic () {
   if [ "$SYMLINK_CONFIRMED" ]; then silent="--silent";fi
   manage_topic_bin "$action" "$topic" "$silent"
 
-  symlinks=()
-  # find .dotsys/user stub files
-  symlinks+=( $(/usr/bin/find "$(user_stub_dir)" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name "*${topic}.stub" -not -name '\.*') )
+  # find stubs first
+  files=( $(get_user_or_builtin_file "$topic" "*.stub") )
+  # add symlinks
+  files+=( $(get_user_or_builtin_file "$topic" "*.symlink") )
 
-  # add topic symlinks & stubs
-  local topic_dir="$(topic_dir "$topic")"
-  if [ -d "$topic_dir" ]; then
-        #if [ "$symlinks" ]; then symlinks="${symlinks}\n"; fi
-        symlinks+=( $(/usr/bin/find "$topic_dir" -mindepth 1 -maxdepth 1 \( -type f -or -type d \) -name "*${topic}.stub" -o -name '*.symlink' -not -name '\.*') )
-  fi
-
-  debug "   symlinks  : $symlinks"
+  debug "   symlinks  : $files"
 
   local linked=()
   local src
   local dst
   local dst_name
-  for src in "${symlinks[@]}";do
+  for src in "${files[@]}";do
 
     debug "   symlink_topic src  : $src"
 
@@ -103,6 +97,11 @@ symlink_topic () {
     dst="$(get_symlink_dst "$src" "$dst_path")"
     dst_name="$(basename "$dst")"
 
+    # Convert stub src path to dotsys/user/stubs
+    if [ "$src" != "${src%.stub}" ];then
+        src="$(get_user_stub_file "$topic" "$src")"
+    fi
+
     # Check if stub was already linked
     if [[ "${linked[@]}" =~ "$dst_name" ]]; then
         debug "   symlink_topic ABORT stub already ${action#e}ed"
@@ -117,7 +116,7 @@ symlink_topic () {
 
     elif [ "$action" = "unlink" ]; then
       # Do not allow stub file links to be removed if dotsys requires it
-      if [[ "$src" =~ .stub ]] && is_required_topic; then
+      if [[ "$src" =~ .stub ]] && is_required_stub; then
         debug "   symlink_topic: ABORT unlink (stub required by dotsys) $src"
         continue
       fi
@@ -455,16 +454,9 @@ unlink(){
 
 
   if [ "$action" != "skip" ]; then
-
     # Remove the symlink
     rm -rf "$link_file"
     success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" $thc )"
-
-    # Remove the stub file
-    if [ "$link_stub" ]; then
-        rm -rf "$link_stub"
-        success_or_none $? "remove" "stub file for" "$(printf "%b$topic's $link_name" $thc )"
-    fi
   fi
 
   # Skip symlink (DRY RUN)

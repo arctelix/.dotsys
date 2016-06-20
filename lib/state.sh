@@ -207,20 +207,30 @@ get_state_value () {
 
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     status=$val
+
   elif [ "$val" ]; then
       local line
+      status=1
       for line in $lines; do
           val="${line#*:}"
 
           # do not match the provided value
           if [[ "$match_val" == "!"* ]]; then
-              if ! [[ "$val" =~ ${match_val#!} ]]; then echo "$val"; fi
+              if ! [[ "$val" =~ ${match_val#!} ]]; then
+                echo "$val"
+                status=0
+              fi
 
           # only match the provided value
           elif [ "$match_val" ]; then
-              if [[ "$val" =~ ${match_val} ]]; then echo "$val"; fi
+              if [[ "$val" =~ ${match_val} ]]; then
+                echo "$val"
+                status=0
+              fi
+
           elif [ "$val" ]; then
               echo "$val"
+              status=0
           fi
       done
   fi
@@ -243,7 +253,7 @@ set_state_value () {
 # sets / gets primary repo value
 state_primary_repo(){
   local repo="$1"
-  local key="user_repo"
+  local key="primary_repo"
 
   if [ "$repo" ]; then
     set_state_value "user" "$key" "$repo"
@@ -378,8 +388,6 @@ get_installed_topics () {
     while read line; do
         topic=${line%:*}
         repo=${line#*:}
-        # skip system keys
-        if [[ "$STATE_SYSTEM_KEYS" =~ $topic ]]; then continue; fi
 
         if [ "$repo" = "dotsys/dotsys" ]; then
             repo="$DOTSYS_REPOSITORY/builtins"

@@ -5,6 +5,9 @@
 
 # COLORS
 
+black="\e[0;30m"
+black_bold="\e[01;30m"
+
 red="\e[0;31m"
 dark_red="\e[01;31m"
 
@@ -23,8 +26,32 @@ dark_magenta="\e[01;35m"
 cyan="\e[0;36m"
 dark_cyan="\e[01;36m"
 
-gray="\e[0;37m"
+light_gray="\e[0;37m"
+light_gray_bold="\e[01;37m"
+
 dark_gray="\e[0;90m"
+dark_gray_bold="\e[01;90m"
+
+l_red="\e[0;91m"
+l_red_bold="\e[01;91m"
+
+l_green="\e[0;92m"
+l_green_bold="\e[01;92m"
+
+l_yellow="\e[0;93m"
+l_yellow_bold="\e[01;93m"
+
+l_blue="\e[94m"
+l_blue_bold="\e[1;94m"
+
+l_magenta="\e[0;95m"
+l_magenta_bold="\e[01;95m"
+
+l_cyan="\e[0;96m"
+l_cyan_bold="\e[01;96m"
+
+white="\e[0;97m"
+white_bold="\e[01;97m"
 
 rc="\e[0m" #reset color
 
@@ -34,9 +61,6 @@ clear_line_above="\e[1A\r\e[K"
 spacer="\r\e[K        " # indent from screen edge
 indent="        " # indent from current position
 
-white='\e[0;37m';
-dark_white='\e[1;37m';
-
 # topic highlight color
 thc=""
 
@@ -45,8 +69,12 @@ uc=$white
 # user highlight color
 uhc=$dark_white
 
+# default value color
+dvc=$l_blue
+
 # code highlight color
-code=$magenta
+_code=$magenta
+_help=$l_blue
 
 # BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE THESE METHODS )
 
@@ -106,17 +134,22 @@ is_even () {
     return $?
 }
 
+# otehr text formatting
+
+code () {
+  printf  "%b%b%b" $_code "$1" $rc
+}
+
 # messages
 
 msg () {
   local text="$(compile_text $yellow $dark_yellow "$@")"
   printf  "\r%b%b%b%b\n" $clear_line $yellow "$text" $rc
   log "MSG" "$@"
-
 }
 
 msg_help () {
-  printf  "\r%b%b%b\n" $dark_gray "$1" $rc
+  printf  "\r%b%b%b\n" $_help "$1" $rc
   log "HELP" "$@"
 }
 
@@ -370,7 +403,7 @@ get_user_input () {
     -o | --options )    alternate options line
                         or 'omit' for no options
     -e | --extra)       extra option
-    -h | --hint)        option line hint for no invalid input
+    -h | --hint)        optional hint line for no invalid input
     -c | --clear )      Number + extra/ - less lines to lear [0]
     -t | --true )       Text to print for 0 value
                         set to 'omit' for required variable input
@@ -398,7 +431,7 @@ get_user_input () {
     local extra=()
     # default TOPIC_CONFIRMED allows bypass of yes no questions pertaining to topic
     # non yes/no questions should be --required or there could be problems!
-    local CONFIRMED_VAR="TOPIC_CONFIRMED"
+    local CONFIRMED_VAR=
     local required
 
 
@@ -478,7 +511,7 @@ get_user_input () {
        options="\n$spacer $options"
     fi
 
-    # put options on new line
+    # format hint
     if [ "$hint" ]; then
        hint="$hint "
     else
@@ -499,7 +532,7 @@ get_user_input () {
 
     # Get user input
     default="${default:-$true}"
-    question=$(printf "$question $options ${hint}[%b${default}%b]" $dark_gray $rc)
+    question=$(printf "$question $options ${hint}[%b${default}%b]" $dvc $rc)
 
     user "${question}: "
 
@@ -614,7 +647,7 @@ confirm_task () {
          $yellow $rc \
          $yellow $rc \
          $yellow $rc \
-         $dark_gray $rc)"
+         $dvc $rc)"
 
       user "$text"
 
@@ -787,12 +820,7 @@ if ! get_state_value "user" "show_logo" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mod
     return
 fi
 
-local message=
-if [ "$USER_NAME" ]; then
-    message="Welcome To Dotsys $USER_NAME"
-else
-    message="WELCOME  TO  YOUR  DOTSYS"
-fi
+local message="Welcome To Dotsys $(get_user_name)"
 
 printf "%b
   (          )

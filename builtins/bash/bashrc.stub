@@ -5,7 +5,7 @@
 # ---------------------------------------
 
 #set architecture flags
-export ARCHFLAGS="-arch x86_64"
+[ "$DOTSYS_PLATFORM_SPE" = mac ] && export ARCHFLAGS="-arch x86_64"
 
 # LOAD: .shellrc if it exists (required for dotsys)
 test -f $HOME/.shellrc && source "$HOME/.shellrc"

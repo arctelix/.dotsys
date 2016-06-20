@@ -307,25 +307,45 @@ you want to install. Each package is entered with a colin "package_name:",  you 
 
 Any files in a topic's bin directory will be available in your shell environment, bash, zsh, etc...
 
-### *.stub
+### \*.stub
     
-Collects user data required for a topic and sources .topic files from other topics.  Jusst add an uppercase
-variable in curly braces and dotsys will prompt the user for input and store the data locally.  
+Sources .topic files from other topics, sources your custom settings from the corresponding .symlink, 
+provides any required boilerplate, and collects data required for a topic.
+Data collection uses *stub template variables* (all caps in curly braces).  All topic specific 
+variables are prefixed with `TOPIC`.
+
 For example the built in gitconfig.stub includes:
 
-    name = {TOPIC_USER_NAME}
-    email = {TOPIC_USER_EMAIL}
+    name = {TOPIC_GLOBAL_AUTHOR_NAME}
+    email = {TOPIC_GLOBAL_AUTHOR_EMAIL}
+    helper = {CREDENTIAL_HELPER}
 
-When dotsys sees the variable names and the data is not already stored it will promt the user:
+When dotsys sees the variable names and the data is not already stored it will prompt the user:
     
-    What is your git user name?
-    What is your git user email?
+    What is your git global author name?
+    What is your git global author email?
+    
+Some basic default values are builtin, such as:
+TOPIC_USER_NAME
+TOPIC_USER_EMAIL
+    
+### \*.vars
 
+Provides values for stub template variables as required. Functions are lower case versions of
+their corresponding stub template variable. See .dotsys/builtins/git/gitconfig.vars for more.
+
+    global_author_name () {
+        echo "$(whoami)"
+        return 1
+    }
+    
+User specific data must return 1 for user confirmation of the returned value. Return 0
+for system data that doe not require user confirmation.
    
 ### .<topic>    
 
-Any topic in dotsys can source files from other topics, just give the file an extension
-with the same name as the topic.  
+Any topic in dotsys with a stub file can source files from other topics, any file
+found with an extension matching the topic name will be added to the stub file.
 
 ##### The following are built in to dotsys:
 |file extention|purpose                                                             |
@@ -333,6 +353,10 @@ with the same name as the topic.
 |\*.shell      | Sourced every time your shell of choice is loaded                  |
 |\*.bash       | Sourced every time bash is loaded                                  |
 |\*.zsh        | Sourced every time zsh is loaded                                   |
+|\*.vim        | Sourced every time vim is loaded                                   |
+|\*.tmux        | Sourced every time tmux is loaded                                 |
+|\*.git        | Sourced every time git is loaded                                   |
+
 ##### Loading order
 |file name     | loading order                                                      |
 |:-------------|:-------------------------------------------------------------------|
