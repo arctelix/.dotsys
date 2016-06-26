@@ -69,9 +69,6 @@ if ! [ "$DOTSYS_REPOSITORY" ];then
     DOTSYS_REPOSITORY="${DOTSYS_LIBRARY%/lib}"
 fi
 
-debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
-
 . "$DOTSYS_LIBRARY/core.sh"
 . "$DOTSYS_LIBRARY/common.sh"
 . "$DOTSYS_LIBRARY/utils.sh"
@@ -89,6 +86,9 @@ debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 . "$DOTSYS_LIBRARY/stubs.sh"
 
 import shell
+
+debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
 
 #GLOBALS
 # All files names used by system
