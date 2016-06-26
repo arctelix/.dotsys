@@ -20,7 +20,7 @@ run_topic_script () {
 
   debug "-- run_topic_script $action for $topic $required"
 
-  local status=0
+  local state=0
 
   # undamaged topic scripts need to check if already installed (since there likely installing software)
   # managed topic install scripts are really post-install scripts (manager checks for prior install)
@@ -42,21 +42,21 @@ run_topic_script () {
   # try topic.sh function call first
   if [ -f "$(topic_dir "$topic")/topic.sh" ];then
     run_script_func "$topic" "topic.sh" "$action" $packages $required
-    status=$?
+    state=$?
 
   # run individual action scripts
   else
     run_script "$topic" "$action" $packages $required
-    status=$?
+    state=$?
   fi
 
   # no script required for topic
-  if [ $status -eq 10 ]; then
+  if [ $state -eq 10 ]; then
      #success "$(printf "No $action script supplied $DRY_RUN for %b$topic%b" $green $rc)"
      pass
   fi
 
-  return $status
+  return $state
 }
 
 # 0     = everything ok
@@ -83,7 +83,7 @@ run_script (){
 
   debug "-- run_script $script params: ${params[@]}"
 
-  local status=0
+  local state=0
 
   if script_exists "$script"; then
 
@@ -96,24 +96,24 @@ run_script (){
     #run the script
     elif ! dry_run;then
       script -q /dev/null "$script" ${params[@]} | indent_lines
-      status=$?
+      state=$?
     fi
 
-    success_or_fail $status "exicute" "script $DRY_RUN" "$(printf "%b$script" $thc )" "on" "$(printf "%b$PLATFORM" $thc)"
+    success_or_fail $state "exicute" "script $DRY_RUN" "$(printf "%b$script" $thc )" "on" "$(printf "%b$PLATFORM" $thc)"
 
   # missing required
   elif [ "$required" ]; then
     fail "Script not found $DRY_RUN" "$(printf "%b$script" $thc )" "on" "$(printf "%b$PLATFORM" $thc)"
-    status=11
+    state=11
 
   # missing ok
   else
-    status=10
+    state=10
   fi
 
-  debug "   run_script exit status $DRY_RUN[ $status ] for $script"
+  debug "   run_script exit status $DRY_RUN[ $state ] for $script"
 
-  return $status
+  return $state
 }
 
 
@@ -149,7 +149,7 @@ run_script_func () {
     return 11
   fi
 
-  local status=0
+  local state=0
 
   # execute built in function then user script function
   local script_sources=(builtin $ACTIVE_REPO)
@@ -175,7 +175,7 @@ run_script_func () {
           # run script action func
           elif ! dry_run; then
             output_script "$script" "$action" ${params[@]}
-            status=$?
+            state=$?
           fi
 
           # manager message
@@ -190,31 +190,31 @@ run_script_func () {
 
           # Required function success/fail
           if [ "$required" ]; then
-              success_or_fail $status "$action" "$prefix" "$(printf "%b$topic" $thc)" "$message" "$script_name"
+              success_or_fail $state "$action" "$prefix" "$(printf "%b$topic" $thc)" "$message" "$script_name"
 
           # Only show success for not required
           #elif [ $status -eq 0 ]; then
           # On second thought, this is helpful
           else
-              success_or_fail $status "$action" "$prefix" "$(printf "%b$topic" $thc)" "$message" "$script_name"
+              success_or_fail $state "$action" "$prefix" "$(printf "%b$topic" $thc)" "$message" "$script_name"
           fi
 
       # Required script fail
       elif [ "$required" ]; then
           fail "$(cap_first "$script_name") $DRY_RUN for" "$topic"  "does not define the required $action function"
-          status=12
+          state=12
       # Silent fail when not required
       else
-         status=10
+         state=10
       fi
 
       i=$((i+1))
 
   done
 
-  debug "   run_script_func exit status: $DRY_RUN[ $status ] for $script $action"
+  debug "   run_script_func exit status: $DRY_RUN[ $state ] for $script $action"
 
-  return $status
+  return $state
 }
 
 get_topic_scripts () {

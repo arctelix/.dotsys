@@ -89,7 +89,6 @@ load_config_vars (){
             debug "   load_config_vars -> call manage_repo"
             manage_repo "$action" "$ACTIVE_REPO" "$force" "$confirmed"
         fi
-        status=$?
     fi
 
     # make sure we get config file from a downloaded repo
@@ -157,7 +156,7 @@ validate_config_or_repo (){
     local action="$2"
     local prev_error=0
 
-    local status=0
+    local ret=0
 
     # Special repo key word to disregard user default
     if [ "$input" = "none" ]; then
@@ -194,7 +193,7 @@ validate_config_or_repo (){
     # repo manager handles all other repo issues
     # nothing else to validate, pass silently
 
-    return $status
+    return $ret
 
 }
 
@@ -438,9 +437,9 @@ config_use_stubs () {
 
     local user_input
     config_user_var "use_stub_files" "$1" --bool --prompt "$prompt"
-    local status=$?
+    local ret=$?
 
-    if [ "$1" = "--prompt" ] && [ $status -eq 0 ]; then
+    if [ "$1" = "--prompt" ] && [ $ret -eq 0 ]; then
         info "If you are migrating from another dotfile manager and your
       $spacer current shell config files source topic files by extension
       $spacer *.shell, *.bash, *.zsh, etc you can remove this functionality
@@ -453,7 +452,7 @@ config_use_stubs () {
       $spacer - zsh  extensions are sourced by zsh only."
     fi
 
-    return $status
+    return $ret
 }
 
 # Walk through all user config options

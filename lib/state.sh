@@ -175,15 +175,15 @@ in_state () {
   fi
 
   in_state_results="$(grep "$(grep_kv)" "$file")"
-  local status=$?
+  local ret=$?
 
   local found
   if [ "$not" ]; then
-      status=1
+      ret=1
       for r in $in_state_results; do
         #debug "$indent -> testing $r !=~ '${not_key}:${not_val}' = $status"
         if [ "$r" ] && ! [[ "$r" =~ ${not_key}:${not_val} ]]; then
-            status=0
+            ret=0
             in_state_results="$r"
             #debug "$indent -> found $r"
             break
@@ -191,8 +191,8 @@ in_state () {
       done
   fi
 
-  debug "   - in_state ($query) = $status $in_state_results"
-  return $status
+  debug "   - in_state ($query) = $ret $in_state_results"
+  return $ret
 }
 
 # gets value for provided key
@@ -201,18 +201,18 @@ get_state_value () {
   local file="$(state_file "$1")"
   local key="$2"
   local match_val="$3"
-  local status=0
+  local ret=0
 
   local lines="$(grep "^$key:.*$" "$file")"
-  status=$?
+  ret=$?
   local val="${lines#*:}"
 
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
-    status=$val
+    ret=$val
 
   elif [ "$val" ]; then
       local line
-      status=1
+      ret=1
       for line in $lines; do
           val="${line#*:}"
 
@@ -220,26 +220,26 @@ get_state_value () {
           if [[ "$match_val" == "!"* ]]; then
               if ! [[ "$val" =~ ${match_val#!} ]]; then
                 echo "$val"
-                status=0
+                ret=0
               fi
 
           # only match the provided value
           elif [ "$match_val" ]; then
               if [[ "$val" =~ ${match_val} ]]; then
                 echo "$val"
-                status=0
+                ret=0
               fi
 
           elif [ "$val" ]; then
               echo "$val"
-              status=0
+              ret=0
           fi
       done
   fi
 
   #debug "   - get_state_value found: $val"
 
-  return $status
+  return $ret
 }
 
 # sets value for unique key

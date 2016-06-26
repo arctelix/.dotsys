@@ -453,7 +453,7 @@ dotsys () {
         debug "config: $config_var $config_val"
 
         local config_func="config_$config_var"
-        local status
+        local state
         local error_msg
 
         # Run full user config (no variable name supplied)
@@ -463,18 +463,18 @@ dotsys () {
         # use variable function
         elif cmd_exists "$config_func"; then
             $config_func "$config_val"
-            status=$?
-            if [ $status -eq 1 ]; then error_msg="error: $config_func"; fi
+            state=$?
+            if [ $state -eq 1 ]; then error_msg="error: $config_func"; fi
 
         # use generic function
         else
             config_user_var "$config_var" "$config_val" --edit
-            status=$?
-            if [ $status -eq 1 ]; then error_msg="not found: $config_var "; fi
+            state=$?
+            if [ $state -eq 1 ]; then error_msg="not found: $config_var "; fi
         fi
 
         if [ "$config_val" ]; then
-            success_or_error $status "update" "config variable" "${error_msg:-$config_var = $config_val}"
+            success_or_error $state "update" "config variable" "${error_msg:-$config_var = $config_val}"
             # update stub files with new data
             action="update"
 

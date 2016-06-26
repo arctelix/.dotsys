@@ -295,7 +295,7 @@ manage_user_stub () {
 
     # move to .dotsys/user/stubs/stubname.topic.stub
     mv -f "$stub_out" "$stub_dst"
-    local status=$?
+    local ret=$?
 
     # ADD SOURCES
 
@@ -309,7 +309,7 @@ manage_user_stub () {
     debug "manage_user_stub $topic -> flag reload"
     RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
 
-    success_or_fail $status "$file_action" "stub file:" "${topic}/$stub_name" "$output"
+    success_or_fail $ret "$file_action" "stub file:" "${topic}/$stub_name" "$output"
 }
 
 # Collects user data and populates stub file

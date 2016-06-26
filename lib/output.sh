@@ -181,53 +181,53 @@ freeze_msg () {
 
 log () {
     if ! [ "$LOG_FILE" ]; then return ;fi
-    local status="$1"
+    local state="$1"
     local item="$2"
     if [ "$item" ]; then
-        echo "$status: $item" >> $LOG_FILE
+        echo "$state: $item" >> $LOG_FILE
     else
-        echo "$status" >> $LOG_FILE
+        echo "$state" >> $LOG_FILE
     fi
 }
 
 debug_log () {
-    local status="$1"
+    local state="$1"
     local item="$2"
-    printf "$status: $item" >> "$DOTSYS_REPOSITORY/debug.dslog"
-    log "$status" "$item"
+    printf "$state: $item" >> "$DOTSYS_REPOSITORY/debug.dslog"
+    log "$state" "$item"
 }
 
 success_or_fail () {
-    local status=$1
+    local state=$1
     local action="$2"
     shift; shift
-    func_or_func_msg success fail $status "$action" "$@"
+    func_or_func_msg success fail $state "$action" "$@"
 }
 
 success_or_error () {
-    local status=$1
+    local state=$1
     local action="$2"
     shift; shift
-    func_or_func_msg success error $status "$action" "$@"
+    func_or_func_msg success error $state "$action" "$@"
     if ! [ $? -eq 0 ]; then exit; fi
 }
 
 success_or_none () {
-    local status=$1
+    local state=$1
     local action="$2"
     shift; shift
-    func_or_func_msg success pass $status "$action" "$@"
+    func_or_func_msg success pass $state "$action" "$@"
 }
 
 func_or_func_msg () {
     local zero_func="$1"
     local other_func="$2"
-    local status="$3"
+    local state="$3"
     local action="$4"
     local first_arg="$5"
     shift; shift; shift; shift; shift
 
-    if [ $status -eq 0 ]; then
+    if [ $state -eq 0 ]; then
         if [ "$action" ]; then
             action="${action%ed}"
             action="$(cap_first "${action%e}ed")"
@@ -242,7 +242,7 @@ func_or_func_msg () {
             $other_func "Failed to $first_arg" "$@"
         fi
     fi
-    return $status
+    return $state
 }
 
 
@@ -394,9 +394,9 @@ output_script() {
    #"$@" | indent_lines
    debug "output_script $@"
    script -q /dev/null "$@"
-   local status=$?
-   debug "   output_script status=$status"
-   return $status
+   local state=$?
+   debug "   output_script state=$state"
+   return $state
 
 #  unset -f read
 #  debug "=========read_tty unset"

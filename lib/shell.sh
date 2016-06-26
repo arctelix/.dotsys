@@ -4,7 +4,7 @@
 # Author: arctelix
 
 import platforms
-import state get_state_value
+import state
 
 shell_debug () {
     if [ "$DEBUG_SHELL" = true ]; then
@@ -17,16 +17,16 @@ flag_reload () {
     local topic="$1"
     local flagged="$2"
     local active_shell="$ACTIVE_SHELL"
-    local status=1
+    local state=1
 
     # Test if topic is current_shell or "required"
     if [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
-        status=0
+        state=0
         flagged="$topic"
-        debug "FLAG RELOAD SHELL ($status): $flagged"
+        debug "FLAG RELOAD SHELL ($state): $flagged"
     fi
     echo "$flagged"
-    return $status
+    return $state
 }
 
 # Resources active shell files
@@ -79,7 +79,7 @@ shell_init() {
 
     set_prompt "$shell"
 
-    local home="$(platforms platform_user_home "sytu")"
+    local home="$(platforms platform_user_home)"
     local profile="$(get_file "profile" "$shell")"
     local shellrc="$(get_file "rcfile" "$shell")"
     local loaded_files
@@ -208,7 +208,7 @@ set_prompt () {
     local shell="${1:-$ACTIVE_SHELL}"
 
     # Only use dotsys prompt if enabled by user
-    if ! get_state_value "dotsys" "dsprompt";then return;fi
+    if ! state get_state_value "dotsys" "dsprompt";then return;fi
 
     if [ "$shell" = "zsh" ];then
         autoload -Uz colors && colors

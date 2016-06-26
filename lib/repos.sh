@@ -322,7 +322,7 @@ manage_remote_repo (){
     local confirmed
     local branch="${branch:-master}"
     local ret_val=0
-    local status
+    local state
 
     while [[ $# > 0 ]]; do
     case "$1" in
@@ -408,45 +408,45 @@ manage_remote_repo (){
     local BASE=$(git merge-base @ @{u})
     debug "   manage_remote_repo: determine status"
     if [ $LOCAL = $REMOTE ]; then
-        status="up-to-date"
+        state="up-to-date"
     elif [ $LOCAL = $BASE ]; then
-        status="pull"
+        state="pull"
     elif [ $REMOTE = $BASE ]; then
-        status="push"
+        state="push"
     else
-        status="diverged"
+        state="diverged"
     fi
 
-    debug "   manage_remote_repo auto status-> $status"
+    debug "   manage_remote_repo auto status-> $state"
 
     if [ "$task" = "status" ]; then
-        echo "$status"
+        echo "$state"
         cd "$OWD"
         return
     fi
 
     # check action and status
-    if [ "$status" = "diverged" ];then
+    if [ "$state" = "diverged" ];then
        error "Remote repo has diverged from your local version,
                 $spacer you will have to resolve the conflicts manually."
        ret_val=1
        task="diverged"
 
-    elif [ "$status" = "up-to-date" ];then
+    elif [ "$state" = "up-to-date" ];then
        success "Local repo is" "$(printf "%bup to date" $thc )" "with remote:" "$remote_repo"
        # check for uncommitted changes (aborted by user)
-       local status="$(git status --porcelain | indent_lines)"
-       if [ -n "$status" ]; then
-          warn "There are uncommitted local changes in your repo\n" "$(printf "%b$status" $red )"
+       state="$(git status --porcelain | indent_lines)"
+       if [ -n "$state" ]; then
+          warn "There are uncommitted local changes in your repo\n" "$(printf "%b$state" $red )"
        fi
        ret_val=0
        task="up-to-date"
 
     elif [ "$task" = "auto" ]; then
-       info "Auto determined git status:" "$(printf "%b$status" $thc )"
-       task="$status"
-    elif [ "$task" != "$status" ];then
-        warn "A $task was requested, but a" "$(printf "%b$status" $thc )" "is required, please resolve the conflict"
+       info "Auto determined git status:" "$(printf "%b$state" $thc )"
+       task="$state"
+    elif [ "$task" != "$state" ];then
+        warn "A $task was requested, but a" "$(printf "%b$state" $thc )" "is required, please resolve the conflict"
     fi
 
 
@@ -499,6 +499,7 @@ git_commit () {
     local result
     local user_input
     local default
+    local state
 
     usage="git_commit [<option>]"
     usage_full="
@@ -518,10 +519,10 @@ git_commit () {
     git add .
 
     # Abort if nothing to commit
-    local status="$(git status --porcelain | indent_lines)"
-    if ! [ -n "$status" ]; then cd "$OWD";return;fi
+    state="$(git status --porcelain | indent_lines)"
+    if ! [ -n "$state" ]; then cd "$OWD";return;fi
 
-    info "$(printf "Git Status:\n%b$status%b" $yellow $rc)"
+    info "$(printf "Git Status:\n%b$state%b" $yellow $rc)"
 
     # default message
     default="${message:-dotsys $action}"
@@ -769,30 +770,30 @@ has_remote_repo (){
     local repo="${1:-$repo}"
     local remote_repo="$remote_repo"
     local silent="$2"
-    local status
+    local state
 
-    status="$(curl -Ls --head --silent "${remote_repo}" | head -n 1)"
+    state="$(curl -Ls --head --silent "${remote_repo}" | head -n 1)"
     #wget -q "${remote}.git" --no-check-certificate -O - > /dev/null
 
-    debug "curl result=$status"
+    debug "curl result=$state"
 
     local ret=1
-    if echo "$status" | grep "[23].." > /dev/null 2>&1; then
+    if echo "$state" | grep "[23].." > /dev/null 2>&1; then
         ret=0
         if [ "$silent" ];then  return $ret;fi
-        success "remote found: $status
+        success "remote found: $state
          $spacer -> $remote_repo"
 
-    elif echo "$status" | grep "[4].." > /dev/null 2>&1; then
+    elif echo "$state" | grep "[4].." > /dev/null 2>&1; then
         ret=1
         if [ "$silent" ];then  return $ret;fi
-        success "remote not found: $status
+        success "remote not found: $state
          $spacer -> $remote_repo"
 
-    elif echo "$status" | grep "[5].." > /dev/null 2>&1; then
+    elif echo "$state" | grep "[5].." > /dev/null 2>&1; then
         ret=2
         if [ "$silent" ];then  return $ret;fi
-        error "connection failed: $status
+        error "connection failed: $state
        $spacer -> $remote_repo"
     fi
 

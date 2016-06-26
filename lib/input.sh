@@ -144,9 +144,9 @@ get_user_input () {
     question=$(printf "$question $options ${hint}[%b${default}%b]" $dvc $rc)
 
     user "${question}: "
-
+    local state=0
     if ! [ "$confirmed" ]; then
-        local state=0
+
         while true; do
             read user_input < /dev/tty
 
@@ -155,7 +155,7 @@ get_user_input () {
             case "$user_input" in
                 "") # any input is ok
                     if ! [ "$invalid" ]; then
-                        status=0
+                        state=0
                         break
                     fi
                     # use invalid message
@@ -192,7 +192,7 @@ get_user_input () {
                     ;;
                 * ) # any input is ok
                     if ! [ "$invalid" ]; then
-                        status=0
+                        state=0
                         break
                     fi
                     # use invalid message
