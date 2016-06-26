@@ -67,6 +67,7 @@ symlink_topic () {
   # Symlink all files in topic/bin to dotsys/user/bin
   local silent
   if [ "$SYMLINK_CONFIRMED" ]; then silent="--silent";fi
+
   manage_topic_bin "$action" "$topic" "$silent"
 
   # find stubs first
@@ -496,33 +497,31 @@ unlink(){
 get_symlink_dst () {
     local src_file="$1"
     local dst_path="$2"
-    local link_cfg="$(get_topic_config_val "$topic" "symlinks")"
-    local src_name
-    local alt_name
-    local base_name="$(basename "$src_file")"
+    local symlink_cfg="$(get_topic_config_val "$topic" "symlinks")"
+    local cfg_name
+    local src_name="$(basename "$src_file")"
+    src_name="${src_name%.symlink}"
+    src_name="${src_name%.${topic}.stub}"
+    src_name="${src_name%.stub}"
+    src_name="${src_name%.vars}"
+    src_name="${src_name%.sources}"
 
     if ! [ "$dst_path" ]; then
-        dst_path="$(user_home_dir)"
+        dst_path="$(platform_user_home)"
     fi
 
-    #remove extensions
-    base_name="${base_name%.symlink}"
-    base_name="${base_name%.${topic}.stub}"
-    base_name="${base_name%.stub}"
-
     # create dst path+file name
-    dst_file="$dst_path/.$base_name"
+    dst_file="$dst_path/.$src_name"
 
     #debug "-- get_symlink_dst: $src_file -> $dst_file"
 
     # check topic config for symlink paths
-    for link in $link_cfg; do
-      src_name="$(basename "$src_file")"
-      alt_name="${link%-\>*}"
-      #debug "(${src_name}=${alt_name})"
+    for cfg in $symlink_cfg; do
+      cfg_name="${cfg%-\>*}"
+      #debug "(${src_name}=${cfg_src})"
       # return config path if found
-      if [ "$src_name" = "$alt_name" ]; then
-         dst_file="${link#*-\>}"
+      if [ "$src_name" = "$cfg_name" ]; then
+         dst_file="${cfg#*-\>}"
          #debug "  CONFIG DEST: ($dst_file)"
          mkdir -p "$(dirname "$dst_file")"
          break
@@ -555,7 +554,7 @@ manage_topic_bin () {
     local src_bin
     local dst_bin
 
-    if [ "$topic" = "core" ]; then
+    if [ "$topic" = "dotsys" ]; then
         src="$(dotsys_dir)"
         dst_bin="${PLATFORM_USER_BIN}"
     else
@@ -622,6 +621,7 @@ manage_topic_bin () {
             return
 
         elif [ "$action" = "link" ]; then
+            chmod u+x "$file"
             symlink "$file" "$dst_file"
 
         elif [ "$action" = "unlink" ]; then

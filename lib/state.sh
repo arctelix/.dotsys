@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
+import paths
+
 state_dir () {
-  echo "$(dotsys_dir)/state"
+  echo "$(paths dotsys_dir)/state"
 }
 
 state_file () {
-    echo "$(state_dir)/${1}.state"
+    echo "$(paths state_dir)/${1}.state"
 }
 # adds key:value if key:value does not exist (value optional)
 state_install() {
@@ -363,11 +365,11 @@ get_topic_list () {
     else
         if ! [ -d "$repo_dir" ];then return 1;fi
 
-        # dotsys install limited to core & deps
+        # dotsys install limited to shell & deps
         if in_limits "dotsys" -r; then
-            load_topic_config_vars "core"
-            deps="$(get_topic_config_val "core" "deps")"
-            echo "$deps core"
+            load_topic_config_vars "shell"
+            deps="$(get_topic_config_val "shell" "deps")"
+            echo "$deps shell"
 
         # all other installs take topic directory
         else

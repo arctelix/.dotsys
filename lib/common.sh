@@ -1,115 +1,7 @@
 #!/bin/sh
 
-# Global utility vars and methods
+# Common tests
 # Author: arctelix
-
-# PATHS
-
-drealpath(){
-    sh "$DOTSYS_LIBRARY/drealpath" $@
-}
-
-
-dotfiles_dir () {
-  echo "$(user_home_dir)/.dotfiles"
-}
-
-dotsys_dir () {
-  echo "$DOTSYS_REPOSITORY"
-
-}
-
-# Gets full path to topic based on topic config repo or active repo
-# restrict:
-# 'active'  Restrict to active user repo (do not check builtins)
-# 'builtin' Restrict to builtin repo
-# 'primary' Restrict to primary repo
-# 'user'    Restrict to any user repo topic config repo or active repo or primary repo
-topic_dir () {
-    local topic="${1:-$topic}"
-    local restrict="$2"
-    local return_non_exist="$3"
-    local path
-
-    #debug "   - topic_dir $restrict:"
-
-    # Installed repo (not dotsys)
-    local repo="$(get_state_value "dotsys" "$topic" "!dotsys/dotsys")"
-
-    if ! [ "$repo" ]; then
-        # Check for topic alternate repo
-        repo=$(get_topic_config_val "$topic" "repo")
-        # use active repo if topic repo not found
-        repo="${repo:-$(get_active_repo)}"
-    fi
-
-    # Do not use dotsys repo (default to primary repo)
-    if [ "$restrict" = "user" ]; then
-        if is_dotsys_repo; then
-           repo="$(state_primary_repo)"
-        fi
-
-    # Restrict to primary
-    elif [ "$restrict" = "primary" ]; then
-        repo="$(state_primary_repo)"
-
-    # Non restricted (installed, topic cfg, active, builtin)
-    elif [ "$restrict" != "active" ]; then
-        path="$(repo_dir "$repo")/$topic"
-        if [ ! -d "$path" ]; then
-            path="$(builtin_topic_dir "$topic")"
-        fi
-    fi
-
-    # catch dotsys repo or well get .dotsys dir not builtins
-    if is_dotsys_repo || [ "$restrict" = "builtin" ]; then
-        path="$(builtin_topic_dir "$topic")"
-
-    elif ! [ "$path" ]; then
-        path="$(repo_dir "$repo")/$topic"
-    fi
-
-    # Return bad path when user requested and does not exist
-    if ! [ -d "$path" ] && ! [ "$restrict" = "user" ]; then
-        #debug "   -> PATH NOT FOUND $repo + $topic = $path"
-        echo ""
-        return 1
-    else
-        #debug "   -> FOUND $repo + $topic = $path"
-        echo "$path"
-    fi
-    return 0
-}
-
-# converts supplied repo or active repo to full path
-repo_dir () {
-    local repo="${1}"
-    local branch
-
-    if ! [ "$repo" ]; then
-        repo="$(get_active_repo)"
-    fi
-
-    if ! [ "$repo" ]; then
-        return 1
-    fi
-
-    # catch dotsys repo
-    if is_dotsys_repo; then
-        # Git is in root not builtins
-        repo="$DOTSYS_REPOSITORY"
-    fi
-
-    _split_repo_branch
-
-    # catch abs path
-    if [[ "$repo" = /* ]]; then
-        echo "$repo"
-    # relative to full path
-    else
-        echo "$(dotfiles_dir)/$repo"
-    fi
-}
 
 # determines the active repo config -> state
 get_active_repo () {
@@ -145,65 +37,6 @@ _split_repo_branch () {
     fi
 }
 
-builtin_topic_dir () {
-    echo "$(dotsys_dir)/builtins/$1"
-}
-
-dotsys_user_bin () {
-    echo "$(dotsys_dir)/user/bin"
-}
-
-get_user_stub_file() {
-    local topic="$1"
-    local stub_src="$2"
-    local stub_name="$(basename "${stub_src%.*}")"
-    echo "$(user_stub_dir)/${stub_name}.${topic}.stub"
-}
-
-user_stub_dir() {
-    echo "$(dotsys_dir)/user/stubs"
-}
-
-# returns a file from user directory or builtin directory
-get_user_or_builtin_file () {
-    local topic="$1"
-    local find_file="$2"
-    local u_dir="$(topic_dir "$topic" "user")"
-    local u_files=()
-    local b_dir="$(topic_dir "$topic" "builtin")"
-    local b_files=()
-
-
-    # check user directory for file
-    if [ -d "$u_dir" ]; then
-        u_files=( $(find "$u_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" -not -name '\.*') )
-    fi
-
-    # check builtin directory for file
-    if ! [ "$file" ] && [ -d "$b_dir" ];then
-        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file") )
-    fi
-
-    local file
-    # Add any builtin file name not already in user files
-    for file in "${b_files[@]}";do
-        if ! array_contains u_files "*$(basename "$file")"; then
-            u_files+=( "$file" )
-        fi
-    done
-
-    # Set permissions for all files
-    for file in "${u_files[@]}";do
-        script_exists "$file"
-    done
-
-    # return line separated array
-    printf '%s\n' "${u_files[@]}"
-
-    return $?
-}
-
-
 # MISC TESTS
 
 # Test for VERBOSE_MODE
@@ -234,28 +67,6 @@ dry_run (){
         DRY_RUN="(dry run)"
     fi
     return $DRY_RUN_STATE
-}
-
-# Test for the existence of a command
-cmd_exists() {
-  if ! [ "$1" ];then return 1;fi
-  command -v $1 >/dev/null 2>&1
-}
-
-# Test if script contains function
-script_func_exists() {
-  script_exists "$1"
-  $1 command -v $2 >/dev/null 2>&1
-}
-
-# Test if script exists
-script_exists() {
-  if [ -f "$1" ]; then
-      chmod +x "$1"
-      cmd_exists "$1"
-      return $?
-  fi
-  return 1
 }
 
 topic_exists () {
@@ -292,13 +103,6 @@ topic_exists () {
 
 }
 
-# not used
-is_array() {
-  local var=$1
-  [[ "$(declare -p $var)" =~ "declare -a" ]]
-}
-
-
 in_limits () {
     local tests=$@
     local option
@@ -333,28 +137,6 @@ topic_is_repo () {
 }
 
 
-# MISC utils
-
-# Determines if a path is a file or a directory
-path_type () {
-  local type="\b"
-
-  if [ -L "$1" ];then
-    type="symlinked"
-  fi
-
-  if [ -d "$1" ];then
-    type="$type directory"
-  elif [ -f "$1" ];then
-    type="$type file"
-  elif [ -L "$1" ];then
-    type="unused symlink"
-  fi
-
-  echo "$type"
-}
-
-
 # Executes a function in an external script
 # not used
 external_func () {
@@ -373,92 +155,35 @@ external_func () {
   return 1 # file not found
 }
 
-# Returns a list directory names in a directory
-get_dir_list () {
-    local dir="$1"
-    local force="$2"
-    local list
-    local t
-
-    if ! [ -d "$dir" ];then return 1;fi
-    list="$(find "$dir" -mindepth 1 -maxdepth 1 -type d -not -name '\.*')"
-
-    for t in ${list[@]}; do
-        echo "$(basename "$t") "
-    done
+# no args : checks if there there any user installed topics
+# topic as first arg : test if topic is user installed
+user_topics_installed () {
+    in_state "dotsys" "$1" "!dotsys/dotsys"
+    local r=$?
+    debug "   - user_topics_installed = $r"
+    return $r
 }
 
-# rename all files in a directory matching a name
-rename_all() {
-    local files="$(find "$1" -type f -name "$2")"
-    local file
-    local new
-    while IFS=$'\n' read -r file; do
-        new="$(dirname "$file")/$3"
-        get_user_input "rename $file -> $new"
-        mv "$file" "$new"
-    done <<< "$files"
+# Check if topic is required by dotsys
+is_required_topic () {
+    local topic="${1:-$topic}"
+    ! in_limits "dotsys" -r && in_state "dotsys" "$topic" "dotsys/dotsys"
+    local r=$?
+    debug "   - is_required_topic = $r"
+    return $r
 }
 
-#Reverse order of array
-#USAGE: reverse_array arrayname
-reverse_array() {
-    local arrayname=${1:?Array name required}
-    local array
-    local revarray
-    local e
-
-    #Copy the array, $arrayname, to local array
-    eval "array=( \"\${$arrayname[@]}\" )"
-
-    #Copy elements to revarray in reverse order
-    for e in "${array[@]}"; do
-    revarray=( "$e" "${revarray[@]}" )
-    done
-
-    #Copy revarray back to $arrayname
-    eval "$arrayname=( \"\${revarray[@]}\" )"
+# Check if topic has required stub file
+is_required_stub () {
+    local topic="${1:-$topic}"
+    ! in_limits "dotsys" -r && [ "$topic" = shell ]
+    local r=$?
+    debug "   - is_required_stub = $r"
+    return $r
 }
 
-
-#Test if value is in an array
-#USAGE: array_contains arrayname
-array_contains () {
-    local array="$1[@]"
-    local seeking=$2
-    local in=1
-    for element in "${!array}"; do
-        if [[ $element == $seeking ]]; then
-            in=0
-            break
-        fi
-    done
-    return $in
+is_shell_topic () {
+    local topic="${1:-$topic}"
+    [[ "shell bash zsh ksh" =~ $topic ]]
 }
 
-# return a list of unique values
-unique_list () {
-    local var="$1"
-    local seen
-    local word
-
-    for word in $var; do
-      case $seen in
-        $word\ * | *\ $word | *\ $word\ * | $word)
-          # already seen
-          ;;
-        *)
-          seen="$seen $word"
-          ;;
-      esac
-    done
-    echo $seen
-}
-
-remove_string_from_file () {
-    local file="$1"
-    local string="$2"
-    ex "+g|$string|d" -cwq "$file"
-}
-
-[ ! "$SOURCED" ] && "$@"

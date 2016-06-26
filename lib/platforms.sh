@@ -6,6 +6,7 @@
 PLATFORMS="linux windows mac freebsd openbsd ubuntu debian archlinux cygwin msys babun"
 
 get_platform () {
+
   if [ -n "$PLATFORM" ]; then
     printf "$PLATFORM"
     return
@@ -30,22 +31,22 @@ get_platform () {
     platform="unknown"
   fi
 
-  PLATFORM="$platform"
   echo "$platform"
 }
 
 
 platform_user_bin () {
 
-  if [ -n "$PLATFORM_USER_BIN" ]; then
-    printf "$PLATFORM_USER_BIN"
+  if [ ! "$1" ] && [ -n "$PLATFORM_USER_BIN" ]; then
+    echo "$PLATFORM_USER_BIN"
     return
   fi
 
   local bin_path="/usr/local/bin"
   local missing_var
+  local platform="${1:-$(get_platform)}"
 
-  case "$(get_platform)" in
+  case "$platform" in
       linux* )
           echo "$bin_path"
           return
@@ -91,39 +92,46 @@ platform_user_bin () {
 }
 
 # Gets full path to users home directory based on platform
-user_home_dir () {
-  local platform="${1:-$PLATFORM}"
+platform_user_home () {
+
+  if [ ! "$1" ] && [ "$PLATFORM_USER_HOME" ]; then
+      echo "$PLATFORM_USER_HOME"
+      return
+  fi
 
   if [ "$HOME" ]; then
       echo "$HOME"
       return
   fi
 
+  local home
+  local platform="${1:-$(get_platform)}"
+
   case "$platform" in
     *cygwin )
-      HOME="$(printf "%s" "$(cygpath --unix $USERPROFILE)")"
+      home="$(printf "%s" "$(cygpath --unix $USERPROFILE)")"
       ;;
     *msys )
-      HOME="$(printf "%s" "$($USERPROFILE)")"
+      home="$(printf "%s" "$($USERPROFILE)")"
       ;;
     * )
       fail "Cannot determine home directories for" "$( printf "%b$platform" $thc)"
       ;;
   esac
 
-  echo "$HOME"
-}
 
+  echo "$home"
+}
 
 topic_excluded () {
   local topic=$1
-  local platform="${2:-$PLATFORM}"
+  local platform="${1:-$(get_platform)}"
   local exclude_file="$(topic_dir "$topic")/.exclude-platforms"
 
   # generic platform linux.*
-  local generic="$(generic_platform)"
+  local generic="$(generic_platform "$platform")"
   # specific platform *.mac
-  local specific="$(specific_platform)"
+  local specific="$(specific_platform "$platform")"
 
   if [ -f "$exclude_file" ]; then
      if [ -n "$(grep "$specific" "$exclude_file")" ]; then return 0; fi
@@ -148,16 +156,16 @@ topic_excluded () {
 # ie: mac value should supered linux
 # ie: cygn value should supered windows
 specific_platform () {
-    local platform="${1:-$PLATFORM}"
+    local platform="${1:-$(get_platform)}"
     echo "${platform#*-}"
 }
 generic_platform () {
-    local platform="${1:-$PLATFORM}"
+    local platform="${1:-$(get_platform)}"
     echo "${platform%-*}"
 }
 
-if_platform () {
-  local platform="${1:-$PLATFORM}"
+is_platform () {
+  local platform="${1:-$(get_platform)}"
   if [ "$(specific_platform "$platform")" = "$platform" ]; then
     return 0
   elif [ "$(generic_platform "$platform")" = "$platform" ]; then
@@ -166,5 +174,3 @@ if_platform () {
 
   return 1
 }
-
-get_platform 2>&1 >/dev/null

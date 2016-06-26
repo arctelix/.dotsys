@@ -1,0 +1,11 @@
+#!/bin/sh
+
+format_source_file () {
+    local source_file="$1"
+    echo "source $source_file"
+}
+
+"$@"
+
+
+

@@ -10,10 +10,10 @@ you are using this system and are familiar with package mangers like brew..
 You already know how to use it!
 -------------------------------
 
-A repo is any github repository containing topic-centric dotfiles.
-Dotsys actions are install, uninstall, update, upgrade, & freeze
-
 #### BASIC ACTIONS
+
+Dotsys actions are install, uninstall, update, upgrade, & freeze.  These actions
+can be applied to all topics, a single topic, or a list of topics.  
 
 Perform action on all topics:
 > dotsys \<action\>
@@ -31,6 +31,8 @@ Perform an action on topics from another repo
 > `dotsys uninstall vim from user/repo`
 
 #### LIMIT ACTIONS
+
+You can also limit an action to a specific part of dotsys.
 
 > dotsys \<action\> \<limit\>
 
@@ -50,6 +52,10 @@ Just dotsys (core system):
 > `dotsys upgrade dotsys`
 
 #### REPO MANAGEMENT (local and remote)
+
+A repo is simply a github repository containing a directory for each topic you wish to maintain. When
+you make changes to your repo, it will be synced to github so you can roll those changes out on all
+the systems you maintain.
 
 Your default repo's "master" branch
 > dotsys \<action\> repo
@@ -281,8 +287,8 @@ way to insure that a topic directory is preserved in your remote repo is to add 
 blank dotsys.cfg file.
 
 
-File names and extensions
--------------------------
+System file names and extensions
+--------------------------------
 
 ### topic/\*.symlink
 
@@ -307,12 +313,21 @@ you want to install. Each package is entered with a colin "package_name:",  you 
 
 Any files in a topic's bin directory will be available in your shell environment, bash, zsh, etc...
 
+### topic/.*
+
+Any file prfixed with a "." will be ignored, but remains part of the repo.
+
+
+Stub files
+----------
+
+A stub file provides any required boilerplate and allows us to source your custom settings from the corresponding .symlink, 
+source .topic files from other topics, and collect required user and system data for the topic.
+
 ### \*.stub
     
-Sources .topic files from other topics, sources your custom settings from the corresponding .symlink, 
-provides any required boilerplate, and collects data required for a topic.
-Data collection uses *stub template variables* (all caps in curly braces).  All topic specific 
-variables are prefixed with `TOPIC`.
+This is the template file confining the boiler plate code and *stub template variables* (all caps in curly braces).  
+All topic specific variables get prefixed with `TOPIC`.
 
 For example the built in gitconfig.stub includes:
 
@@ -326,8 +341,9 @@ When dotsys sees the variable names and the data is not already stored it will p
     What is your git global author email?
     
 Some basic default values are builtin, such as:
-TOPIC_USER_NAME
-TOPIC_USER_EMAIL
+
+    TOPIC_USER_NAME
+    TOPIC_USER_EMAIL
     
 ### \*.vars
 
@@ -339,13 +355,26 @@ their corresponding stub template variable. See .dotsys/builtins/git/gitconfig.v
         return 1
     }
     
-User specific data must return 1 for user confirmation of the returned value. Return 0
-for system data that doe not require user confirmation.
+Return 1 when user confirmation of the default value is required. 
+Return 0 for system data that doe not require user confirmation.
+
+### \*.sources
+
+Enables sourcing of files from other topics by providing a `format_source_file` function.
+The function must return the required lines to source a file in the target topics language.
+The returned sting will be written to the target stub file.
+
+For example vim's vimrc.sources file looks like this:
+
+    format_source_file() {
+        local source_file="$1"
+        echo "execute 'source $source_file'"
+    }
    
 ### .<topic>    
 
-Any topic in dotsys with a stub file can source files from other topics, any file
-found with an extension matching the topic name will be added to the stub file.
+Any topic in dotsys with a .stub file and a .dources file can source files from other topics, 
+any file found with an extension matching the topic name will be added to the stub file.
 
 ##### The following are built in to dotsys:
 |file extention|purpose                                                             |

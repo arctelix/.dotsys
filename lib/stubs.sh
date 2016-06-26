@@ -117,7 +117,7 @@ manage_stubs () {
     if [ "$mode" = "--data" ]; then
         task "Collecting user data"
     elif [ "$mode" = "--task" ];then
-        task "Managing stub files"
+        task "$action stub files"
     fi
 
     for topic in ${topics[@]}; do
@@ -127,11 +127,6 @@ manage_stubs () {
         fi
         manage_topic_stubs "$action" "$topic" "$mode" "$force"
     done
-
-#    # Core Always gets updated
-#    manage_topic_stubs "$action" "core" "$mode"
-#    # Shell always gets updated for sourcing topic .shell files
-#    manage_topic_stubs "$action" "shell" "$mode"
 
 }
 
@@ -149,14 +144,16 @@ manage_topic_stubs () {
     shift; shift
 
     local force
-    local mode
+    local data_mode
+    local task
     local stub_file
 
     while [[ $# > 0 ]]; do
         case "$1" in
-        -f | --force )      force="$1" ;;
-        -t | --task )       mode="task" ;;
-        -d | --data )       mode="data" ;;
+        -f | --force )        force="$1" ;;
+        -t | --task )         task="task" ;;
+        -d | --data_update )  data_mode="data_update" ;;
+        -d | --data_collect ) data_mode="data_collect" ;;
         *)  invalid_option ;;
         esac
         shift
@@ -168,29 +165,29 @@ manage_topic_stubs () {
     # Check for topic stub files
     local stub_files="$(get_topic_stub_sources "$topic")"
     if [ "$stub_files" ];then
-        debug "-- manage_topic_stubs: $action $topic $mode $force"
+        debug "-- manage_topic_stubs: $action $topic $data_mode $force"
 
-        if [ "$mode" = "task" ]; then
-            task "Stubbing $topic $mode"
+        if [ "$task" ]; then
+            task "Stubbing $topic $data_mode"
         fi
 
         while IFS=$'\n' read -r stub_file; do
             debug "   found stub file for $topic -> $stub_file"
 
-            if [ "$mode" = "data" ]; then
-                collect_user_data "$action" "$topic" "$stub_file" "" "$force"
+            if [ "$data_mode" = "data_collect" ]; then
+                collect_user_data "$action" "$topic" "$stub_file" "" "$data_mode" "$force"
             elif [ "$action" = freeze ];then
-                collect_user_data "$action" "$topic" "$stub_file" "" "$force"
+                collect_user_data "$action" "$topic" "$stub_file" "" "$data_mode" "$force"
                 collect_topic_sources "$action" "$topic" "$(basename "${stub_file%.*}")"
             else
                 # Create/Update stub file with target, user data, and source files
-                manage_user_stub "$action" "$topic" "$stub_file" "$mode" "$force"
+                manage_user_stub "$action" "$topic" "$stub_file" "$data_mode" "$force"
             fi
         done <<< "$stub_files"
     fi
 
-    # Make sure source files from topic are added to the appropriate stub file
-    if [ "$mode" != "data" ]; then
+    # Check topic for other topic source files
+    if [ "$data_mode" ]; then
         manage_topic_source_files "$action" "$topic"
     fi
 }
@@ -206,7 +203,7 @@ manage_user_stub () {
     local action="$1"
     local topic="$2"
     local stub_src="$3"
-    local mode="$4"
+    local data_mode="$4"
     local force="$5"
 
     local stub_name="$(basename "${stub_src%.*}")"
@@ -234,7 +231,7 @@ manage_user_stub () {
 
     if [ "$action" = uninstall ]; then
 
-        # DO NOT DELETE shell stub
+        # DO NOT DELETE shell stub, but remove target
         if is_required_stub "$topic"; then
             stub_tar=""
 
@@ -246,12 +243,12 @@ manage_user_stub () {
         fi
     fi
 
-    # Create mode (no user stub)
+    # Create action (no user stub)
     if ! [ -f "$stub_dst" ]; then
         file_action="create"
 
-    # Update mode (ABORT if up to date)
-    else
+    # Update action (ABORT if up to date unless data_update)
+    elif [ "$data_mode" != "data_update" ]; then
         local target_ok="$( [ "$stub_tar" ] && grep "$stub_tar" "$stub_dst" )"
         # Abort if stub_dst is newer then source and has correct target
         if ! [ "$force" ] && [ "$stub_dst" -nt "$stub_src" ] && [ "$target_ok" ]; then
@@ -267,20 +264,31 @@ manage_user_stub () {
     cp -f "$stub_src" "$stub_out"
 
     local output
-    # ADD STUB_TARGET
+
+    # STUB_TARGET
+
     debug "   create_user_stub update target"
     grep -q '{STUB_TARGET}' "$stub_out"
     if [ $? -eq 0 ]; then
+
+        # Use load_source_file for shell topics
+        if is_shell_topic; then
+            stub_tar="load_source_file '$stub_tar'"
+        fi
+
         sed -e "s|{STUB_TARGET}|$stub_tar|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
+
         if ! [ "$target_ok" ];then
             output="
             $spacer Stub Target : ${stub_tar:-uninstalled}"
         fi
+
     fi
 
     # ADD USER VARS
-    local user_vars="$(collect_user_data "$action" "$topic" "$stub_out" "$stub_tmp")"
+    local user_vars
+    collect_user_data "$action" "$topic" "$stub_out" "$stub_tmp" "$data_mode" "$force"
     if [ "$user_vars" ]; then
         output="$output\n$user_vars"
     fi
@@ -290,35 +298,46 @@ manage_user_stub () {
     local status=$?
 
     # ADD SOURCES
+
     local sources
     sources="$(collect_topic_sources "install" "$topic" "$stub_name")"
     if [ "$sources" ]; then
         output="$output\n$sources"
     fi
 
+    # TEST IF CURRENT SHELL FILES NEED TO BE RESOURCED
+    debug "manage_user_stub $topic -> flag reload"
+    RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
+
     success_or_fail $status "$file_action" "stub file:" "${topic}/$stub_name" "$output"
 }
 
+# Collects user data and populates stub file
+# All modified vars are supplied to $user_vars
+# Do not encapsulate this function in a subshell !
 collect_user_data () {
 
-    # TODO (IF NEEDED): IF more complex topic specific variables become necessary (like git) implement topic/*.stub.vars scripts to obtain values
-    # get_custom_stub_vars $topic   # returns a list of "VARIABLE=value" pairs
-    # variables+="$@"               # add "VARIABLE=value" pairs to variables
-
-    debug "-- collect user data variables"
     local action="$1"
     local topic="$2"
     local stub_in="$3"
     local stub_out="$4"
-    local force="$5"
+    local data_mode="$5"
+    local force="$6"
     local stub_name="$(basename ${stub_in%.stub*})"
+    local modified=()
+
+    debug "-- collect user data for : $topic/$stub_name"
+
+    # SHELL INIT VARS
+    local init_shell_login="INIT_SHELL=\"$topic .$stub_name login\"; source \"\$(dotsys source init_shell)\""
+    local init_shell="${init_shell_login/login}"
 
     local var
     local variables=($(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_in"))
     for var in ${variables[@]}; do
         local val
         local user_input
-        local user_var
+        local var_type="system"
         local default_val
         local script_val
         local values_script
@@ -335,14 +354,25 @@ collect_user_data () {
         case "$var" in
             SOURCE_FILES )              continue ;;
             STUB_TARGET )               continue;;
-            DOTSYS_BIN )                val="$(dotsys_user_bin)";;
-            DOTFILES_DIR )              val="$(dotfiles_dir)" ;;
-            DOTSYS_DIR )                val="$(dotsys_dir)" ;;
-            DOTSYS_PLATFORM )           val="$(get_platform)" ;;
-            DOTSYS_PLATFORM_SPE )       val="$(specific_platform "$(get_platform)")" ;;
-            DOTSYS_PLATFORM_GEN )       val="$(generic_platform "$(get_platform)")" ;;
+
+            INIT_SHELL )                val="$init_shell"
+                                        var_type="hidden" ;;
+            INIT_SHELL_LOGIN )          val="$init_shell_login"
+                                        var_type="hidden" ;;
+
+            DOTSYS_DIR )                val="$(dotsys_dir)";;
+            DOTSYS_USER_BIN )           val="$(dotsys_user_bin)";;
+            DOTFILES_DIR )              val="$(dotfiles_dir)";;
+
+            DOTSYS_PLATFORM )           val="$(get_platform)";;
+            DOTSYS_PLATFORM_SPE )       val="$(specific_platform "$(get_platform)")";;
+            DOTSYS_PLATFORM_GEN )       val="$(generic_platform "$(get_platform)")";;
+
+            PLATFORM_USER_HOME )        val="$(platform_user_home)";;
+            PLATFORM_USER_BIN )         val="$(platform_user_bin)";;
+
             *)                          val="$(get_state_value "user" "$t_state_key")"
-                                        user_var="true" ;;
+                                        var_type="user" ;;
         esac
 
         debug "   - collect_user_data: var($var) key($gen_state_key) text($var_text) = $val"
@@ -356,7 +386,7 @@ collect_user_data () {
 
                 # value was obtained and no user confirm required
                 if [ $? -eq 0 ]; then
-                    user_var=""
+                    var_type="system"
                     val="$script_val"
                 # no value or value requires user confirm
                 else
@@ -365,16 +395,18 @@ collect_user_data () {
             fi
         fi
 
-        # Get user input if no val found
-        if [ "$user_var" ] && [[ ! "$val" || "$force" ]]; then
+        # Get user input if no val found (use force to recollect all values)
+        if [ "$var_type" = "user" ] && [[ ! "$val" || "$force" = "--force" && "$data_mode" = "data_collect" ]]; then
 
-            # use gen_state_key value as default
+            default_val="$val"
+
+            # use gen_state_key value as default if no val
             if ! [ "$default_val" ]; then
                 debug "   create_user_stub get default: $gen_state_key"
                 default_val="$(get_state_value "user" "${gen_state_key}")"
             fi
 
-            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${default_val:-none}" -r
+            get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${default_val}" -r
             if ! [ $? -eq 0 ]; then return;fi
             user_input="${user_input:-$def}"
             # set user provided value
@@ -386,19 +418,25 @@ collect_user_data () {
 
         # Freeze user data
         if [ "$action" = "freeze" ];then
-            freeze_msg "user data" "$var_text = $val"
+            freeze_msg "$var_type data" "$var_text = $val"
 
         # Replace stub variable with value
         elif [ "$stub_out" ]; then
-            sed -e "s|{$var}|${val}|g" "$stub_in" > "$stub_out"
+            local escaped_val="$(echo "$val" | escape_sed)"
+            sed -e "s|{$var}|$escaped_val|g" "$stub_in" > "$stub_out"
             mv -f "$stub_out" "$stub_in"
-            echo "$spacer user variable : $var_text=$val"
+            if [ "$var_type" != "hidden" ];then
+                modified+=("$spacer $var_type data : $var_text=$val")
+            fi
+
         # Output user data
-        elif [ "$user_var" ];then
+        elif [ "$var_type" = "user" ];then
             success "$topic $var_text = $val"
         fi
 
     done
+
+    user_vars="$(printf '%s\n' "${modified[@]}")"
 }
 
 # Collect stub files for a topic
@@ -428,6 +466,8 @@ get_credential_helper () {
 }
 
 # Check all installed topics for files with topic extension
+# only new sources written to file & returned
+# freeze action outputs all found files
 collect_topic_sources () {
     local action="$1"
     local topic="$2"
@@ -475,30 +515,33 @@ collect_topic_sources () {
 }
 
 # Check current topic for other topic sources
+# new sources writen to file
+# removed sources removed from file
 manage_topic_source_files () {
     local action="$1"
     local topic="$2"
     #TODO: manage_topic_source_files append builtin sources to user sources
     local topic_files="$(find "$(topic_dir "$topic")" -mindepth 1 -maxdepth 1 -type f -not -name '\.*' )"
-    local src_file
+    local topic_file
+    local target_topic
 
     debug "-- manage_topic_source_files: $action $topic"
 
     local src_files=()
 
     # iterate all files in topic dir
-    while IFS=$'\n' read -r src_file; do
+    while IFS=$'\n' read -r topic_file; do
         # source topic is the file extension
-        local src_topic="${src_file##*.}"
+        target_topic="${topic_file##*.}"
 
         # Skip system extensions
         if [[ "$SYSTEM_FILE_EXTENSIONS" =~ $src_topic ]]; then continue;fi
 
         # make sure topic is installed
-        if ! in_state "dotsys" "$src_topic"; then continue;fi
+        if ! in_state "dotsys" "$target_topic"; then continue;fi
 
-        manage_source "$action" "$src_topic" "$src_file" "output_status"
-        src_files+=("$src_file")
+        manage_source "$action" "$target_topic" "$topic_file" "output_status"
+        src_files+=("$topic_file")
     done <<< "$topic_files"
 
     local prev_sourced_file="$(user_stub_dir)/sources_from_${topic}"
@@ -511,68 +554,72 @@ manage_topic_source_files () {
     fi
 
     # Remove any deleted source files from active sources
-    while IFS='' read -r src_file || [[ -n "$src_file" ]]; do
-        local src_topic="${src_file##*.}"
-        debug "   - checking array contains $src_topic $src_file "
-        if ! array_contains src_files "$src_file";then
-            manage_source uninstall "$src_topic" "$src_file" "output_status"
+    while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
+        target_topic="${topic_file##*.}"
+        debug "   - checking array contains $target_topic $topic_file "
+        if ! array_contains src_files "$topic_file";then
+            manage_source uninstall "$target_topic" "$topic_file" "output_status"
         fi
     done <"$prev_sourced_file"
 
-    # Create new prev_sourced_file
-    printf "%s\n" "${src_files[@]}" > "$prev_sourced_file"
+    if [ "$src_files" ]; then
+        # Add all src_files to prev_sourced_file
+        printf "%s\n" "${src_files[@]}" > "$prev_sourced_file"
+    fi
 
 }
 
 # Add/remove source from stub file
+# Checks if current shel requires resourcing
 manage_source () {
     local action="$1"
-    local src_file_topic="$2"
+    local target_topic="$2"
     local src_file="$3"
     local output_status="$4"
     local src_file_name="$(basename "${src_file%.*}")"
 
     # check if src_file_name has a .sources file
-    local format_script="$(get_user_or_builtin_file "$src_file_topic" "*.sources")"
+    local format_script="$(get_user_or_builtin_file "$target_topic" "*.sources")"
     if ! [ $? ]; then return; fi
 
-    debug "   - manage_source for: $src_file_topic/$src_file_name
-        $spacer with script: $format_script"
+    debug "   - manage_source for: $target_topic/$src_file_name
+         \r     with script: $format_script"
 
-    local write_target="$(get_user_stub_file "$src_file_topic" "$format_script")"
+    local write_target="$(get_user_stub_file "$target_topic" "$format_script")"
     local formatted_source="$($format_script format_source_file "$src_file")"
+    local modified
 
-    # remove source on uninstall
+    # Add a debug command to shell topic sources
+    if is_shell_topic; then
+        formatted_source="load_source_file '$src_file'"
+    fi
+
+    # REMOVE FROM FILE
     if [ "$action" = "uninstall" ];then
         remove_string_from_file "$write_target" "$formatted_source"
         success_or_fail $? "remove" "source $src_file \n$spacer from -> $write_target"
-        return
-    fi
+        modified="remove"
 
-    # Abort if source is already added
-    if grep -q "$src_file" "$write_target"; then
-        debug "   - manage_source: ABORT already sourced $src_file"
-
-        if [ "$action" = "freeze" ] && [ "$output_status" ];then
-            freeze_msg "source" "$src_file"
-        fi
-        return
-
+    # output all sources to terminal
     elif [ "$action" = "freeze" ] && [ "$output_status" ];then
-        freeze_msg "source (un-sourced)" "$src_file"
-        return
+        freeze_msg "source" "$src_file"
+
+    # WRITE TO FILE
+    elif ! grep -q "$src_file" "$write_target"; then
+        # Add source to target file
+        echo "$formatted_source" >> $write_target
+        modified="add"
     fi
 
-    # Add source to target file
-    echo "$formatted_source" >> $write_target
+    if [ "$modified" ]; then
 
-    if [ "$output_status" ];then
-        success_or_fail $? "add" "source $src_file \n$spacer to -> $write_target"
-    else
-        echo "$spacer Sourced : $src_file"
+        debug "manage_source $target_topic -> flag reload"
+        RELOAD_SHELL="$(shell flag_reload "$target_topic" "$RELOAD_SHELL")"
+
+        if [ "$output_status" ];then
+            success_or_fail $? "$modified" "source $src_file \n$spacer to -> $write_target"
+        else
+            echo "$spacer ${modified}ed source : $src_file"
+        fi
     fi
-
 }
-
-
-

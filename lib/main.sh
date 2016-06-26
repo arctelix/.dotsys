@@ -32,15 +32,15 @@
 
 #GENERAL FIXES:
 #TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
-#TODO URGENT: When packages are added to manager via 'dotsys action cmd package' update manager.state
+#TODO URGENT: When packages are added to manager via 'dotsys action cmd package' update manager.state & topic packages.yaml
 
 #FUTURE FEATURES
+#TODO ROADMAP: finish implementing .settings
 #TODO ROADMAP: Implement config action for topics user data rather then running update --force
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
-#TODO ROADMAP: handle .settings files
 #TODO ROADMAP: FOR NEW Installs prompt for --force & --confirm options
-#TODO ROADMAP: Detect platforms like babun and linux distros that give generic uname.
+#TODO ROADMAP: Detect linux distros that give generic uname.
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
 #TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..
 
@@ -63,43 +63,45 @@
 # Dotsys debug system true/false
 DEBUG=false
 
-if ! [ "$DOTSYS_LIBRARY" ];then
-    if [ ! -f "$0" ];then
-        DOTSYS_REPOSITORY="$(dirname "$BASH_SOURCE")"
-    else
-        DOTSYS_REPOSITORY="$(dirname "$0")"
-    fi
-    DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
+# Determine dotsys repo if this file is called directly
+if ! [ "$DOTSYS_REPOSITORY" ];then
+    DOTSYS_LIBRARY="$(dirname "$0")"
+    DOTSYS_REPOSITORY="${DOTSYS_LIBRARY%/lib}"
 fi
 
-#echo "main DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
-SOURCED="true"
+debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
+debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
+
+. "$DOTSYS_LIBRARY/core.sh"
 . "$DOTSYS_LIBRARY/common.sh"
-. "$DOTSYS_LIBRARY/configio.sh"
-. "$DOTSYS_LIBRARY/terminalio.sh"
+. "$DOTSYS_LIBRARY/utils.sh"
+. "$DOTSYS_LIBRARY/paths.sh"
+. "$DOTSYS_LIBRARY/output.sh"
+. "$DOTSYS_LIBRARY/input.sh"
+. "$DOTSYS_LIBRARY/config_yaml.sh"
+. "$DOTSYS_LIBRARY/configuration.sh"
 . "$DOTSYS_LIBRARY/state.sh"
 . "$DOTSYS_LIBRARY/platforms.sh"
 . "$DOTSYS_LIBRARY/scripts.sh"
 . "$DOTSYS_LIBRARY/managers.sh"
 . "$DOTSYS_LIBRARY/symlinks.sh"
-. "$DOTSYS_LIBRARY/config.sh"
 . "$DOTSYS_LIBRARY/repos.sh"
 . "$DOTSYS_LIBRARY/stubs.sh"
-SOURCED=""
 
-DOTSYS_REPOSITORY="$(drealpath "$DOTSYS_REPOSITORY")"
-DOTSYS_LIBRARY="$(drealpath "$DOTSYS_LIBRARY")"
-debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
+import shell
 
 #GLOBALS
 # All files names used by system
 SYSTEM_FILES="install.sh uninstall.sh update.sh upgrade.sh freeze.sh manager.sh topic.sh dotsys.cfg"
 # All file extensions used by system
-SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml vars dslog"
+SYSTEM_FILE_EXTENSIONS="sh symlink stub cfg dsbak yaml vars dslog sources"
 
+# managers
 DEFAULT_APP_MANAGER=
 DEFAULT_CMD_MANAGER=
+
+# Flag reload active shell
+RELOAD_SHELL=
 
 # current active repo (set by load_config_vars)
 ACTIVE_REPO=
@@ -141,6 +143,7 @@ INSTALLED=()
 # Current platform
 PLATFORM="$(get_platform)"
 PLATFORM_USER_BIN="$(platform_user_bin)"
+PLATFORM_USER_HOME="$(platform_user_home)"
 
 # Determines if logo,stats,and other verbose messages are shownm
 VERBOSE_MODE=
@@ -166,7 +169,7 @@ dotsys () {
                     re-sources bin, re-sources stubs
     freeze          Output installed state to terminal
                     use --log option to freeze to file
-    config          Set configuration options
+    config          Configure options 'config <var_name> [<set value or --prompt>]'
 
     <topics> optional:
 
@@ -219,7 +222,7 @@ dotsys () {
       $ dotsys <action> vim tmux
 
     - Perform action on all topics and bypass confirmations
-      $ dotsys <action> --confirm repo
+      $ dotsys <action> --confirm default
 
     - Limit actions to a specific catagory
       $ dotsys <action> links
@@ -283,11 +286,17 @@ dotsys () {
                         customize almost everything about a repo and topic
                         behavior with dotsys.cfg file.
 
-      stubs:            - topic/file_name.stub
-                        Provides common boilerplate functionality, collect user information,
+      stubs:            Provides common boilerplate functionality, collect user information,
                         sources your personalized settings, and sources *.topic files.
-                        - topic/file_name.vars
-                        Provides values for stub file variables.
+                        - topic/file_name.stub (required)
+                        The stub template file which contains boilerplate code and variables.
+                        - topic/file_name.vars (not always required)
+                        Provides functions for obtaining values for the stub template variables.
+                        All efforts should be made to provide default values for user data.
+                        Required for variables not provided by dotsys and not user specific.
+                        - topic/file_name.sources (required)
+                        Provides a formatting function for topic sources.
+
 
     scripts:            scripts are optional and placed in each topic root directory
 
@@ -326,6 +335,8 @@ dotsys () {
     check_for_help "$1"
 
     local action=
+    local config_var
+    local config_val
 
     case $1 in
         install )   action="install" ;;
@@ -333,7 +344,10 @@ dotsys () {
         upgrade )   action="upgrade" ;;
         update )    action="update" ;;
         freeze)     action="freeze" ;;
-        config)     action="config" ;;
+        config)     action="config"
+                    config_var="$2"
+                    config_val="$3"
+                    shift; shift;;
         * )  error "Invalid action: $1"
            show_usage ;;
     esac
@@ -372,8 +386,8 @@ dotsys () {
 
         # options
         --force)        force="$1" ;;
-        --tlogo)        ! get_state_value "dotsys" "SHOW_LOGO"; SHOW_LOGO=$? ;;
-        --tstats)       ! get_state_value "dotsys" "SHOW_STATS"; SHOW_STATS=$? ;;
+        --tlogo)        ! get_state_value "dotsys" "show_logo"; SHOW_LOGO=$? ;;
+        --tstats)       ! get_state_value "dotsys" "show_stats"; SHOW_STATS=$? ;;
         --debug)        DEBUG="true" ;;
         --recursive)    recursive="true" ;; # used internally for recursive calls
         --dryrun)       dry_run 0 ;;
@@ -400,14 +414,15 @@ dotsys () {
 
     debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$confirmed r:$recursive from:$from_repo"
 
-    # reset globals if non recursive call
+    # reset persisted vars if non recursive call
     if ! [ "$recursive" ]; then
-        GLOBAL_CONFIRMED=""
-        TOPIC_CONFIRMED=""
-        SYMLINK_CONFIRMED=""
-        PACKAGES_CONFIRMED=""
+        GLOBAL_CONFIRMED=
+        TOPIC_CONFIRMED=
+        SYMLINK_CONFIRMED=
+        PACKAGES_CONFIRMED=
         ACTIVE_REPO=
         ACTIVE_REPO_DIR=
+        RELOAD_SHELL=
     fi
 
     # SET CONFIRMATIONS
@@ -432,7 +447,49 @@ dotsys () {
     # HANDLE CONFIG ACTION
 
     if [ "$action" = "config" ]; then
-        new_user_config
+
+        # get / set <value> or --prompt for user input
+
+        debug "config: $config_var $config_val"
+
+        local config_func="config_$config_var"
+        local status
+        local error_msg
+
+        # Run full user config (no variable name supplied)
+        if ! [ "$config_var" ]; then
+            new_user_config
+
+        # use variable function
+        elif cmd_exists "$config_func"; then
+            $config_func "$config_val"
+            status=$?
+            if [ $status -eq 1 ]; then error_msg="error: $config_func"; fi
+
+        # use generic function
+        else
+            config_user_var "$config_var" "$config_val" --edit
+            status=$?
+            if [ $status -eq 1 ]; then error_msg="not found: $config_var "; fi
+        fi
+
+        if [ "$config_val" ]; then
+            success_or_error $status "update" "config variable" "${error_msg:-$config_var = $config_val}"
+            # update stub files with new data
+            action="update"
+
+            # check for topic variable
+            topics="${config_var%%_*}"
+
+            if ! topic_exists "$topics" > /dev/null ; then
+                topics="$(get_topic_list)"
+            fi
+
+            manage_stubs "update" "$topics" --data_update --force
+
+        elif [ "$error_msg" ];then
+            echo "$error_msg"
+        fi
         return
     fi
 
@@ -487,6 +544,9 @@ dotsys () {
                 if ! [ $? -eq 0 ]; then exit; fi
             fi
         fi
+
+        manage_topic_bin "$action" "dotsys" "$silent"
+
     fi
 
     verbose_mode
@@ -580,7 +640,7 @@ dotsys () {
     # Collect user data
     if ! [ "$recursive" ] && [ "$action" = "install" ] && in_limits "stubs" "dotsys"; then
         debug "main -> collect_user_data for ${topics[*]}"
-        manage_stubs "$action" "${topics[*]}" --data "$force"
+        manage_stubs "$action" "${topics[*]}" --data_collect "$force"
     fi
 
     # ITERATE TOPICS
@@ -640,7 +700,7 @@ dotsys () {
                     ACTIVE_MANAGERS+=("$topic")
                     debug "main -> ABORT MANGER IN USE: Active manager $topic can not be ${action%e}ed."
                     continue
-                # now we can remove the sate file
+                # now we can remove the state file
                 else
                     local sf="$(state_file "$topic")"
                     if [ -f "$sf" ]; then
@@ -722,7 +782,7 @@ dotsys () {
 
         # CONFIRM / ABORT DOTSYS UNINSTALL
 
-        if [ "$topic" = "core" ] && [ "$action" = "uninstall" ]; then
+        if [ "$topic" = "shell" ] && [ "$action" = "uninstall" ]; then
 
             # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
             if ! in_limits "dotsys" -r; then continue; fi
@@ -784,7 +844,6 @@ dotsys () {
 
         # record to state file
         if [ "$action" = "install" ]; then
-
             # add to state file if not there
             state_install "dotsys" "$topic" "$(get_active_repo)"
             INSTALLED+=($topic) # not used any more
@@ -797,13 +856,14 @@ dotsys () {
 
     done
 
-    debug "main -> TOPIC LOOP END"
+    # RELOAD_SHELL WHEN REQUIRED
 
-#    # When installing we have to manage the stubs last and add shell to topics
-#    if [ "$action" = "install" ] && in_limits "stubs" "links"; then
-#        debug "main -> manage stub files for installed topics"
-#        manage_stubs "$action" "${topics[*]}" --task "$force"
-#    fi
+    if ! [ "$recursive" ] && [ "$RELOAD_SHELL" ]; then
+        task "Reloading $RELOAD_SHELL"
+        shell reload
+    fi
+
+    debug "main -> TOPIC LOOP END"
 
     # Finally check for repos, managers, & topics that still need to be uninstalled
     if [ "$action" = "uninstall" ]; then
@@ -854,29 +914,3 @@ uninstall_inactive () {
     fi
 }
 
-# no args : checks if there there any user installed topics
-# topic as first arg : test if topic is user installed
-user_topics_installed () {
-    in_state "dotsys" "$1" "!dotsys/dotsys"
-    local r=$?
-    debug "   - user_topics_installed = $r"
-    return $r
-}
-
-# Check if topic is required by dotsys
-is_required_topic () {
-    local topic="${1:-$topic}"
-    ! in_limits "dotsys" -r && in_state "dotsys" "$topic" "dotsys/dotsys"
-    local r=$?
-    debug "   - is_required_topic = $r"
-    return $r
-}
-
-# Check if topic has required stub file
-is_required_stub () {
-    local topic="${1:-$topic}"
-    ! in_limits "dotsys" -r && [ "$topic" = shell ]
-    local r=$?
-    debug "   - is_required_stub = $r"
-    return $r
-}

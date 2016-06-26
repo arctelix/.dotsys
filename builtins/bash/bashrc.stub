@@ -4,14 +4,8 @@
 # SOURCED BY BASH (ALWAYS)
 # ---------------------------------------
 
-#set architecture flags
-[ "$DOTSYS_PLATFORM_SPE" = mac ] && export ARCHFLAGS="-arch x86_64"
+{INIT_SHELL}
 
-# LOAD: .shellrc if it exists (required for dotsys)
-test -f $HOME/.shellrc && source "$HOME/.shellrc"
+# LOAD BASH FILES
 
-# LOAD TOPIC SYMLINK: CUSTOMIZE THE FILE NAMED BELOW
-stub_target="{STUB_TARGET}"
-test -f "$stub_target" && source "$stub_target"
-
-# SOURCE TOPIC FILES: .bash
+{STUB_TARGET}

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+
+# Configuration functions
+# Author: arctelix
+
+
 # NEVER USE ACTUAL VARS DIRECTLY; USE THIS METHOD OR GET_TOPIC_CONFIG_VAL!
 get_config_val () {
   # TYPE                         ACTUAL VAR      CALL AS
@@ -270,13 +275,9 @@ prompt_config_or_repo () {
                    \r  we'll create it locally in your dotfiles directory and
                    \r  optionally upload it to github.
 
-                   \r  Then move any existing topics you have to the new folder
-                   \r  %b~/.dotfiles/github_user/repo_name%b.
-
                    \rOPTION 2 (cofig file):
 
-                   \r  A %bconfig file%b is a way to specify repos & topic configs.
-                   \r  Provide a full path to a %bdotsys.cfg%b file and we'll take
+                   \r  Alternately, Provide a full path to a %bdotsys.cfg%b file and we'll take
                    \r  it form there.
 
                    \rEASY!%b" \ $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $blue $dark_gray $rc)"
@@ -314,13 +315,148 @@ get_repo_from_config_file () {
 
 # USER CONFIG
 
-is_new_user () {
-    # Empty user state file is new user
-    #! [ -s "$(state_file "user")" ]
-    get_state_value "user" "user_repo"
-    return $?
+# Gets or Sets user state value
+config_user_var () {
+    usage="config_user_var [value to set] [<option>]"
+    usage_full="
+        -p | --prompt <text>     Prompt for user value [optional prompt text]
+        -d | --default <val>     Default value for user input
+        -b | --bool )            Variable is a boolean value
+        -e | --edit )            Edit only mode (error if var does not exist)
+    "
+    local var="$1"
+    local set="$2"
+    shift; shift
+
+    local prompt
+    local default
+    local user_input
+    local value
+    local non_bool="--options omit"
+    local edit_only
+
+    while [[ $# > 0 ]]; do
+        case "$1" in
+        -p | --prompt )   prompt="$2"; shift ;;
+        -d | --default )  default="$2"; shift ;;
+        -b | --bool )     non_bool="";;
+        -e | --edit )     edit_only="$1";;
+        *)  invalid_option ;;
+        esac
+        shift
+    done
+
+    local state_value="$(get_state_value "user" "$var")"
+    if [ "$edit_only" ] && ! in_state "user" "$var"; then return 1; fi
+
+    if [ "$set" = "--prompt" ]; then
+        if ! [ "$prompt" ]; then
+            prompt="Provide a value for $(echo "$var" | tr '_' ' ')"
+        fi
+        debug "config_user_var: prompt:$prompt d:$default bool:$non_bool"
+        get_user_input "$prompt " --default "${state_value:-$default}" $non_bool
+
+    elif [ "$set" ]; then
+        debug "config_user_var: set:$set"
+        user_input="$set"
+    fi
+
+    # set value
+    if [ "$set" ]; then
+        value="$user_input"
+
+        # Convert to boolean value
+        if [ "$value" = "yes" ]; then value=0
+        elif [ "$value" = "no" ]; then value=1;fi
+
+        set_state_value "user" "$var" "$value"
+
+    # get state value
+    else
+        echo "$state_value"
+    fi
+
+    # return integer value
+    if [[ $value =~ ^-?[0-9]+$ ]]; then
+        return $value
+    fi
 }
 
+# All user options require a function called "config_<variable name>"
+# Each config function must call config_user_var and takes the following arguments:
+# Getter : no arguments     Gets the value from user state
+# Setter : <value>          Sets the supplied value
+# Setter : --prompt         Prompts user for a value to set
+
+config_user_name () {
+    config_user_var "user_name" "$1" -d "$(cap_first "$(whoami)")"
+}
+
+config_user_email () {
+    config_user_var "user_email" "$1" -d "$(get_state_value "user" "git_author_email")"
+}
+
+get_user_name () {
+    config_user_name
+}
+
+config_primary_repo () {
+    local val="$1"
+    local user_input
+
+    if [ "$val" = "--prompt" ]; then
+        prompt_config_or_repo "set as your primary repo"
+        val="$user_input"
+    elif [ "$val" ];then
+        validate_config_or_repo "$val"
+        val="$user_input"
+    fi
+
+    config_user_var "primary_repo" "$val"
+}
+
+config_show_logo () {
+    local prompt="Show the dotsys logo when working on multiple topics?
+            $spacer (it's helpful)"
+    config_user_var "show_logo" "$1" --bool --prompt "$prompt"
+}
+
+config_show_stats () {
+    local prompt="Show the dotsys stats when working on multiple topics?
+            $spacer (it's helpful)?"
+    config_user_var "show_stats" "$1" --bool --prompt "$prompt"
+}
+
+config_use_stubs () {
+
+    if [ "$1" = "--prompt" ]; then
+          info "The stub file process allows topics to collect user specific
+        $spacer information and sources topic related files from other topics
+        $spacer such as *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"
+        local prompt="Would you like use dotsys sub files?"
+    fi
+
+    local user_input
+    config_user_var "use_stub_files" "$1" --bool --prompt "$prompt"
+    local status=$?
+
+    if [ "$1" = "--prompt" ] && [ $status -eq 0 ]; then
+        info "If you are migrating from another dotfile manager and your
+      $spacer current shell config files source topic files by extension
+      $spacer *.shell, *.bash, *.zsh, etc you can remove this functionality
+      $spacer since dotsys takes care of it for you now. You can review stub
+      $spacer files by opening the symlink in your home directory.
+
+      $spacer IMPORTANT NOTE: Dotsys does not source *.sh files from topics!
+      $spacer - shell extensions are sourced by all shells.
+      $spacer - bash  extensions are sourced by bash only.
+      $spacer - zsh  extensions are sourced by zsh only."
+    fi
+
+    return $status
+}
+
+# Walk through all user config options
 new_user_config () {
 
     print_logo
@@ -329,19 +465,19 @@ new_user_config () {
     msg "Before getting started lets set some common default values."
     printf "\n"
 
-    config_user_var "user_name" "$(get_user_name)"
+    config_user_name --prompt
 
-    config_user_var "user_email" "$(get_state_value "user" "git_author_email")"
+    config_user_email --prompt
 
     printf "\n"
     msg "Now just a few more configuration options."
     printf "\n"
 
-    config_user_logo
+    config_show_logo --prompt
 
-    config_user_stats
+    config_show_stats --prompt
 
-    config_user_stubs
+    config_use_stubs --prompt
 
     printf "\n"
     msg "The last step is to set a primary repo.  This will
@@ -349,73 +485,19 @@ new_user_config () {
     \rUse the format $(code "github_user_name/repo_name")"
     printf "\n"
 
-    config_user_primary_repo
+    config_primary_repo --prompt
 
     printf "\n"
     msg "\nCongratulations $(get_user_name), your preferences are set!\n"
     printf "\n"
 }
 
-config_user_var () {
-    local var="$1"
-    local var_text="$(echo "$var" | tr '_' ' ')"
-
-    local state_val="$(get_state_value "user" "$var")"
-    local default="${state_val:-$2}"
-
-    local user_input
-    get_user_input "Provide a default $var_text " --options omit --default "$default"
-    set_state_value "user" "$var" "$user_input"
-}
-
-get_user_name () {
-    local val
-    val="$(get_state_value "user" "user_name")"
-    if ! [ "$val" ]; then
-        val="$(cap_first "$(whoami)")"
-    fi
-    echo "$val"
-}
-
-config_user_primary_repo () {
-    local user_input
-    prompt_config_or_repo "set as your primary repo"
-    state_primary_repo "$user_input"
-}
-
-config_user_logo () {
-    get_user_input "Show the dotsys logo when working on multiple topics?
-            $spacer (it's helpful)"
-    set_state_value "user" "SHOW_LOGO" $?
-}
-
-config_user_stats () {
-    get_user_input "Show the dotsys stats when working on multiple topics?
-            $spacer (it's helpful)?"
-    set_state_value "user" "SHOW_STATS" $?
-}
-
-config_user_stubs () {
-    info "The stub file process allows topics to collect user specific
-  $spacer information and sources topic related files from other topics
-  $spacer such as *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"
-
-    get_user_input "Would you like use dotsys sub files?"
-    local status=$?
-    set_state_value "user" "use_stub_files" $status
-
-    if ! [ $status -eq 0 ]; then return;fi
-    info "If you are migrating from another dotfile manager and your
-  $spacer current shell config files source topic files by extension
-  $spacer *.shell, *.bash, *.zsh, etc you can remove this functionality
-  $spacer since dotsys takes care of it for you now. You can review stub
-  $spacer files by opening the symlink in your home directory.
-
-  $spacer IMPORTANT NOTE: Dotsys does not source *.sh files from topics!
-  $spacer - shell extensions are sourced by all shells.
-  $spacer - bash  extensions are sourced by bash only.
-  $spacer - zsh  extensions are sourced by zsh only."
-
+# Test for new user
+is_new_user () {
+    # Empty user state file is new user
+    #! [ -s "$(state_file "user")" ]
+    get_state_value "user" "user_repo"
+    return $?
 }
 
 # TOPIC CONFIG

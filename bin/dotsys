@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Command entry point, see lib/min.sh.
+# System command entry point, see lib/main.sh handler.
 #
 # Author: Arctelix (http://gitbub.com/arctelix)
 #
@@ -31,46 +31,70 @@
 
 set +o posix
 
+init="$1"
+
 chdir() {
   cd "$@" >/dev/null
 }
 
-DOTSYS_FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
-DOTSYS_DOTSYS_FILE="$DOTSYS_FILE_DIRECTORY/${0##*/}"
+dotsys_file () {
+    local DOTSYS_FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
+    local DOTSYS_DOTSYS_FILE="$DOTSYS_FILE_DIRECTORY/${0##*/}"
+    echo "$DOTSYS_DOTSYS_FILE"
+}
 
-DOTSYS_PREFIX="${DOTSYS_DOTSYS_FILE%/*/*}"
-DOTSYS_REPOSITORY="$DOTSYS_PREFIX"
+dotsys_repository () {
 
-if [[ -L "$DOTSYS_DOTSYS_FILE" ]]
-then
-  DOTSYS_SYMLINK="$(readlink "$DOTSYS_DOTSYS_FILE")"
-  DOTSYS_SYMLINK_DIRECTORY="$(dirname "$DOTSYS_SYMLINK")"
-  DOTSYS_FILE_DIRECTORY="$(chdir "$DOTSYS_FILE_DIRECTORY" &&
-                         chdir "$DOTSYS_SYMLINK_DIRECTORY" && pwd -P)"
-  DOTSYS_REPOSITORY="${DOTSYS_FILE_DIRECTORY%/*}"
-fi
+    if [ "$DOTSYS_REPOSITORY" ]; then
+        echo "$DOTSYS_REPOSITORY"
+        return
+    fi
 
+    local DOTSYS_DOTSYS_FILE="$(dotsys_file)"
+
+    if [[ -L "$DOTSYS_DOTSYS_FILE" ]]; then
+        local DOTSYS_SYMLINK="$(drealpath "$DOTSYS_DOTSYS_FILE")"
+        local DOTSYS_SYMLINK_DIRECTORY="$(dirname "$DOTSYS_SYMLINK")"
+        local DOTSYS_FILE_DIRECTORY="$(chdir "$DOTSYS_FILE_DIRECTORY" &&
+                             chdir "$DOTSYS_SYMLINK_DIRECTORY" && pwd -P)"
+        local DOTSYS_REPOSITORY="${DOTSYS_FILE_DIRECTORY%/*}"
+    else
+        local DOTSYS_REPOSITORY="${DOTSYS_DOTSYS_FILE%/*/*}"
+    fi
+
+    echo "$DOTSYS_REPOSITORY"
+}
+
+DOTSYS_REPOSITORY="$(dotsys_repository)"
 DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
+source "$DOTSYS_LIBRARY/core.sh"
 
-
-# allows testing for all dotsys funcs
-if [ "$1" = "ds_test" ]; then
+# testing for all dotsys funcs
+if [ "$init" = "test" ]; then
   shift
   source "$DOTSYS_LIBRARY/main.sh"
   DEBUG=true
   echo
-  warn "You have entered dotsys test mode!"
+  warn "You are in dotsys test mode!"
   echo
   #eval "$1"
   "$@"
 
-# allows access to all common.sh funcs
-# (not sure yet if this will be needed)
-elif [ "$1" = "ds_utils" ]; then
+# Return path for sourcing
+elif [ "$init" = "repository" ]; then
+  echo "$DOTSYS_REPOSITORY"
+
+# Return path for sourcing
+elif [ "$init" = "source" ]; then
   shift
-  source "$DOTSYS_LIBRARY/utils.sh"
-  $@
+  echo "$DOTSYS_LIBRARY/${1}.sh"
+
+# execute script function
+elif [ -f "$DOTSYS_LIBRARY/${init}.sh"  ]; then
+  shift
+  source "$DOTSYS_LIBRARY/${init}.sh"
+  "$@"
 
 # call main dotsys func
 else

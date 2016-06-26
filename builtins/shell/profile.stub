@@ -3,12 +3,9 @@
 #
 # SOURCED BY ALL BORNE SHELLS (LOGIN)
 # -------------------------------------
-if [ "$profile" = "loaded" ]; then return; fi
-profile="loaded"
 
-# LOAD: .shellrc if it exists
-test -f "$HOME/.shellrc" && source "$HOME/.shellrc"
+{INIT_SHELL_LOGIN}
 
-# LOAD TOPIC SYMLINK: CUSTOMIZE THE FILE NAMED BELOW
-stub_target="{STUB_TARGET}"
-test -f "$stub_target" && source "$stub_target"
+# LOAD PROFILE SYMLINK
+
+{STUB_TARGET}
