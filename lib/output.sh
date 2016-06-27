@@ -397,7 +397,8 @@ output_script() {
    #sh -i "$@" 2>&1 | indent_lines
    #"$@" | indent_lines
    debug "output_script $@"
-   script -q /dev/null "$@"
+   #script -q /dev/null "$@"
+   sh -i "$@"
    local state=$?
    debug "   output_script state=$state"
    return $state

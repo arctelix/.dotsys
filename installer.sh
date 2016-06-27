@@ -3,8 +3,8 @@
 # TODO ROADMAP: Enable download of dotsys repo from installer script.
 
 cd "$(dirname "$0")"
-DOTSYS_REPOSITORY="$PWD"
-DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
+export DOTSYS_REPOSITORY="$PWD"
+export DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
 dotsys_installer () {
 
@@ -88,7 +88,7 @@ dotsys_installer () {
     dotsys $action dotsys --confirm default "$force"
 
     # Remove dotsys/bin files from usr/bin
-    if [ "$action" = "install" ]; then
+    if [ "$action" = "uninstall" ]; then
         manage_topic_bin unlink core
     fi
 

@@ -91,15 +91,16 @@ manage_stubs () {
     shift; shift
 
     #local builtins=$(get_dir_list "$(dotsys_dir)/builtins")
-    local topic
     local force
-    local mode
+    local data_mode
+    local task
 
     while [[ $# > 0 ]]; do
         case "$1" in
-        -f | --force )      force="$1" ;;
-        -d | --data )       mode="$1" ;;
-        -t | --task )       mode="$1" ;;
+        -f | --force )        force="$1" ;;
+        -t | --task )         task="task" ;;
+        -d | --data_update )  data="$1"; data_mode="update" ;;
+        -d | --data_collect ) data="$1"; data_mode="collect" ;;
         *)  invalid_option ;;
         esac
         shift
@@ -112,12 +113,13 @@ manage_stubs () {
         return
     fi
 
-    debug "-- manage_stubs: $action ${topics[@]} $mode $force"
+    debug "-- manage_stubs: $action $mode $force"
+    debug "   topics: ${topics[@]}"
 
-    if [ "$mode" = "--data" ]; then
-        task "Collecting user data"
-    elif [ "$mode" = "--task" ];then
-        task "$action stub files"
+    if [ "$data_mode" ]; then
+        task "${data_mode}ing user data"
+    elif [ "$task" ];then
+        task "${action}ing stub files"
     fi
 
     for topic in ${topics[@]}; do
@@ -125,7 +127,7 @@ manage_stubs () {
         if ! [ "$(topic_dir "$topic" "user")" ] && ! is_required_stub; then
             continue
         fi
-        manage_topic_stubs "$action" "$topic" "$mode" "$force"
+        manage_topic_stubs "$action" "$topic" "$data" "$task" "$force"
     done
 
 }
@@ -152,8 +154,8 @@ manage_topic_stubs () {
         case "$1" in
         -f | --force )        force="$1" ;;
         -t | --task )         task="task" ;;
-        -d | --data_update )  data_mode="data_update" ;;
-        -d | --data_collect ) data_mode="data_collect" ;;
+        -d | --data_update )  data_mode="update" ;;
+        -d | --data_collect ) data_mode="collect" ;;
         *)  invalid_option ;;
         esac
         shift
@@ -167,14 +169,16 @@ manage_topic_stubs () {
     if [ "$stub_files" ];then
         debug "-- manage_topic_stubs: $action $topic $data_mode $force"
 
-        if [ "$task" ]; then
-            task "Stubbing $topic $data_mode"
+        if [ "$data_mode" ]; then
+            task "${data_mode}ing $topic data"
+        elif [ "$task" ];then
+            task "${action}ing $topic stub files"
         fi
 
         while IFS=$'\n' read -r stub_file; do
             debug "   found stub file for $topic -> $stub_file"
 
-            if [ "$data_mode" = "data_collect" ]; then
+            if [ "$data_mode" = "collect" ]; then
                 collect_user_data "$action" "$topic" "$stub_file" "" "$data_mode" "$force"
             elif [ "$action" = freeze ];then
                 collect_user_data "$action" "$topic" "$stub_file" "" "$data_mode" "$force"
@@ -187,7 +191,7 @@ manage_topic_stubs () {
     fi
 
     # Check topic for other topic source files
-    if [ "$data_mode" ]; then
+    if ! [ "$data_mode" ]; then
         manage_topic_source_files "$action" "$topic"
     fi
 }
@@ -248,7 +252,7 @@ manage_user_stub () {
         file_action="create"
 
     # Update action (ABORT if up to date unless data_update)
-    elif [ "$data_mode" != "data_update" ]; then
+    elif [ "$data_mode" != "update" ]; then
         local target_ok="$( [ "$stub_tar" ] && grep "$stub_tar" "$stub_dst" )"
         # Abort if stub_dst is newer then source and has correct target
         if ! [ "$force" ] && [ "$stub_dst" -nt "$stub_src" ] && [ "$target_ok" ]; then
@@ -270,13 +274,13 @@ manage_user_stub () {
     debug "   create_user_stub update target"
     grep -q '{STUB_TARGET}' "$stub_out"
     if [ $? -eq 0 ]; then
-
+        local prefix
         # Use load_source_file for shell topics
         if is_shell_topic; then
-            stub_tar="load_source_file '$stub_tar'"
+            prefix="load_source_file "
         fi
 
-        sed -e "s|{STUB_TARGET}|$stub_tar|g" "$stub_out" > "$stub_tmp"
+        sed -e "s|{STUB_TARGET}|"$prefix'$stub_tar'"|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
 
         if ! [ "$target_ok" ];then
@@ -384,22 +388,23 @@ collect_user_data () {
             if script_func_exists "$values_script" "$gen_state_key"; then
 
                 script_val="$($values_script $gen_state_key)"
-                debug "   collect_user_data: script_val = $script_val"
 
                 # value was obtained and no user confirm required
                 if [ $? -eq 0 ]; then
                     var_type="system"
                     val="$script_val"
-                # no value or value requires user confirm
+                # got value, requires user confirm
                 else
                     default_val="$script_val"
                     var_type="user"
                 fi
+
+                debug "   collect_user_data: $var_type script val = $script_val"
             fi
         fi
 
         # Get user input if no val found (use force to recollect all values)
-        if [ "$var_type" = "user" ] && [[ ! "$val" || "$force" = "--force" && "$data_mode" = "data_collect" ]]; then
+        if [ "$var_type" = "user" ] && [[ ! "$val" || "$force" = "--force" && "$data_mode" = "collect" ]]; then
 
             default_val="${val:-$default_val}"
 

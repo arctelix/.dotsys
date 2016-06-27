@@ -544,7 +544,8 @@ git_commit () {
 
     message="${user_input:-$default}"
 
-    script -q /dev/null git commit -a -m "$message" 2>&1 | indent_lines
+    #script -q /dev/null git commit -a -m "$message" 2>&1 | indent_lines
+    git commit -a -m "$message" 2>&1 | indent_lines
 
     if ! [ "$silent" ]; then success_or_fail $? "commit" ": $message";fi
     cd "$OWD"

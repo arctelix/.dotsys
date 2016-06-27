@@ -53,8 +53,6 @@ load_config_vars (){
     debug "$yaml"
     eval "$yaml" #set default config vars
 
-
-
     # validate from and set config_file
     if [ "$repo" ]; then
         debug "   load_config_vars validate: $repo"
@@ -63,11 +61,11 @@ load_config_vars (){
     else
         ACTIVE_REPO="$(get_active_repo)"
         config_file="$(get_config_file_from_repo "$ACTIVE_REPO")"
-        debug "   existing user repo: $ACTIVE_REPO"
-        debug "   existing user cfg: $config_file"
+        debug "   load_config_vars: existing user repo: $ACTIVE_REPO"
+        debug "   load_config_vars: existing user cfg: $config_file"
     fi
 
-    debug "found ACTIVE_REPO: $ACTIVE_REPO"
+    debug "   load_config_vars: ACTIVE_REPO = $ACTIVE_REPO"
 
     # Set ACTIVE_REPO & config_file for new user/repo
     if ! [ "$ACTIVE_REPO" ]; then
@@ -494,8 +492,8 @@ new_user_config () {
 # Test for new user
 is_new_user () {
     # Empty user state file is new user
-    #! [ -s "$(state_file "user")" ]
-    get_state_value "user" "user_repo"
+    # ! [ -s "$(state_file "user")" ]
+    get_state_value "user" "primary_repo"
     return $?
 }
 

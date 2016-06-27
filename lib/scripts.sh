@@ -142,6 +142,7 @@ run_script_func () {
 
   # Returns built in and user script
   local scripts="$(get_topic_scripts "$topic" "$script_name")"
+  debug "   run_script_func scripts: $scripts"
 
   # Verify required script was found
   if ! [ "$scripts" ] && [ "$required" ]; then
@@ -161,10 +162,8 @@ run_script_func () {
   local i=0
   for script in $scripts; do
       script_src="${script_sources[$i]}"
-      debug "   run_script_func_src: $script_src $script"
+      debug "   run_script_func test source $script_src : $script"
       if script_func_exists "$script" "$action"; then
-
-          debug "   running $script $action ${params[@]}"
 
           if [ "$action" = "freeze" ]; then
               result="$($script $action ${params[@]})"
@@ -174,7 +173,8 @@ run_script_func () {
               return
           # run script action func
           elif ! dry_run; then
-            output_script "$script" "$action" ${params[@]}
+            debug "   running script func: $script $action ${params[*]}"
+            output_script "$script" "$action" ${params[*]}
             state=$?
           fi
 
