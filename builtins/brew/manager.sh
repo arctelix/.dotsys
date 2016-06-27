@@ -15,7 +15,7 @@ upgrade () {
   return $?
 }
 
-$@ # Required for function execution
+"$@"
 
 
 

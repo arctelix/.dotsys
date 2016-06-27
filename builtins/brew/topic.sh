@@ -31,5 +31,5 @@ freeze () {
   return $?
 }
 
-"$@" # Required for function execution
+"$@"
 

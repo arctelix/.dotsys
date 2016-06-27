@@ -250,9 +250,10 @@ func_or_func_msg () {
 indent_lines () {
   local first
   local line
+  local prefix
 
   if [ "$1" == "--prefix" ]; then
-    local prefix="$2"
+    prefix="$2"
     shift
     shift
   fi
@@ -391,21 +392,32 @@ output_script() {
 #  export -f read
 #  debug "=========read_tty $@"
 
-   #TODO: Tried everything imaginable to indent lines & get prompts for brew
-   #script -q /dev/null "$@" 2>&1 | indent_lines
-   #script -q /dev/null sh -i "$@" 2>&1 | indent_lines
-   #sh -i "$@" 2>&1 | indent_lines
-   #"$@" | indent_lines
+   local state
+
    debug "output_script $@"
-   #script -q /dev/null "$@"
-   sh -i "$@"
-   local state=$?
+
+   #TODO: Tried everything imaginable to indent lines & still get prompts
+#   echo "---------------"
+#   script -q /dev/null "$@" 2>&1 | indent_lines
+#   echo "---------------"
+#   script -q /dev/null sh -i "$@" 2>&1 | indent_lines
+#   echo "---------------"
+#   #script -q /dev/null "$@" | indent_lines
+#    echo "---------------"
+#   sh -i "$@" 2>&1 | indent_lines
+#   echo "---------------"
+#   sh --init-file -i "$@" 2>&1
+#   echo "---------------"
+#   sh --init-file -i "$@" 2>&1 | indent_lines
+
+   sh "$@"
+   state=${PIPESTATUS[0]}
    debug "   output_script state=$state"
-   return $state
+   return ${state:-$?}
 
 #  unset -f read
 #  debug "=========read_tty unset"
-  #"$@"
+#  "$@"
 }
 
 test_read_tty () {
@@ -414,5 +426,4 @@ test_read_tty () {
     # sed "s/^/printf
     #read_tty script -q /dev/null ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
     output_script "$(builtin_topic_dir)brew/topic.sh" install
-
 }
