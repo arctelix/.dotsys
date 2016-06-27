@@ -65,8 +65,8 @@ DEBUG=false
 
 # Determine dotsys repo if this file is called directly
 if ! [ "$DOTSYS_REPOSITORY" ];then
-    DOTSYS_LIBRARY="$(dirname "$0")"
-    DOTSYS_REPOSITORY="${DOTSYS_LIBRARY%/lib}"
+    export DOTSYS_LIBRARY="$(dirname "$0")"
+    export DOTSYS_REPOSITORY="${DOTSYS_LIBRARY%/lib}"
 fi
 
 . "$DOTSYS_LIBRARY/core.sh"

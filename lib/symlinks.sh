@@ -554,7 +554,7 @@ manage_topic_bin () {
     local src_bin
     local dst_bin
 
-    if [ "$topic" = "dotsys" ]; then
+    if [ "$topic" = "core" ]; then
         src="$(dotsys_dir)"
         dst_bin="${PLATFORM_USER_BIN}"
     else
@@ -594,7 +594,7 @@ manage_topic_bin () {
 
         # test for exitsing command
         local command="$(basename "$file")"
-        if ! [ "$topic" = "dotsys" ] && ! [ "$silent" ] && [ "$action" = "install" ] && cmd_exists $command; then
+        if ! [ "$topic" = "core" ] && ! [ "$silent" ] && [ "$action" = "install" ] && cmd_exists $command; then
             warn "The command '$command' already exists on the system path"
             get_user_input "Are you sure you want to supersede it with
                     $spacer $file?" --required

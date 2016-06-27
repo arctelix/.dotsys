@@ -1,9 +1,13 @@
 #!/bin/sh
 
-DOTSYS_REPOSITORY="$(dirname "$0")"
-DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
+# TODO ROADMAP: Enable download of dotsys repo from installer script.
+
+export DOTSYS_REPOSITORY="$(dirname "$0")"
+export DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
 dotsys_installer () {
+
+    source "$DOTSYS_LIBRARY/main.sh"
 
     local usage="dotsys_installer <action>"
     local usage_full="Installs and uninstalls dotsys.
@@ -13,17 +17,18 @@ dotsys_installer () {
     --debug        turn on debug mode
     "
 
-    #TODO ROADMAP: Enable download of dotsys repo from installer script.
-    source "$DOTSYS_LIBRARY/main.sh"
+    export ACTIVE_SHELL="${SHELL##*/}"
+    export ACTIVE_LOGIN_SHELL="$ACTIVE_SHELL"
 
-    local current_shell="${SHELL##*/}"
     local action
+    local force
 
     while [[ $# > 0 ]]; do
         case "$1" in
         install )    action="$1" ;;
         uninstall )  action="$1" ;;
-        -d | --debug )  DEBUG="true" ;;
+        --debug )  DEBUG="true" ;;
+        --force )  force="$1" ;;
         * )  error "Not a valid action: $1"
              show_usage ;;
         esac
@@ -57,9 +62,11 @@ dotsys_installer () {
         debug "added /usr/local/bin to path: $PATH"
     fi
 
-    # create required directories
+    # create required files and directories
     if [ "$action" = "install" ]; then
+
         task "Preparing required directories and files"
+
         mkdir -p "$(dotfiles_dir)"
         mkdir -p "$DOTSYS_REPOSITORY/user/bin"
         mkdir -p "$DOTSYS_REPOSITORY/user/stubs"
@@ -67,13 +74,22 @@ dotsys_installer () {
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
         touch "$DOTSYS_REPOSITORY/state/repos.state"
+
         # some initial values for user state
         state_install "user" "show_stats" "0"
         state_install "user" "show_logo" "0"
+
+        # Add dotsys/bin files to usr/bin
+        manage_topic_bin link core
     fi
 
-    # This is the actual installer
-    dotsys "$action" dotsys --confirm default
+    # install dotsys deps
+    dotsys $action dotsys --confirm default "$force"
+
+    # Remove dotsys/bin files from usr/bin
+    if [ "$action" = "install" ]; then
+        manage_topic_bin unlink core
+    fi
 
     msg "\nDotsys has been ${action%e}ed
          \rThanks for using dotsys!\n"
@@ -84,7 +100,3 @@ dotsys_installer () {
 }
 
 dotsys_installer $@
-
-
-
-

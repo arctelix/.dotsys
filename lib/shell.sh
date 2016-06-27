@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Shell specific functions
+# Shell functions
 # Author: arctelix
 
 import platforms
@@ -36,8 +36,10 @@ reload () {
 
     if [ "$ACTIVE_LOGIN_SHELL" ];then
         exec -l "$ACTIVE_SHELL"
-    else
+    elif [ "$ACTIVE_SHELL" ]; then
         exec "$ACTIVE_SHELL"
+    else
+        exec "$SHELL" -l
     fi
 
     # Remove flag for reload

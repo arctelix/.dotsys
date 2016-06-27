@@ -375,14 +375,16 @@ collect_user_data () {
                                         var_type="user" ;;
         esac
 
-        debug "   - collect_user_data: var($var) key($gen_state_key) text($var_text) = $val"
+        debug "   collect_user_data for $var: state val ($t_state_key = $val)"
 
         # Check if stubfile.vars supplies values
         if ! [ "$val" ]; then
             values_script="$(get_user_or_builtin_file "$topic" "${stub_name}.vars")"
-            if script_exists "$values_script"; then
+            debug "   collect_user_data: values_script = $values_script"
+            if script_func_exists "$values_script" "$gen_state_key"; then
 
                 script_val="$($values_script $gen_state_key)"
+                debug "   collect_user_data: script_val = $script_val"
 
                 # value was obtained and no user confirm required
                 if [ $? -eq 0 ]; then
@@ -391,6 +393,7 @@ collect_user_data () {
                 # no value or value requires user confirm
                 else
                     default_val="$script_val"
+                    var_type="user"
                 fi
             fi
         fi
@@ -398,12 +401,12 @@ collect_user_data () {
         # Get user input if no val found (use force to recollect all values)
         if [ "$var_type" = "user" ] && [[ ! "$val" || "$force" = "--force" && "$data_mode" = "data_collect" ]]; then
 
-            default_val="$val"
+            default_val="${val:-$default_val}"
 
             # use gen_state_key value as default if no val
             if ! [ "$default_val" ]; then
-                debug "   create_user_stub get default: $gen_state_key"
                 default_val="$(get_state_value "user" "${gen_state_key}")"
+                debug "   collect_user_data get default: $gen_state_key = $default_val"
             fi
 
             get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${default_val}" -r

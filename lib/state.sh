@@ -370,9 +370,7 @@ get_topic_list () {
 
         # dotsys install limited to shell & deps
         if in_limits "dotsys" -r; then
-            load_topic_config_vars "shell"
-            deps="$(get_topic_config_val "shell" "deps")"
-            echo "$deps shell"
+            echo "$(get_system_deps)"
 
         # all other installs take topic directory
         else

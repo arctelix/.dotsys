@@ -51,12 +51,12 @@ platform_user_bin () {
           echo "$bin_path"
           return
       ;;
-      *cygwin ) bin_path="$CYGWIN_HOME/$bin_path"
+      *cygwin | *babun ) bin_path="$CYGWIN_HOME/$bin_path"
 
           if ! [ -d "$bin_path" ]; then
               missing_var="CYGWIN_HOME"
           else
-              echo "$(printf "%s" "$(cygpath --unix "$CYGWIN_HOME")")"
+              echo "$(printf "%s" "$(cygpath --unix "$bin_path")")"
               return
           fi
       ;;
@@ -77,8 +77,7 @@ platform_user_bin () {
       ;;
   esac
 
-  error "$(printf "Cannot determine the $bin_path directly for platform %b%s%b" \
-                   green "$platform" $rc)"
+  error "The platform_user_bin directory" "$bin_path" "does not exist for" "$platform"
 
   if [ "$missing_var" ]; then
 

@@ -363,13 +363,17 @@ print_stats () {
         return
     fi
 
-    info "Active repo:" "$(printf "%b%s%b" $thc $ACTIVE_REPO $rc)"
-    info "Platform   :" "$(printf "%b%s%b" $thc $PLATFORM $rc)"
-    info "App manager:" "$(printf "%b%s%b" $thc $DEFAULT_APP_MANAGER $rc)"
-    info "Cmd manager:" "$(printf "%b%s%b" $thc $DEFAULT_CMD_MANAGER $rc)"
+    info "Active repo : " "$(printf "%b%s%b" $thc $ACTIVE_REPO $rc)"
+    info "Platform    : " "$(printf "%b%s%b" $thc $PLATFORM $rc)"
+    info "App manager : " "$(printf "%b%s%b" $thc $DEFAULT_APP_MANAGER $rc)"
+    info "Cmd manager : " "$(printf "%b%s%b" $thc $DEFAULT_CMD_MANAGER $rc)"
+    info "User bin    : " "$(printf "%b%s%b" $thc $PLATFORM_USER_BIN $rc)"
+    info "User home   : " "$(printf "%b%s%b" $thc $PLATFORM_USER_HOME $rc)"
+
     local count=${#topics[@]}
     if [ $count -eq 0 ]; then count="all"; fi
     info "$(printf "$(cap_first "${action}ing") %b%s%b" $thc "$count topics" $rc)"
+
     # make sure it's only seen once
     SHOW_STATS=1
 }

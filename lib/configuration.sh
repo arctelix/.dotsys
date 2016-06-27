@@ -574,6 +574,12 @@ get_topic_config_val () {
     return 1
 }
 
+get_system_deps () {
+    load_topic_config_vars "shell"
+    deps="$(get_topic_config_val "shell" "deps")"
+    echo "$deps shell $ACTIVE_SHELL"
+}
+
 
 
 
