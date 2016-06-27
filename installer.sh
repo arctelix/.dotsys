@@ -32,7 +32,6 @@ dotsys_installer () {
 
     action="${action:-install}"
 
-    set_user_vars
     print_logo
 
     debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"

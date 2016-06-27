@@ -203,6 +203,9 @@ get_state_value () {
   local match_val="$3"
   local ret=0
 
+  # State file does not exist yet so pretend it's ok (pre install)
+  if [ -f "$file" ]; then return 0;fi
+
   local lines="$(grep "^$key:.*$" "$file")"
   ret=$?
   local val="${lines#*:}"
