@@ -2,8 +2,9 @@
 
 # TODO ROADMAP: Enable download of dotsys repo from installer script.
 
-export DOTSYS_REPOSITORY="$(dirname "$0")"
-export DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
+cd "$(dirname "$0")"
+DOTSYS_REPOSITORY="$PWD"
+DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
 dotsys_installer () {
 
@@ -40,8 +41,8 @@ dotsys_installer () {
     print_logo
 
     debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-    debug "current_shell: $current_shell"
-    debug "$action dotsys user_dotfiles: "$(dotfiles_dir)""
+    debug "ACTIVE_SHELL: $ACTIVE_SHELL"
+    debug "dotfiles_dir: $(dotfiles_dir)"
 
     if [ "$action" = "install" ]; then
         msg "Please make sure the .dotsys directory is located in it's
