@@ -74,7 +74,7 @@ manage_repo (){
     # existing uninstalled local repo
     elif [ -d "$local_repo" ]; then
         info "Local directory exists: $local_repo"
-        repo_status="local directory"
+        repo_status="local"
     else
         # check for remote
         debug "   check for remote #1"
@@ -182,7 +182,7 @@ manage_repo (){
         return
     # CONFIRM
     else
-        confirm_task "$action" "" "$repo_status repo:" "$local_repo" --confvar "GLOBAL_CONFIRMED"
+        confirm_task "$action" "" "$repo_status repo $repo:$branch" "-> $local_repo" --confvar "GLOBAL_CONFIRMED"
         if ! [ $? -eq 0 ]; then return; fi
     fi
 
@@ -201,7 +201,7 @@ manage_repo (){
             clone_remote_repo "$repo"
 
         # create full repo directory (after remote: or clone will fail)
-        elif [ "$repo_status" != "local directory" ];then
+        elif [ "$repo_status" != "local" ];then
             mkdir -p "$local_repo"
             if ! [ $? -eq 0 ]; then error "Local repo $local_repo could not be created"; exit; fi
         fi

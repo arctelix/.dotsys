@@ -280,7 +280,7 @@ manage_user_stub () {
             prefix="load_source_file "
         fi
 
-        sed -e "s|{STUB_TARGET}|"$prefix'$stub_tar'"|g" "$stub_out" > "$stub_tmp"
+        sed -e "s|{STUB_TARGET}|$prefix'$stub_tar'|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
 
         if ! [ "$target_ok" ];then

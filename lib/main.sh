@@ -357,7 +357,7 @@ dotsys () {
     local limits=()
     local force
     local from_repo
-    local from_branch
+    local branch
     local cfg_mode
     local LOG_FILE
     local recursive
@@ -371,7 +371,7 @@ dotsys () {
         -r | repo)      limits+=("repo")    #no topics permitted (just branch)
                         # repo not followed by option
                         if [ "$2" ] && [[ "$2" != "-"* ]]; then
-                            from_branch="$2";shift
+                            branch="$2";shift
                         fi ;;
         -l | links)     limits+=("links") ;;
         -m | managers)  limits+=("managers") ;;
@@ -511,8 +511,7 @@ dotsys () {
 
     # allow "repo" as shortcut to active repo
     if [ "$from_repo" = "repo" ] ; then
-        #from_repo="$(get_active_repo)"
-        from_repo=""
+        from_repo="$(get_active_repo)"
         if ! [ "$from_repo" ]; then
             error "There is no primary repo configured, so
             $spacer a repo must be explicitly specified"
@@ -566,12 +565,20 @@ dotsys () {
 
     # LOAD CONFIG VARS Parses from_repo, Loads config file, manages repo
     if ! [ "$recursive" ]; then
-        debug "main -> load config vars"
-        if [ "$from_branch" ]; then
-            debug "   got from_branch: $from_branch"
-            from_repo="${from_repo}:$from_branch"
-            debug "   new from_repo = $from_repo"
+
+        if [ "$branch" ]; then
+            debug "- main branch: $branch "
+            debug "- main from_repo: $from_repo "
+            # check branch for repo
+            if [[ "$branch" =~ .+/.+ ]]; then
+                from_repo="$branch"
+                branch=""
+            else
+                from_repo="$(get_active_repo):${branch}"
+            fi
+            debug "  -> new from_repo = $from_repo"
         fi
+        debug "main -> load config vars"
         load_config_vars "$from_repo" "$action"
     fi
 
@@ -782,10 +789,7 @@ dotsys () {
 
         # CONFIRM / ABORT DOTSYS UNINSTALL
 
-        if [ "$topic" = "shell" ] && [ "$action" = "uninstall" ]; then
-
-            # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
-            if ! in_limits "dotsys" -r; then continue; fi
+        if in_limits "dotsys" -r && [ "$action" = "uninstall" ]; then
 
             # Dotsys is expicity being uninstalled with 'dotsys uninstall dotsys'
             get_user_input "$(printf "%bAre you sure you want to remove the 'dotsys' command

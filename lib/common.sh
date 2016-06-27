@@ -32,7 +32,7 @@ is_dotsys_repo () {
 _split_repo_branch () {
     # [^/]+/[^/]+/[^/]+$ = user/repo/master[end]
     if [[ "$repo" =~ .+/.+:.+ ]]; then
-        branch="${repo##*:}"
+        branch="${repo#*:}"
         repo="${repo%:*}"
     fi
 }
