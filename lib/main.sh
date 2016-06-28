@@ -883,9 +883,9 @@ dotsys () {
 
     debug "main -> FINISHED"
 
-    # RELOAD_SHELL WHEN REQUIRED (never on dotsys install)
+    # RELOAD_SHELL WHEN REQUIRED
 
-    if [ "$RELOAD_SHELL" ] && ! [ "$recursive" ] && ! [[ in_limits "dotsys" -r && "$action" = "install" ]]; then
+    if [ "$RELOAD_SHELL" ] && ! [ "$recursive" ] && ! [ "$INSTALLER_RUNNING" ];then
         task "Reloading $RELOAD_SHELL"
         shell reload
     fi

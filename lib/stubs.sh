@@ -385,7 +385,7 @@ collect_user_data () {
         if ! [ "$val" ]; then
             values_script="$(get_user_or_builtin_file "$topic" "${stub_name}.vars")"
             debug "   collect_user_data: values_script = $values_script"
-            if script_exists "$values_script"; then
+            if script_func_exists "$values_script" "$gen_state_key"; then
 
                 script_val="$($values_script $gen_state_key)"
 

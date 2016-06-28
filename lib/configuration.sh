@@ -427,9 +427,12 @@ config_show_stats () {
 config_use_stubs () {
 
     if [ "$1" = "--prompt" ]; then
-          info "The stub file process allows topics to collect user specific
-        $spacer information and sources topic related files from other topics
-        $spacer such as *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"
+          info "Stub files are at the core of dotsys, but are not required.
+        $pascer They facilitate separation of your shell configuration and
+        $specer help to insure that your dotfiles are usable by everyone.
+        $spacer They also allow topics to collect user specific information
+        $spacer and source topic related files from other topics such as
+        $spacer *.shell, *.bash, *.zsh, *.vim, etc.. You should say yes!"
         local prompt="Would you like use dotsys sub files?"
     fi
 

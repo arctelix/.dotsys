@@ -8,6 +8,9 @@ export DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
 dotsys_installer () {
 
+    # Let main know that we're running from installer
+    INSTALLER_RUNNING=true
+
     source "$DOTSYS_LIBRARY/main.sh"
 
     local usage="dotsys_installer <action>"
@@ -82,8 +85,8 @@ dotsys_installer () {
         touch "$DOTSYS_REPOSITORY/state/repos.state"
 
         # some initial values for user state
-        state_install "user" "show_stats" "0"
-        state_install "user" "show_logo" "0"
+#        state_install "user" "show_stats" "0"
+#        state_install "user" "show_logo" "0"
 
         # Add dotsys/bin files to usr/bin
         manage_topic_bin link core
@@ -93,9 +96,17 @@ dotsys_installer () {
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"
 
-    msg "\nDotsys has been ${action%e}ed
-         \rThanks for using dotsys!\n"
+    msg "\nDotsys has been ${action%e}ed."
+    msg "Run the command $(code "dotsys install")"
+    msg "to install your repo and it's topics\n"
 
+    # Reload the shell to get dotsys changes
+    task "Reloading $ACTIVE_SHELL"
+    shell reload
+
+    #TODO: Backed up shell files will not be seen by topic import function
+
+    # This is no reachable because of the shell reload...
     if [ "$action" = "install" ]; then
         dotsys "$action" from ""
     fi
