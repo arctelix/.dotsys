@@ -20,11 +20,43 @@ debug () {
     fi
 }
 
+debug_import () {
+    if [ "$DEBUG_IMPORT" = true ]; then
+        printf "%b%b%b\n" $debug_text "$1" $rc 1>&2
+    fi
+}
+
 # a print function that does not interfere with function output
 print () {
     printf "%b%b%b\n" $debug_text "$1" $rc 1>&2
 }
 
+# Shows local usage and usage_full text and exits script
+show_usage () {
+
+  while [[ $# > 0 ]]; do
+    case "$1" in
+      -f | --full   ) state="full" ;;
+      * ) error "Invalid option: $1";;
+    esac
+    shift
+  done
+
+  printf "$usage\n"
+
+  if [ "$state" = "full" ]; then
+    printf "$usage_full\n"
+  else
+    printf "Use <command> -h or --help for more.\n"
+  fi
+  exit
+}
+
+# Checks for a help param and displays show_usage if available
+# ex: check_for_help "$1"
+check_for_help () {
+  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then show_usage -f; fi
+}
 
 not_implemented () {
     if [ "$DEBUG" = true ]; then
@@ -52,8 +84,7 @@ script_func_exists() {
 script_exists() {
   if [ -f "$1" ]; then
       chmod u+x "$1"
-      cmd_exists "$1"
-      return $?
+      return 0
   fi
   return 1
 }
@@ -94,12 +125,15 @@ path_type () {
 # PLATFORM="$(get_platform)"
 import () {
 
-    usage="import [source] <file> [<function>]"
-    usage_full="
+    local usage="import [source] <file> [<function>]"
+    local usage_full="
         source  Source entire file
         file    File to import
         func    Function to import
     "
+
+    check_for_help "$1"
+
     local source
 
     if [ "$1" = "source" ]; then
@@ -113,10 +147,10 @@ import () {
 
     # if local func exists nothing to do
     if [ "$func_name" ] && cmd_exists "$func_name" ; then
-        debug "already imported $func_name"
+        debug_import "already imported $func_name"
         return
     elif ! [ "$func_name" ] && cmd_exists "$file_name" ; then
-        debug "already imported $file_name"
+        debug_import "already imported $file_name"
         return
     fi
 
@@ -134,10 +168,10 @@ import () {
     # causing a second call to import source to be aborted.
 
     if [ "$source" ]; then
-        debug "importing source $file_name $func_name"
+        debug_import "importing source $file_name $func_name"
         source "$script"
         eval "${file_name}() {
-                  debug \"call sourced $file_name : \$@ \"
+                  debug_import \"call sourced $file_name : \$@ \"
                   \"\$@\"
         }"
         return
@@ -147,16 +181,16 @@ import () {
     # inadvertant local name collisions.
 
     if [ "$func_name" ]; then
-        debug "importing $func_name"
+        debug_import "importing $func_name"
         eval "${func_name}() {
-              debug \"call $func_name : \$@\"
+              debug_import \"call $func_name : \$@\"
               # Source file into subshell and execute function
               ( source \"$script\"; $func_name \"\$@\" )
         }"
     else
-        debug "importing $file_name"
+        debug_import "importing $file_name"
         eval "${file_name}() {
-              debug \"call $file_name : \$@ \"
+              debug_import \"call $file_name : \$@ \"
               # Source file into subshell and execute function
               ( source \"$script\"; \"\$@\" )
         }"

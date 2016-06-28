@@ -569,8 +569,8 @@ manage_topic_bin () {
         return
     fi
 
-    usage="link_topic_bin [<option>]"
-    usage_full="
+    local usage="link_topic_bin [<option>]"
+    local usage_full="
     -s | --silent        Suppress command already exists warning
     "
     local silent

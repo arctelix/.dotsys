@@ -23,6 +23,7 @@ dotsys_installer () {
 
     local action
     local force
+    local DEBUG="false"
 
     while [[ $# > 0 ]]; do
         case "$1" in
@@ -35,6 +36,8 @@ dotsys_installer () {
         esac
         shift
     done
+
+    export DEBUG
 
     action="${action:-install}"
 
@@ -56,6 +59,8 @@ dotsys_installer () {
 
     get_user_input "Would you like to install dotsys?" --confvar ""
     if ! [ $? -eq 0 ]; then  exit; fi
+
+    new_user_config
 
     # make sure PLATFORM_USER_BIN is on path
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
@@ -82,15 +87,11 @@ dotsys_installer () {
 
         # Add dotsys/bin files to usr/bin
         manage_topic_bin link core
+        alias atest='echo alias test success'
     fi
 
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"
-
-    # Remove dotsys/bin files from usr/bin
-    if [ "$action" = "uninstall" ]; then
-        manage_topic_bin unlink core
-    fi
 
     msg "\nDotsys has been ${action%e}ed
          \rThanks for using dotsys!\n"

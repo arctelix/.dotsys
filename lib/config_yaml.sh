@@ -33,8 +33,8 @@ CFG_MODES="user topic default full"
 # Output topic config to yaml file
 create_config_yaml() {
 
-    usage="create_config_yaml [<option>]"
-    usage_full="
+    local usage="create_config_yaml [<option>]"
+    local usage_full="
         -c | --cfg      Specify config mode
                         user    : prints only user settings
                         topic   : prints topic $ user settings
@@ -169,8 +169,8 @@ last_value_root=
 # actually looks up value and directs to file
 cfg_val_to_file (){
 
-    usage="cfg_to_file [<option>]"
-    usage_full="
+    local usage="cfg_to_file [<option>]"
+    local usage_full="
         -r | --required        Key is required, even without value                     
     "
 

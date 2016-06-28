@@ -79,8 +79,8 @@ add_existing_dotfiles () {
 # However, since stubs are symlinked to user directory
 # changes are instant and do not need to be relinked!
 manage_stubs () {
-    usage="manage_stubs [<option>]"
-    usage_full="
+    local usage="manage_stubs [<option>]"
+    local usage_full="
         -f | --force        Force stub updates
         -d | --data         Collect user data only
         -t | --task         Show task messages
@@ -134,8 +134,8 @@ manage_stubs () {
 
 # Manage all stubs for a topic
 manage_topic_stubs () {
-    usage="manage_topic_stubs [<option>]"
-    usage_full="
+    local usage="manage_topic_stubs [<option>]"
+    local usage_full="
         -f | --force        Force stub updates
         -d | --data         Collect user data only
         -t | --task         Show task messages
@@ -385,7 +385,7 @@ collect_user_data () {
         if ! [ "$val" ]; then
             values_script="$(get_user_or_builtin_file "$topic" "${stub_name}.vars")"
             debug "   collect_user_data: values_script = $values_script"
-            if script_func_exists "$values_script" "$gen_state_key"; then
+            if script_exists "$values_script"; then
 
                 script_val="$($values_script $gen_state_key)"
 
@@ -400,6 +400,8 @@ collect_user_data () {
                 fi
 
                 debug "   collect_user_data: $var_type script val = $script_val"
+            else
+                debug "   collect_user_data: values_script func exit code($?)"
             fi
         fi
 

@@ -70,8 +70,6 @@ export DOTSYS_LIBRARY="$DOTSYS_REPOSITORY/lib"
 
 source "$DOTSYS_LIBRARY/core.sh"
 
-debug "dotsys cmd DOTSYS_REPOSITORY=$DOTSYS_REPOSITORY"
-
 # testing for all dotsys funcs
 if [ "$init" = "test" ]; then
   shift
@@ -104,7 +102,3 @@ else
   dotsys "$@"
   echo
 fi
-
-
-
-

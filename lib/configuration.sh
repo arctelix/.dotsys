@@ -201,8 +201,8 @@ prompt_config_or_repo () {
     local action="${1:-install}"
     shift
 
-    usage="prompt_config_or_repo [<option>]"
-    usage_full="
+    local usage="prompt_config_or_repo [<option>]"
+    local usage_full="
         -e | --error        Display error message
         -d | --default      Display default
     "
@@ -314,8 +314,8 @@ get_repo_from_config_file () {
 
 # Gets or Sets user state value
 config_user_var () {
-    usage="config_user_var [value to set] [<option>]"
-    usage_full="
+    local usage="config_user_var [value to set] [<option>]"
+    local usage_full="
         -p | --prompt <text>     Prompt for user value [optional prompt text]
         -d | --default <val>     Default value for user input
         -b | --bool )            Variable is a boolean value
@@ -572,10 +572,10 @@ get_topic_config_val () {
     return 1
 }
 
-get_system_deps () {
-    load_topic_config_vars "shell"
-    deps="$(get_topic_config_val "shell" "deps")"
-    echo "$deps shell $ACTIVE_SHELL"
+get_system_topics () {
+    load_topic_config_vars "core"
+    deps="$(get_topic_config_val "core" "deps")"
+    echo "core $deps $ACTIVE_SHELL"
 }
 
 

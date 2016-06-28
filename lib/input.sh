@@ -304,27 +304,6 @@ confirm_task () {
 
 # USAGE & HELP SYSTEM
 
-# Shows local usage and usage_full text and exits script
-show_usage () {
-
-  while [[ $# > 0 ]]; do
-    case "$1" in
-      -f | --full   ) state="full" ;;
-      * ) error "Invalid option: $1";;
-    esac
-    shift
-  done
-
-  printf "$usage\n"
-
-  if [ "$state" = "full" ]; then
-    printf "$usage_full\n"
-  else
-    printf "Use <command> -h or --help for more.\n"
-  fi
-  exit
-}
-
 # Display invalid option message and exit
 invalid_option () {
     if ! [ "$1" ]; then return;fi
@@ -337,12 +316,6 @@ invalid_limit () {
     error "invalid limit: $1"
     show_usage
     exit
-}
-
-# Checks for a help param and shows help
-# ex: check_for_help "$1"
-check_for_help () {
-  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then show_usage -f; fi
 }
 
 # Confirms provided param list is longer then a specified length.

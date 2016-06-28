@@ -501,8 +501,8 @@ git_commit () {
     local default
     local state
 
-    usage="git_commit [<option>]"
-    usage_full="
+    local usage="git_commit [<option>]"
+    local usage_full="
         -s | --silent        Surpress output
     "
     local silent

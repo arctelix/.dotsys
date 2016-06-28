@@ -62,8 +62,8 @@ is_installed () {
     shift;shift
     local val
 
-    usage="is_installed <state> <key> [<val>] [<option>]"
-    usage_full="
+    local usage="is_installed <state> <key> [<val>] [<option>]"
+    local usage_full="
         -m | --manager        Use manager warnings
         -m | --manager        Use scripts warnings
     "
@@ -370,7 +370,7 @@ get_topic_list () {
 
         # dotsys install limited to shell & deps
         if in_limits "dotsys" -r; then
-            echo "$(get_system_deps)"
+            echo "$(get_system_topics)"
 
         # all other installs take topic directory
         else

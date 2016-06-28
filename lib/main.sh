@@ -60,9 +60,6 @@
 # Show executed commands
 #set -x
 
-# Dotsys debug system true/false
-DEBUG=false
-
 # Determine dotsys repo if this file is called directly
 if ! [ "$DOTSYS_REPOSITORY" ];then
     export DOTSYS_LIBRARY="$(dirname "$0")"
@@ -87,8 +84,8 @@ fi
 
 import shell
 
-debug "final DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
-debug "final DOTSYS_LIBRARY: $DOTSYS_LIBRARY"
+DEBUG=false
+DEBUG_IMPORT=false
 
 #GLOBALS
 # All files names used by system
@@ -412,8 +409,6 @@ dotsys () {
 
     required_vars "action"
 
-    debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$confirmed r:$recursive from:$from_repo"
-
     # reset persisted vars if non recursive call
     if ! [ "$recursive" ]; then
         GLOBAL_CONFIRMED=
@@ -423,7 +418,10 @@ dotsys () {
         ACTIVE_REPO=
         ACTIVE_REPO_DIR=
         RELOAD_SHELL=
+        export DEBUG
     fi
+
+    debug "[ START DOTSYS ]-> a:$action t:${topics[@]} l:$limits force:$force conf:$confirmed r:$recursive from:$from_repo"
 
     # SET CONFIRMATIONS
     if ! [ "$recursive" ]; then
@@ -789,7 +787,10 @@ dotsys () {
 
         # CONFIRM / ABORT DOTSYS UNINSTALL
 
-        if in_limits "dotsys" -r && [ "$action" = "uninstall" ]; then
+        if [ "$topic" = "core" ] && [ "$action" = "uninstall" ]; then
+
+            # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
+            if ! in_limits "dotsys" -r; then continue; fi
 
             # Dotsys is expicity being uninstalled with 'dotsys uninstall dotsys'
             get_user_input "$(printf "%bAre you sure you want to remove the 'dotsys' command
@@ -860,13 +861,6 @@ dotsys () {
 
     done
 
-    # RELOAD_SHELL WHEN REQUIRED
-
-    if ! [ "$recursive" ] && [ "$RELOAD_SHELL" ]; then
-        task "Reloading $RELOAD_SHELL"
-        shell reload
-    fi
-
     debug "main -> TOPIC LOOP END"
 
     # Finally check for repos, managers, & topics that still need to be uninstalled
@@ -888,6 +882,13 @@ dotsys () {
     fi
 
     debug "main -> FINISHED"
+
+    # RELOAD_SHELL WHEN REQUIRED (never on dotsys install)
+
+    if [ "$RELOAD_SHELL" ] && ! [ "$recursive" ] && ! [[ in_limits "dotsys" -r && "$action" = "install" ]]; then
+        task "Reloading $RELOAD_SHELL"
+        shell reload
+    fi
 }
 
 uninstall_inactive () {
