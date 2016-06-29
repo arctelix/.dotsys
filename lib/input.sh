@@ -73,6 +73,7 @@ get_user_input () {
         false_all="$(cap_first "$false-all")"
     fi
 
+    debug "   -- get_user_input: $question"
     debug "   -- get_user_input: CONFIRMED_VAR($CONFIRMED_VAR)=${!CONFIRMED_VAR} sets confirm=$confirmed "
 
     if [ "$options" = "omit" ]; then
@@ -137,13 +138,14 @@ get_user_input () {
     done
 
     debug "      get_user_input: extra_regex=$extra_regex"
-    debug "      get_user_input: confirm=$confirmed invalid=$invalid TOPIC_CONFIRMED=$TOPIC_CONFIRMED"
+    debug "      get_user_input: confirm=$confirmed invalid=$invalid"
 
     # Get user input
     default="${default:-$true}"
     question=$(printf "$question $options ${hint}[%b${default}%b]" $dvc $rc)
-
+    debug "      get_user_input before question"
     user "${question}: "
+    debug "      get_user_input after  question"
     local state=0
     if ! [ "$confirmed" ]; then
 

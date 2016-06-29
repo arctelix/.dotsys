@@ -374,7 +374,7 @@ dotsys () {
         -m | managers)  limits+=("managers") ;;
         -s | scripts)   limits+=("scripts") ;;
         -t | stubs)     limits+=("stubs") ;;
-        -f | from)      from_repo="${2:-none}"; shift ;;
+        -f | from)      from_repo="${2}"; shift ;;
         -p | packages)  limits+=("packages") ;;
         -a | app)       limits+=("packages")
                         topics+=("app") ;;
@@ -426,7 +426,8 @@ dotsys () {
     # SET CONFIRMATIONS
     if ! [ "$recursive" ]; then
         GLOBAL_CONFIRMED="$confirmed"
-        # Set global if topics provided by user
+
+        # Set global confirmed if topics provided by user
         if [ "${topics[0]}" ] || [[ "$action" =~ (update|upgrade|freeze) ]]; then
             debug "main -> Set GLOBAL_CONFIRMED = backup (Topics specified or not install/uninstall)"
             GLOBAL_CONFIRMED="default"
@@ -457,6 +458,7 @@ dotsys () {
         # Run full user config (no variable name supplied)
         if ! [ "$config_var" ]; then
             new_user_config
+            new_user_config_repo
 
         # use variable function
         elif cmd_exists "$config_func"; then
@@ -540,10 +542,11 @@ dotsys () {
                 get_user_input "Would you like to uninstall everything, including dotsys, now?" --required
                 if ! [ $? -eq 0 ]; then exit; fi
             fi
+
+        # Bin files must be linked first
+        elif [ "$action" = "install" ]; then
+            manage_topic_bin "link" "core"
         fi
-
-        manage_topic_bin "$action" "dotsys" "$silent"
-
     fi
 
     verbose_mode
@@ -617,7 +620,7 @@ dotsys () {
         debug "main -> get_topic_list $from_repo $force"
         local list="$(get_topic_list "$from_repo" "$force")"
 
-        # Handle no topics found
+        # Handle no topics found (collect topics from user system)
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
                 msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" $thc)"
@@ -634,8 +637,12 @@ dotsys () {
 
         topics=( $list )
 
+        # Make sure $ACTIVE_SHELL is in topic list
+        if [ "$action" = "install" ] && ! in_limits "dotsys" -r; then
+            add_active_shell_to_topics
+
         # Uninstall is more efficient with reversed order
-        if [ "$action" = "uninstall" ]; then
+        elif [ "$action" = "uninstall" ]; then
             reverse_array topics
         fi
 

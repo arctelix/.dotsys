@@ -159,6 +159,7 @@ manage_dependencies () {
         #remove topic from active
         ACTIVE_TOPICS=(${ACTIVE_TOPICS[@]/$topic/})
     fi
+
   # Deps only need install / uninstall
   elif [ "$action" != "install" ]; then
     return 0
@@ -197,15 +198,15 @@ manage_dependencies () {
         # install
         if ! is_installed "system" "$dep";then
           dotsys "install" "$dep" --recursive
-          # Add dep to deps state
           if [ $? -eq 0 ]; then
             debug "state_install: deps $dep $topic $ACTIVE_REPO"
-            state_install "deps" "$dep" "$ACTIVE_REPO/$topic"
           fi
         # already installed
         else
           success "Dependency Already installed $DRY_RUN:" "$( printf "%b$dep" $thc)"
         fi
+        # Add dep to deps state
+        state_install "deps" "$dep" "$ACTIVE_REPO/$topic"
     fi
   done
 

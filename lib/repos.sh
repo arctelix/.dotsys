@@ -756,7 +756,6 @@ setup_git_config () {
             fi
         fi
 
-        local
         if [ "$cfg" = "local" ]; then
             success "A local .gitconfig has been created for $repo"
         else
@@ -950,4 +949,16 @@ repo_in_use () {
         return 0; fi
     done
     return 1
+}
+
+# sets / gets primary repo value
+state_primary_repo(){
+  local repo="$1"
+  local key="primary_repo"
+
+  if [ "$repo" ]; then
+    set_state_value "user" "$key" "$repo"
+  else
+    echo "$(get_state_value "user" "$key")"
+  fi
 }

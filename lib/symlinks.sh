@@ -99,7 +99,7 @@ symlink_topic () {
     dst_name="$(basename "$dst")"
 
     # Convert stub src path to dotsys/user/stubs
-    if [ "$src" != "${src%.stub}" ];then
+    if is_stub_file "$src";then
         src="$(get_user_stub_file "$topic" "$src")"
     fi
 
@@ -164,7 +164,7 @@ symlink () {
 
   while [[ $# > 0 ]]; do
     case $1 in
-      -d | default )    SYMLINK_CONFIRMED=default ;;
+      -d | default )    SYMLINK_CONFIRMED=repo ;;
       -o | original )   SYMLINK_CONFIRMED=original ;;
       -r | repo )       SYMLINK_CONFIRMED=repo ;;
       -s | skip )       SYMLINK_CONFIRMED=skip ;;
@@ -175,9 +175,6 @@ symlink () {
     shift
   done
 
-  # Set default for confirmed
-  if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="repo";fi
-
   # shortcut for typical $src -> $HOME/.$dst
   if ! [ "$dst" ]; then
     dst="$HOME/.$(basename "${src%.symlink}")"
@@ -187,83 +184,107 @@ symlink () {
 
   # file or directory?
   local type="$(path_type "$src")"
-  local dst_link_target="$(drealpath "$dst")"
+  local dst_target="$(drealpath "$dst")"
   local dst_name="$(basename "$dst")"
-  local question
+  local message
+  local options
+  local default="repo"
+
+  # Set default for confirmed
+  if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="$default";fi
+  local confirmed="$SYMLINK_CONFIRMED"
+
+  debug "-- symlink src   = $src"
+  debug "   symlink dst  -> $dst"
+  debug "   symlink dtrg -> $dst_target"
+
 
   src="$(drealpath "$src")"
   #stub="$(drealpath "${src%.*}.stub")"
 
   # target path matches source (do nothing)
-  if [ "$dst_link_target" = "$src" ] && [ -L "$dst"  ]; then
+  if [ -L "$dst"  ] && [ "$dst_target" = "$src" ]; then
       success "Already linked $DRY_RUN" "$(printf "%b$type" $thc )" "$(printf "%b$dst" $thc )"
       return
   fi
 
-  local exists
+  local repo_existing="$src"    # topic/file.symlink or none
+  local repo_target="$src"      # topic/file.symlink or file.dsbak or none
+  local dst_existing            # existing file at destination
+  local stub_file               # src is a stub file
+
+  # Test for existing original
   if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]; then
     # not a link, so exits
-    if ! [ -L "$dst" ]; then
-      exists="true"
-    # link exists only if target exists
-    elif [ -f "$dst_link_target" ]; then
-      exists="true"
+    if ! [ -L "$dst" ] && ! is_stub_file "$src"; then
+      dst_existing="$dst"
+
+    # exists only if dst target exists
+    elif [ -f "$dst_target" ]; then
+      dst_existing="$dst"
     fi
   fi
 
+  debug "   dst_existing = $dst_existing"
+
+  # check if src is a stub file
+  if is_stub_file "$src";then
+    stub_file="$src"
+    repo_target="$(get_user_stub_target "$stub_file")"
+    repo_existing="$(get_user_stub_target "$stub_file" "user")"
+  fi
+
+  debug "   repo_existing = $repo_existing"
+  debug "   repo_target = $repo_target"
+
   # Get confirmation if file already exists and not confirmed
-  if [ "$exists" ] && [ -z "$SYMLINK_CONFIRMED" ]; then
-     local default="repo"
+  if [ "$dst_existing" ] && [ ! "$confirmed" ]; then
 
-     question="$(printf "Two versions of %b$(basename "$dst")%b were found:
-               $spacer %brepo version%b: $src
-               $spacer %boriginal version%b: $dst_link_target
+    message="$(printf "An existing original version of %b$dst_name%b was found:
+               $spacer your repo version: %b${repo_existing:-import existing origianl}%b
+               $spacer existing original: %b$dst_existing%b
                $spacer Which version would you like to use?
-               $spacer %b(Don't stress, we'll backup any original files)%b" $uhc $uc $green $uc $yellow $uc $dark_gray $rc)"
+               $spacer %b(Don't stress, we'll backup any original files)%b" \
+               $uhc $uc $yellow $uc $yellow $uc $l_blue $rc)"
 
-     question="$(printf "$question
-             $spacer (%br%b)repo, (%bR%b)all, (%bo%b)original, (%bO%b)all (%bs%b)kip, (%bS%b)all [%b$default%b] : " \
-               $green $rc \
-               $green $rc \
-               $yellow $rc \
-               $yellow $rc \
-               $blue $rc \
-               $blue $rc \
-               $dark_gray $rc)"
+    options="$(printf "\n$spacer (%br%b)repo, (%bR%b)all, (%bo%b)original, (%bO%b)all (%bs%b)kip, (%bS%b)all [%b$default%b] : " \
+               $green $rc $green $rc $yellow $rc $yellow $rc $blue $rc $blue $rc $dvc $rc)"
 
-    user "$question"
+    user "$message $options"
 
     while true; do
-      # Read from tty, needed because we read in outer loop.
-      read user_input < /dev/tty
+        # Read from tty, needed because we read in outer loop.
+        read user_input < /dev/tty
 
-      case "$user_input" in
-        o | original )action=original; break;;
-        O | Original )SYMLINK_CONFIRMED=original; break;;
-        r | repo )action=repo; break;;
-        R | Repo )SYMLINK_CONFIRMED=repo; break;;
-        s | skip )action=skip; break;;
-        S | Skip )SYMLINK_CONFIRMED=skip; break;;
-        "") action="$default"; break;;
-        * ) msg_invalid_input "$question > invalid '$user_input': "
-          ;;
-      esac
+        case "$user_input" in
+            o | original )action=original; break;;
+            O | Original )SYMLINK_CONFIRMED=original; break;;
+            r | repo )action=repo; break;;
+            R | Repo )SYMLINK_CONFIRMED=repo; break;;
+            s | skip )action=skip; break;;
+            S | Skip )SYMLINK_CONFIRMED=skip; break;;
+            "") action="$default"; break;;
+            * ) msg_invalid_input "$message > invalid '$user_input': "
+            ;;
+        esac
     done
 
-    clear_lines "$question" ${clear:-0}
+    clear_lines "$message" ${clear:-0}
 
   fi
 
   action=${action:-$SYMLINK_CONFIRMED}
 
   debug "-- symlink confirmed action: $action
-       \r   $src -> $dst"
+       \r   src : $src
+       \r   dst : $dst"
 
   local skip_reason="skipped "
   if dry_run; then
       skip_reason="$DRY_RUN"
   fi
 
+  local result
   if [ "$action" == "skip" ]; then
 
     success "$(printf "Symlink %s for %b%s%b:" "$skip_reason" $thc "$dst_name" $rc)"
@@ -271,9 +292,9 @@ symlink () {
     if [ -L "$dst" ]; then
       warn "$(printf "Symlinked $type : %b%s%b
                       $spacer currently linked to : %b%s%b
-                      $spacer should be linked to : %b%s%b" $thc "$dst" $rc $thc "$dst_link_target" $rc $thc "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" $thc "$dst" $rc $thc "$dst_target" $rc $thc "$src" $rc)"
     # original file not linked
-    elif [ "$exists" ] && [ "$dst_link_target" = "$dst" ]; then
+    elif [ "$dst_existing" ] && [ "$dst_target" = "$dst" ]; then
       warn "$(printf "original $type : %b%s%b
                       $spacer should be linked to : %b%s%b" $thc "$dst" $rc $thc "$src" $rc)"
 
@@ -285,24 +306,55 @@ symlink () {
     fi
 
   # keep repo version
-  elif [ "$action" == "repo" ] && [ "$exists" ]; then
-    # backup original version
-    remove_and_backup_file "original" "$dst"
+  elif [ "$action" == "repo" ] && [ "$dst_existing" ]; then
+
+    # copy existing to repo
+    if ! [ "$repo_existing" ] && [ "$repo_target" ];then
+        local target_dir="$(dirname "$repo_target")"
+        result=$?
+        if ! [ -d "$target_dir" ]; then
+            mkdir "$(dirname "$repo_target")"
+            result=$?
+        fi
+
+        if [ $result -eq 0 ];then
+            cp "$dst_existing" "$repo_target"
+            result=$?
+        fi
+        success_or_fail $result "move" "original to $repo_target"
+    fi
+
+    # backup existing version
+    remove_and_backup_file "original" "$dst_existing"
 
   # keep original version
-  elif [ "$action" == "original" ] && [ "$exists" ]; then
+  elif [ "$action" == "original" ] && [ "$dst_existing" ]; then
+
     # backup repo version
-    remove_and_backup_file "repo" "$src"
-    # move original to repo
-    mv "$dst_link_target" "$src"
-    success_or_fail $? "move" "original to $src"
+    if [ "$repo_existing" ];then
+        remove_and_backup_file "repo" "$repo_existing"
+    fi
+
+    # move existing to repo
+    mv "$dst_existing" "$repo_target"
+    success_or_fail $? "move" "original to $repo_target"
   fi
 
+  # Always link the source to dst unless skipped
   if [ "$action" != "skip" ]; then
     # Create native symlinks on Windows.
     export CYGWIN=winsymlinks:nativestrict
     ln -fs "$src" "$dst"
-    success_or_fail $? "link" "$type" "$(printf "%b$dst" $thc)" "\n$spacer -> $src"
+
+    if [ "$stub_file" ]; then
+        stub_file="\n$spacer stub -> $stub_file"
+    fi
+
+    if [ "$repo_target" ]; then
+        repo_target="\n$spacer repo -> $repo_target"
+    fi
+
+    success_or_fail $? "link" "$type" "$(printf "%b$dst" $thc)" "$stub_file" "$repo_target"
   fi
 }
 
@@ -385,7 +437,7 @@ unlink(){
   local message
 
   # We care about the .symlink not the .stub!
-  if [ "${link_target%.stub}" != "$link_target" ]; then
+  if is_stub_file "$link_target" ]; then
         link_stub="$link_target"
         link_target="${link_target%.stub}.symlink"
   fi
@@ -452,6 +504,8 @@ unlink(){
   fi
 
   action=${action:-$SYMLINK_CONFIRMED}
+
+  debug "-- unlink final action = $action"
 
 
   if [ "$action" != "skip" ]; then
@@ -535,9 +589,8 @@ get_symlink_dst () {
 # Restores a backup
 restore_backup_file(){
   local file="$1"
-  local backup="${dst}.dsbak"
+  local backup="${file}.dsbak"
   if [ -f "$backup" ];then
-    rm -rf "$file"
     mv "$backup" "$file"
     return 0
   fi

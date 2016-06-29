@@ -64,20 +64,20 @@ topic_dir () {
     elif [ "$restrict" != "active" ]; then
         path="$(repo_dir "$repo")/$topic"
         if [ ! -d "$path" ]; then
-            path="$(builtin_topic_dir "$topic")"
+            path="$(dotsys_dir)/builtins/$topic"
         fi
     fi
 
     # catch dotsys repo or well get .dotsys dir not builtins
     if is_dotsys_repo || [ "$restrict" = "builtin" ]; then
-        path="$(builtin_topic_dir "$topic")"
+        path="$(dotsys_dir)/builtins/$topic"
 
     elif ! [ "$path" ]; then
         path="$(repo_dir "$repo")/$topic"
     fi
 
-    # Return bad path when user requested and does not exist
-    if ! [ -d "$path" ] && ! [ "$restrict" = "user" ]; then
+    # Return empty path when user requested and does not exist
+    if ! [ -d "$path" ] && [ "$restrict" = "user" ]; then
         #debug "   -> PATH NOT FOUND $repo + $topic = $path"
         echo ""
         return 1
@@ -120,13 +120,6 @@ repo_dir () {
 
 user_stub_dir() {
     echo "$(dotsys_dir)/user/stubs"
-}
-
-get_user_stub_file() {
-    local topic="$1"
-    local stub_src="$2"
-    local stub_name="$(basename "${stub_src%.*}")"
-    echo "$(user_stub_dir)/${stub_name}.${topic}.stub"
 }
 
 # returns a file from user directory or builtin directory

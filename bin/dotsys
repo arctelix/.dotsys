@@ -80,6 +80,46 @@ if [ "$init" = "test" ]; then
   echo
   #eval "$1"
   "$@"
+# Return path for sourcing
+elif [ "$init" = "reset" ]; then
+  type="$2"
+  shift; shift
+
+  if ! [ "$type" ] || [ "$type" = "backups" ]; then
+    backups="$(find "$HOME" -mindepth 1 -maxdepth 1 -type f -name "*$1.dsbak")"
+    for backup in $backups;do
+        mv "$backup" "${backup%.dsbak}"
+        echo "moved backup : $backup -> ${backup%.dsbak}"
+    done
+  fi
+
+  if ! [ "$type" ] || [ "$type" = "symlinks" ]; then
+    links="$(find "$HOME" -mindepth 1 -maxdepth 1 -type l -name ".$1*")"
+    for link in $links;do
+        target="$(drealpath "$link")"
+        if [[ "$target" =~ .dotfiles|.stub ]];then
+            rm "$link"
+            echo "removed symlink : $link
+            -> $target"
+        fi
+    done
+  fi
+
+  if ! [ "$type" ] || [ "$type" = "states" ]; then
+    states="$(find "$DOTSYS_REPOSITORY/state" -mindepth 1 -maxdepth 1 -type f -not -name "user.state")"
+    for state in $states;do
+        rm "$state"
+        echo "removed state : $state"
+    done
+  fi
+
+  if ! [ "$type" ] || [ "$type" = "stubs" ]; then
+    stubs="$(find "$DOTSYS_REPOSITORY/user/stubs" -mindepth 1 -maxdepth 1 -type f -name "*.stub")"
+    for stub in $stubs;do
+        rm "$stub"
+        echo "removed stub : $stub"
+    done
+  fi
 
 # Return path for sourcing
 elif [ "$init" = "repository" ]; then

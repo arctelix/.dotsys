@@ -68,6 +68,11 @@ pass (){
     return 0
 }
 
+# Capitolize first letter for string
+cap_first () {
+    echo `echo ${1:0:1} | tr  '[a-z]' '[A-Z]'`${1:1}
+}
+
 # Test for the existence of a command
 cmd_exists() {
   if ! [ "$1" ];then return 1;fi

@@ -320,11 +320,6 @@ msg_invalid_input (){
     user "$1"
 }
 
-# Capitolize first letter for string
-cap_first () {
-    echo `echo ${1:0:1} | tr  '[a-z]' '[A-Z]'`${1:1}
-}
-
 clear_lines () {
     printf "$clear_line"
     if ! [ "$1" ];then return;fi

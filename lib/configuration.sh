@@ -54,7 +54,7 @@ load_config_vars (){
     eval "$yaml" #set default config vars
 
     # validate from and set config_file
-    if [ "$repo" ]; then
+    if [ "$repo" ] & [ "$repo" != "none" ] ; then
         debug "   load_config_vars validate: $repo"
         validate_config_or_repo "$repo" "$action"
     # existing user (no from supplied)
@@ -70,7 +70,7 @@ load_config_vars (){
     # Set ACTIVE_REPO & config_file for new user/repo
     if ! [ "$ACTIVE_REPO" ]; then
         if is_new_user && [ "$action" != "uninstall" ]; then
-            new_user_config "$repo"
+            new_user_config_repo
         else
             prompt_config_or_repo "$action" --error "A repo must be specified!"
         fi
@@ -480,16 +480,19 @@ new_user_config () {
     config_use_stubs --prompt
 
     printf "\n"
+    msg "\nCongratulations $(get_user_name), your preferences are set!\n"
+    printf "\n"
+}
+
+new_user_config_repo () {
+
+    printf "\n"
     msg "The last step is to set a primary repo.  This will
     \rbe the default repo used when you run dotsys commands.
     \rUse the format $(code "github_user_name/repo_name")"
     printf "\n"
 
     config_primary_repo --prompt
-
-    printf "\n"
-    msg "\nCongratulations $(get_user_name), your preferences are set!\n"
-    printf "\n"
 }
 
 # Test for new user
@@ -576,11 +579,20 @@ get_topic_config_val () {
 }
 
 get_system_topics () {
-    load_topic_config_vars "core"
-    deps="$(get_topic_config_val "core" "deps")"
-    echo "core $deps $ACTIVE_SHELL"
+    #load_topic_config_vars "core"
+    #deps="$(get_topic_config_val "core" "deps")"
+    echo "core shell"
 }
 
+# Add active shell to topic list if not already there
+add_active_shell_to_topics () {
+    if ! [[ "$topics" =~ $ACTIVE_SHELL ]]; then
+        get_user_input "Do you want to add your current shell '$ACTIVE_SHELL' to your topic list?" -r
+        if [ $? -eq 0 ]; then
+            topics="$ACTIVE_SHELL $topics"
+        fi
+    fi
+}
 
 
 

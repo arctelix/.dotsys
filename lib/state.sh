@@ -205,10 +205,11 @@ get_state_value () {
 
   # State file does not exist yet so pretend it's ok (pre install)
   if ! [ -f "$file" ]; then return 0;fi
-
+  debug "   - get_state_value grep: ^$key:.*$:"
   local lines="$(grep "^$key:.*$" "$file")"
   ret=$?
   local val="${lines#*:}"
+  debug "   - get_state_value lines: $lines"
 
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     ret=$val
@@ -253,18 +254,6 @@ set_state_value () {
 
   state_uninstall "$state" "$key"
   state_install "$state" "$key" "$val"
-}
-
-# sets / gets primary repo value
-state_primary_repo(){
-  local repo="$1"
-  local key="primary_repo"
-
-  if [ "$repo" ]; then
-    set_state_value "user" "$key" "$repo"
-  else
-    echo "$(get_state_value "user" "$key")"
-  fi
 }
 
 # get list of existing state names

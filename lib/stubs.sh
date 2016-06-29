@@ -28,7 +28,7 @@ add_existing_dotfiles () {
         while IFS=$'\n' read -r stub_src; do
             debug "src = $stub_src"
             stub_dst="$(get_symlink_dst "$stub_src")"
-            stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
+            stub_target="$(get_topic_stub_target "$topic" "$stub_src" "user")"
             #user_stub_file="$(dotsys_user_stub_file "$topic" "$stub_src")"
 
             # Check for existing original file only (symlinks will be taken care of during stub process)
@@ -70,6 +70,7 @@ add_existing_dotfiles () {
             fi
         done <<< "$stub_files"
     done
+
 }
 
 # Collects all required user data at start of process
@@ -224,7 +225,7 @@ manage_user_stub () {
         error "$topic does not have a stub file at:\n$stub_src"
         return
     fi
-
+    # exiting file.dsbak or user repo file.symlink or blank
     local stub_tar="$(get_topic_stub_target "$topic" "$stub_src")"
     local stub_dst="$(get_user_stub_file "$topic" "$stub_src")"
     local target_ok
@@ -275,9 +276,25 @@ manage_user_stub () {
     grep -q '{STUB_TARGET}' "$stub_out"
     if [ $? -eq 0 ]; then
         local prefix
-        # Use load_source_file for shell topics
-        if is_shell_topic; then
-            prefix="load_source_file "
+
+        if [ "$stub_tar" ]; then
+            # Use load_source_file for shell topics
+            if is_shell_topic; then
+                prefix="load_source_file "
+            fi
+
+#            # check if target is .dstarget
+#            local dstarget_src="${stub_tar%.dstarget}"
+#            if [ "$stub_tar" != "${dstarget_src}" ];then
+#                # create dstarget from original
+#                if [ -f "$dstarget_src" ]; then
+#                    cp "$dstarget_src" "${stub_tar}"
+#                fi
+#
+#            # remove unused .dstarget
+#            elif [ -f "${stub_tar}.dstarget" ];then
+#                cp "$dstarget_src" "${stub_tar}"
+#            fi
         fi
 
         sed -e "s|{STUB_TARGET}|$prefix'$stub_tar'|g" "$stub_out" > "$stub_tmp"
@@ -285,7 +302,7 @@ manage_user_stub () {
 
         if ! [ "$target_ok" ];then
             output="
-            $spacer Stub Target : ${stub_tar:-uninstalled}"
+            $spacer Stub Target : ${stub_tar:-not-installed-${stub_name}.symlink}"
         fi
 
     fi
@@ -456,15 +473,74 @@ get_topic_stub_sources(){
 }
 
 
-# returns the stub file symlink target
+# Determines target for a stub file
+# verify "user" return null if no user file.symlink
+# verify "repo" return null if no user primary repo
+# existing dotfile or user/repo/file.symlink
 get_topic_stub_target(){
     local topic="$1"
     local stub_src="$2"
+    local verify="$3"
+    local user_topic_dir="$(topic_dir "$topic" "user")"
+    local taget_file_name="$(basename "${stub_src%%.*}.symlink")"
 
-    # stub target should never be the builtin repo
-    echo "$(topic_dir "$topic" "user")/$(basename "${stub_src%.stub}.symlink")"
+    # Path to user repo file.symlink
+    local stub_target="$user_topic_dir/$taget_file_name"
+
+    debug "-- get_topic_stub_target $topic/$taget_file_name"
+
+    # verify user repo file.symlink
+    if [ "$verify" = "user" ] && ! [ -f "$stub_target" ]; then
+        return 1
+    fi
+
+    # Verify we get a user repo path when not topic dir
+    if [ "$verify" = "repo" ] && ! [ "$user_topic_dir" ]; then
+        local primary_repo="$(state_primary_repo)"
+        if [ -d "$primary_repo" ];then
+            stub_target="$(topic_dir "$topic" "primary")/$taget_file_name"
+        else
+            stub_target=
+        fi
+        debug "   from primary : $stub_target"
+    fi
+
+    # Exiting dst file or xisting user repo file.symlink or none
+    if ! [ "$verify" ] && ! [ -f "$stub_target" ];then
+        # Check for existing stub target (non symlink)
+        stub_target="$(get_symlink_dst "$stub_src")"
+        if [ -f "$stub_target" ];then
+            stub_target="${stub_target}.dsbak"
+            debug "   from existing : $stub_target"
+
+        # User file does not exist and no existing file
+        else
+            stub_target=
+        fi
+    fi
+
+    echo "$stub_target"
 }
 
+# returns the symlink target for a user tub file
+# See get_topic_stub_target for options
+get_user_stub_target(){
+    # split parts [0]dotfile [1]topic [2]ext
+    local stub_name="$(basename "$1")"
+    local verify="$2"
+    local stub_parts=( ${stub_name//./ } )
+    local stub_topic="${stub_parts[1]}"
+    # empty if user topic does not exist
+    echo "$(get_topic_stub_target "$stub_topic" "$stub_file" "$verify")"
+}
+
+# Convert a stub file to user stub file name
+get_user_stub_file() {
+    local topic="$1"
+    local stub_src="$2"
+    local stub_name="$(basename "${stub_src%.*}")"
+    echo "$(user_stub_dir)/${stub_name}.${topic}.stub"
+}
 
 # this is for git, may be useful else where..
 get_credential_helper () {
@@ -632,4 +708,8 @@ manage_source () {
             echo "$spacer ${modified}ed source : $src_file"
         fi
     fi
+}
+
+is_stub_file () {
+    [ "$1" != "${1%.stub}" ]
 }

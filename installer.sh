@@ -83,31 +83,35 @@ dotsys_installer () {
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
         touch "$DOTSYS_REPOSITORY/state/repos.state"
+        touch "$DOTSYS_REPOSITORY/state/deps.state"
+
+        success_or_error $? "$action" "dotsys files and directories"
 
         # some initial values for user state
 #        state_install "user" "show_stats" "0"
 #        state_install "user" "show_logo" "0"
 
         # Add dotsys/bin files to usr/bin
-        manage_topic_bin link core
+        # (redundant) must be done before collect user data!
+        #task "Installing dotsys core files"
+        #manage_topic_bin link core
         alias atest='echo alias test success'
     fi
 
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"
 
-    msg "\nDotsys has been ${action%e}ed."
-    msg "Run the command $(code "dotsys install")"
-    msg "to install your repo and it's topics\n"
+    success_or_error $? "$action" "the dotsys core system"
 
-    # Reload the shell to get dotsys changes
-    task "Reloading $ACTIVE_SHELL"
-    shell reload
+#    msg "Run the command $(code "dotsys install")"
+#    msg "to install your repo and it's topics\n"
+#    # Reload the shell to get dotsys changes
+#    task "Reloading $ACTIVE_SHELL"
+#    shell reload
 
-    #TODO: Backed up shell files will not be seen by topic import function
-
-    # This is no reachable because of the shell reload...
+    INSTALLER_RUNNING=false
     if [ "$action" = "install" ]; then
+        task "Install user repo and topics\n"
         dotsys "$action" from ""
     fi
 }
