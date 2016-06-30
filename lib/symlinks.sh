@@ -182,7 +182,6 @@ symlink () {
 
   required_vars "src" "dst"
 
-  # file or directory?
   local type="$(path_type "$src")"
   local dst_target="$(drealpath "$dst")"
   local dst_name="$(basename "$dst")"

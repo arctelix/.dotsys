@@ -225,38 +225,39 @@ manage_user_stub () {
         error "$topic does not have a stub file at:\n$stub_src"
         return
     fi
-    # exiting file.dsbak or user repo file.symlink or blank
-    local stub_tar="$(get_topic_stub_target "$topic" "$stub_src")"
-    local stub_dst="$(get_user_stub_file "$topic" "$stub_src")"
+
+    local stub_symlink_dst="$(get_symlink_dst "$stub_src")"
+    local stub_user_target="$(drealpath "$stub_symlink_dst")"
+    local compiled_file="$(get_user_stub_file "$topic" "$stub_src")"
     local target_ok
 
     debug "-- manage_user_stub stub_src : $stub_src"
-    debug "   manage_user_stub stub_dst : $stub_dst"
-    debug "   manage_user_stub stub_tar : $stub_tar"
+    debug "   manage_user_stub stub_dst : $compiled_file"
+    debug "   manage_user_stub stub_tar : $stub_user_target"
 
     if [ "$action" = uninstall ]; then
 
         # DO NOT DELETE shell stub, but remove target
         if is_required_stub "$topic"; then
-            stub_tar=""
+            stub_user_target=""
 
         # delete the stub file
-        elif [ -f "$stub_dst" ]; then
-            rm "$stub_dst"
+        elif [ -f "$compiled_file" ]; then
+            rm "$compiled_file"
             success_or_fail $? "remove" "stub file:" "${topic}/$stub_name"
             return
         fi
     fi
 
     # Create action (no user stub)
-    if ! [ -f "$stub_dst" ]; then
+    if ! [ -f "$compiled_file" ]; then
         file_action="create"
 
     # Update action (ABORT if up to date unless data_update)
     elif [ "$data_mode" != "update" ]; then
-        local target_ok="$( [ "$stub_tar" ] && grep "$stub_tar" "$stub_dst" )"
+        local target_ok="$( [ "$stub_user_target" ] && grep "$stub_user_target" "$compiled_file" )"
         # Abort if stub_dst is newer then source and has correct target
-        if ! [ "$force" ] && [ "$stub_dst" -nt "$stub_src" ] && [ "$target_ok" ]; then
+        if ! [ "$force" ] && [ "$compiled_file" -nt "$stub_src" ] && [ "$target_ok" ]; then
             debug "-- create_user_stub ABORTED (up to date): $stub_src"
             success "Stub file up to date:" "${topic}/$stub_name"
             return
@@ -265,19 +266,19 @@ manage_user_stub () {
 
     # CREATE output file & temp file
     local stub_tmp="${stub_src}.tmp"
-    local stub_out="${stub_src}.out"
-    cp -f "$stub_src" "$stub_out"
+    local stub_tmp_out="${stub_src}.out"
+    cp -f "$stub_src" "$stub_tmp_out"
 
     local output
 
     # STUB_TARGET
 
     debug "   create_user_stub update target"
-    grep -q '{STUB_TARGET}' "$stub_out"
+    grep -q '{STUB_TARGET}' "$stub_tmp_out"
     if [ $? -eq 0 ]; then
         local prefix
 
-        if [ "$stub_tar" ]; then
+        if [ "$stub_user_target" ]; then
             # Use load_source_file for shell topics
             if is_shell_topic; then
                 prefix="load_source_file "
@@ -297,28 +298,32 @@ manage_user_stub () {
 #            fi
         fi
 
-        sed -e "s|{STUB_TARGET}|$prefix'$stub_tar'|g" "$stub_out" > "$stub_tmp"
-        mv -f "$stub_tmp" "$stub_out"
+        sed -e "s|{STUB_TARGET}|$prefix'$stub_user_target'|g" "$stub_tmp_out" > "$stub_tmp"
+        mv -f "$stub_tmp" "$stub_tmp_out"
 
         if ! [ "$target_ok" ];then
             output="
-            $spacer Stub Target : ${stub_tar:-not-installed-${stub_name}.symlink}"
+            $spacer Stub Target : ${stub_user_target:-not-installed-${stub_name}.symlink}"
         fi
 
     fi
 
     # ADD USER VARS
     local user_vars
-    collect_user_data "$action" "$topic" "$stub_out" "$stub_tmp" "$data_mode" "$force"
+    collect_user_data "$action" "$topic" "$stub_tmp_out" "$stub_tmp" "$data_mode" "$force"
     if [ "$user_vars" ]; then
         output="$output\n$user_vars"
     fi
 
-    # move to .dotsys/user/stubs/stubname.topic.stub
-    mv -f "$stub_out" "$stub_dst"
+    # CREATE COMPLIED FILE .dotsys/user/stubs/stubname.topic.stub
+    mv -f "$stub_tmp_out" "$compiled_file"
     local ret=$?
 
-    # ADD SOURCES
+    # SYMLINK COMPLIED FILE
+    if ! [ -L "$stub_symlink_dst" ] ||
+    symlink "$compiled_file" "$stub_symlink_dst"
+
+    # ADD SOURCES TO COMPLIED FILE
 
     local sources
     sources="$(collect_topic_sources "install" "$topic" "$stub_name")"

@@ -831,16 +831,16 @@ dotsys () {
             run_topic_script "$action" "$topic"
         fi
 
-        # 4) Stubs (before symlinks)
-        if in_limits "stubs" "links" "dotsys"; then
-             debug "main -> manage_topic_stubs"
-             manage_topic_stubs "$action" "$topic" "$force"
-        fi
-
         # 5) symlinks
         if in_limits "links" "dotsys"; then
             debug "main -> call symlink_topic: $action $topic confirmed? gc:$GLOBAL_CONFIRMED tc:$TOPIC_CONFIRMED"
             symlink_topic "$action" "$topic"
+        fi
+
+        # 4) Stubs (before symlinks)
+        if in_limits "stubs" "links" "dotsys"; then
+             debug "main -> manage_topic_stubs"
+             manage_topic_stubs "$action" "$topic" "$force"
         fi
 
         # 6) packages
