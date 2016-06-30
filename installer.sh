@@ -88,8 +88,9 @@ dotsys_installer () {
         success_or_error $? "$action" "dotsys files and directories"
 
         # some initial values for user state
-#        state_install "user" "show_stats" "0"
-#        state_install "user" "show_logo" "0"
+        state_install "user" "show_stats" "0"
+        state_install "user" "show_logo" "0"
+        state_install "user" "use_stub_files" "0"
 
         # Add dotsys/bin files to usr/bin
         # (redundant) must be done before collect user data!

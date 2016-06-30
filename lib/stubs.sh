@@ -227,19 +227,25 @@ manage_user_stub () {
     fi
 
     local stub_symlink_dst="$(get_symlink_dst "$stub_src")"
-    local stub_user_target="$(drealpath "$stub_symlink_dst")"
+    local stub_symlink_target="$(drealpath "$stub_symlink_dst")"
+    local stub_target="$(get_topic_stub_target)"
     local compiled_file="$(get_user_stub_file "$topic" "$stub_src")"
     local target_ok
 
     debug "-- manage_user_stub stub_src : $stub_src"
     debug "   manage_user_stub stub_dst : $compiled_file"
-    debug "   manage_user_stub stub_tar : $stub_user_target"
+    debug "   manage_user_stub stub_tar : $stub_target"
+
+    #If stub not already linked set to current file target
+    if [ "stub_symlink_target" != "compiled_file" ];then
+        stub_target="$stub_symlink_target"
+    fi
 
     if [ "$action" = uninstall ]; then
 
         # DO NOT DELETE shell stub, but remove target
         if is_required_stub "$topic"; then
-            stub_user_target=""
+            stub_target=""
 
         # delete the stub file
         elif [ -f "$compiled_file" ]; then
@@ -255,7 +261,7 @@ manage_user_stub () {
 
     # Update action (ABORT if up to date unless data_update)
     elif [ "$data_mode" != "update" ]; then
-        local target_ok="$( [ "$stub_user_target" ] && grep "$stub_user_target" "$compiled_file" )"
+        local target_ok="$( [ "$stub_target" ] && grep "$stub_target" "$compiled_file" )"
         # Abort if stub_dst is newer then source and has correct target
         if ! [ "$force" ] && [ "$compiled_file" -nt "$stub_src" ] && [ "$target_ok" ]; then
             debug "-- create_user_stub ABORTED (up to date): $stub_src"
@@ -278,7 +284,7 @@ manage_user_stub () {
     if [ $? -eq 0 ]; then
         local prefix
 
-        if [ "$stub_user_target" ]; then
+        if [ "$stub_target" ]; then
             # Use load_source_file for shell topics
             if is_shell_topic; then
                 prefix="load_source_file "
@@ -298,12 +304,12 @@ manage_user_stub () {
 #            fi
         fi
 
-        sed -e "s|{STUB_TARGET}|$prefix'$stub_user_target'|g" "$stub_tmp_out" > "$stub_tmp"
+        sed -e "s|{STUB_TARGET}|$prefix'$stub_target'|g" "$stub_tmp_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_tmp_out"
 
         if ! [ "$target_ok" ];then
             output="
-            $spacer Stub Target : ${stub_user_target:-not-installed-${stub_name}.symlink}"
+            $spacer Stub Target : ${stub_target:-not-installed-${stub_name}.symlink}"
         fi
 
     fi
@@ -320,8 +326,9 @@ manage_user_stub () {
     local ret=$?
 
     # SYMLINK COMPLIED FILE
-    if ! [ -L "$stub_symlink_dst" ] ||
-    symlink "$compiled_file" "$stub_symlink_dst"
+    if [ "stub_symlink_target" != "compiled_file" ];then
+        symlink "$compiled_file" "$stub_symlink_dst"
+    fi
 
     # ADD SOURCES TO COMPLIED FILE
 
