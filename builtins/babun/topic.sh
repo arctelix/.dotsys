@@ -1,6 +1,7 @@
 #!/bin/sh
 
 install () {
+
     cmd
 
     # Sets $HOME to user's windows home rather then .babun/home/<username>
