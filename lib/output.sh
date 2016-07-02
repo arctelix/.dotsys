@@ -62,19 +62,22 @@ spacer="\r\e[K        " # indent from screen edge
 indent="        " # indent from current position
 
 # topic highlight color
-thc=""
+hc_topic=""
 
 # user color
-uc=$white
+c_user=$white
 # user highlight color
-uhc=$dark_white
+hc_user=$white_bold
 
 # default value color
-dvc=$l_blue
+c_default=$l_blue
 
 # code highlight color
-_code=$magenta
-_help=$l_blue
+c_code=$magenta
+c_help=$l_blue
+
+#previous color
+pc=
 
 # BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE THESE METHODS )
 
@@ -116,6 +119,7 @@ task() {
 # alternates input text height "normal" "hilight" "normal"
 compile_text () {
     local color=$1
+    pc=$1
     local hcolor=$2
     shift; shift
     local i=0
@@ -138,7 +142,7 @@ is_even () {
 # otehr text formatting
 
 code () {
-  printf  "%b%b%b" $_code "$1" $rc
+  printf  "%b%b%b" $c_code "$1" $pc
 }
 
 # messages
@@ -149,8 +153,8 @@ msg () {
   log "MSG" "$@"
 }
 
-msg_help () {
-  printf  "\r%b%b%b\n" $_help "$1" $rc
+msgc_help () {
+  printf  "\r%b%b%b\n" $c_help "$1" $rc
   log "HELP" "$@"
 }
 
@@ -359,16 +363,17 @@ print_stats () {
         return
     fi
 
-    info "Active repo : " "$(printf "%b%s%b" $thc $ACTIVE_REPO $rc)"
-    info "Platform    : " "$(printf "%b%s%b" $thc $PLATFORM $rc)"
-    info "App manager : " "$(printf "%b%s%b" $thc $DEFAULT_APP_MANAGER $rc)"
-    info "Cmd manager : " "$(printf "%b%s%b" $thc $DEFAULT_CMD_MANAGER $rc)"
-    info "User bin    : " "$(printf "%b%s%b" $thc $PLATFORM_USER_BIN $rc)"
-    info "User home   : " "$(printf "%b%s%b" $thc $PLATFORM_USER_HOME $rc)"
+    info "Active repo : " "$(printf "%b%s%b" $hc_topic $ACTIVE_REPO $rc)"
+    info "Active shell: " "$(printf "%b%s%b" $hc_topic $ACTIVE_SHELL $rc)"
+    info "Platform    : " "$(printf "%b%s%b" $hc_topic $PLATFORM $rc)"
+    info "App manager : " "$(printf "%b%s%b" $hc_topic $DEFAULT_APP_MANAGER $rc)"
+    info "Cmd manager : " "$(printf "%b%s%b" $hc_topic $DEFAULT_CMD_MANAGER $rc)"
+    info "User bin    : " "$(printf "%b%s%b" $hc_topic $PLATFORM_USER_BIN $rc)"
+    info "User home   : " "$(printf "%b%s%b" $hc_topic $PLATFORM_USER_HOME $rc)"
 
     local count=${#topics[@]}
     if [ $count -eq 0 ]; then count="all"; fi
-    info "$(printf "$(cap_first "${action}ing") %b%s%b" $thc "$count topics" $rc)"
+    info "$(printf "$(cap_first "${action}ing") %b%s%b" $hc_topic "$count topics" $rc)"
 
     # make sure it's only seen once
     SHOW_STATS=1

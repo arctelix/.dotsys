@@ -81,7 +81,7 @@ platform_user_bin () {
 
   if [ "$missing_var" ]; then
 
-    msg_help "You need to set the environment variable $missing_var to the absolute
+    msgc_help "You need to set the environment variable $missing_var to the absolute
             \rpath of your system root where usr/local/bin resides.
             \rex:/c/msys/1.0 or /c/cygwin"
 
@@ -114,7 +114,7 @@ platform_user_home () {
       home="$(printf "%s" "$($USERPROFILE)")"
       ;;
     * )
-      fail "Cannot determine home directories for" "$( printf "%b$platform" $thc)"
+      fail "Cannot determine home directories for" "$( printf "%b$platform" $hc_topic)"
       ;;
   esac
 

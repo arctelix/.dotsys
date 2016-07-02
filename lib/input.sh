@@ -81,6 +81,9 @@ get_user_input () {
         true="omit"
         false="omit"
         invalid=
+    elif [ "$options" ]; then
+        true="omit"
+        false="omit"
     fi
 
     debug "      get_user_input: o:$options t:$true f:$false e:$extra d:$default"
@@ -109,7 +112,7 @@ get_user_input () {
         false=
     fi
 
-    # When no false or true all input is valid and confirm required
+    # Make all input valid and require confirm
     if ! [ "$true" ] || ! [ "$false" ]; then
         confirmed=
         invalid=
@@ -142,7 +145,7 @@ get_user_input () {
 
     # Get user input
     default="${default:-$true}"
-    question=$(printf "$question $options ${hint}[%b${default}%b]" $dvc $rc)
+    question=$(printf "$question $options ${hint}[%b${default}%b]" $c_default $rc)
     debug "      get_user_input before question"
     user "${question}: "
     debug "      get_user_input after  question"
@@ -186,7 +189,7 @@ get_user_input () {
                     break
                     ;;
                 help )
-                    msg_help "$(printf "$help")"
+                    msgc_help "$(printf "$help")"
                     ;;
                 [${extra_regex}] )
                     state=0
@@ -251,12 +254,12 @@ confirm_task () {
 
       local text="$(printf "Would you like to %b%s%b %s %b%s%b%b?
          $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
-         $uhc "$action" $rc "$prefix" $uhc "$topic" $rc "$lines" \
+         $hc_user "$action" $rc "$prefix" $hc_user "$topic" $rc "$lines" \
          $yellow $rc \
          $yellow $rc \
          $yellow $rc \
          $yellow $rc \
-         $dvc $rc)"
+         $c_default $rc)"
 
       user "$text"
 
@@ -296,10 +299,10 @@ confirm_task () {
   confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(cap_first "${action%e}")ing $DRY_RUN $prefix" "$(printf "%b$topic" $thc)" "$lines"
+    task "$(cap_first "${action%e}")ing $DRY_RUN $prefix" "$(printf "%b$topic" $hc_topic)" "$lines"
     return 0
   else
-    task "You skipped $action for $prefix" "$(printf "%b$topic" $thc)" "$lines"
+    task "You skipped $action for $prefix" "$(printf "%b$topic" $hc_topic)" "$lines"
     return 1
   fi
 }
@@ -327,7 +330,7 @@ invalid_limit () {
 required_params () {
   local required=$1
   shift
-  check_for_help "$1"
+  check_forc_help "$1"
   if ! (( $# >= $required )); then
     error "Requires ${#required} parameters and $# supplied."
     show_usage

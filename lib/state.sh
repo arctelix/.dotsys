@@ -205,11 +205,12 @@ get_state_value () {
 
   # State file does not exist yet so pretend it's ok (pre install)
   if ! [ -f "$file" ]; then return 0;fi
-  debug "   - get_state_value grep: ^$key:.*$:"
-  local lines="$(grep "^$key:.*$" "$file")"
+  #debug "   - get_state_value grep: ^$key:.*$:"
+  local lines
+  lines=($(grep "^$key:.*$" "$file"))
   ret=$?
   local val="${lines#*:}"
-  debug "   - get_state_value lines: $lines"
+  #debug "   - get_state_value lines: $lines"
 
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     ret=$val
@@ -217,7 +218,7 @@ get_state_value () {
   elif [ "$val" ]; then
       local line
       ret=1
-      for line in $lines; do
+      for line in ${lines[@]}; do
           val="${line#*:}"
 
           # do not match the provided value
@@ -241,7 +242,8 @@ get_state_value () {
       done
   fi
 
-  #debug "   - get_state_value found: $lines ret:$ret"
+  debug "   - get_state_value found lines: ${lines[*]}
+     -> val = ($ret) $val"
 
   return $ret
 }
@@ -286,7 +288,7 @@ freeze_state() {
     local file="$(state_file "$state")"
     if ! [ -s "$file" ]; then return;fi
 
-    task "Freezing" "$(printf "%b$state state:" $thc)"
+    task "Freezing" "$(printf "%b$state state:" $hc_topic)"
     while IFS='' read -r line || [[ -n "$line" ]]; do
         #echo " - $line"
         freeze_msg "${line%:*}" "${line#*:}"
@@ -359,7 +361,7 @@ get_topic_list () {
 
         # dotsys install limited to shell & deps
         if in_limits "dotsys" -r; then
-            echo "$(get_system_topics)"
+            echo "core"
 
         # all other installs take topic directory
         else

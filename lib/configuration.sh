@@ -54,7 +54,7 @@ load_config_vars (){
     eval "$yaml" #set default config vars
 
     # validate from and set config_file
-    if [ "$repo" ] & [ "$repo" != "none" ] ; then
+    if [ "$repo" ] && [ "$repo" != "none" ] ; then
         debug "   load_config_vars validate: $repo"
         validate_config_or_repo "$repo" "$action"
     # existing user (no from supplied)
@@ -231,7 +231,7 @@ prompt_config_or_repo () {
         fi
     fi
 
-    local help="$(msg_help "$(printf "Type %bhelp%b for more details or %babort%b to exit" $_code $_help $_code $_help)")"
+    local help="$(msgc_help "$(printf "Type %bhelp%b for more details or %babort%b to exit" $c_code $c_help $c_code $c_help)")"
     local question="Enter a repo or config file to ${action}"
     local prompt="$(printf "${help}\n${question}")"
 
@@ -331,6 +331,7 @@ config_user_var () {
     local value
     local non_bool="--options omit"
     local edit_only
+    local get_user_input_opts=()
 
     while [[ $# > 0 ]]; do
         case "$1" in
@@ -338,6 +339,7 @@ config_user_var () {
         -d | --default )  default="$2"; shift ;;
         -b | --bool )     non_bool="";;
         -e | --edit )     edit_only="$1";;
+        -* | --* ) get_user_input_opts+=( "$1" "$2" );shift;;
         *)  invalid_option ;;
         esac
         shift
@@ -351,7 +353,7 @@ config_user_var () {
             prompt="Provide a value for $(echo "$var" | tr '_' ' ')"
         fi
         debug "config_user_var: prompt:$prompt d:$default bool:$non_bool"
-        get_user_input "$prompt " --default "${state_value:-$default}" $non_bool
+        get_user_input "$prompt " --default "${state_value:-$default}" $non_bool "${get_user_input_opts[@]}"
 
     elif [ "$set" ]; then
         debug "config_user_var: set:$set"
@@ -424,6 +426,48 @@ config_show_stats () {
     config_user_var "show_stats" "$1" --bool --prompt "$prompt"
 }
 
+config_symlink_install_option () {
+    local prompt="When installing topic dotfiles, which version do you want to use?
+          $spacer repo     : Use your repo versions and backup existing originals (typical).
+          $spacer original : Import existing originals and backup repo versions (new repo).
+          $spacer skip     : Do not install repo version (dry run).
+          $spacer confirm  : Confirm each dotfile as required."
+    config_user_var "symlink_install_option" "$1" -d "confirm" --prompt "$prompt" \
+    --options omit --extra repo --extra original --extra skip --extra confirm
+}
+
+config_symlink_install_norepo () {
+    local prompt="When installing stub files, if exiting originals are found that
+          $spacer do not exist in your repo, which version do you want to use?
+          $spacer repo     : Use the stub file only (typical).
+          $spacer original : Import the original file to your repo (new repo).
+          $spacer skip     : Do not install repo version (dry run).
+          $spacer confirm  : Confirm each dotfile as required."
+
+    config_user_var "symlink_install_norepo" "$1" -d "confirm" --prompt "$prompt" \
+    --options omit --extra repo --extra original --extra skip --extra confirm
+}
+
+config_symlink_uninstall_option () {
+    local prompt="When un-installing dotfiles, which version do you want to keep?
+          $spacer repo     : Keep a copy of your repo version in use.
+          $spacer original : Restore and use the original backup file.
+          $spacer none     : Remove the repo version and leave the backup un-restored
+          $spacer confirm  : Confirm each dotfile as required."
+    config_user_var "symlink_uninstall_option" "$1" -d "confirm" --prompt "$prompt" \
+    --options omit --extra repo --extra original --extra none --extra confirm
+}
+
+config_symlink_uninstall_nobakup () {
+    local prompt="When un-installing dotfiles and no original backup exists,
+          $spacer what would you like to do?
+          $spacer repo     : Keep a copy of your repo version in use.
+          $spacer none     : Remove the repo version and leave the backup un-restored
+          $spacer confirm  : Confirm each dotfile as required."
+    config_user_var "symlink_uninstall_nobakup" "$1" -d "confirm" --prompt "$prompt" \
+    --options omit --extra repo --extra original --extra none --extra confirm
+}
+
 config_use_stubs () {
 
     if [ "$1" = "--prompt" ]; then
@@ -479,6 +523,20 @@ new_user_config () {
 
     config_use_stubs --prompt
 
+    # TODO : Implement these config variables in symlinks
+    printf "\n"
+    info "The following options allow for hands free install and uninstall.
+  $spacer NEW USERS should choose 'confirm' to evaluate each file individually."
+    printf "\n"
+
+    config_symlink_install_option --prompt
+
+    config_symlink_install_norepo --prompt
+
+    config_symlink_uninstall_option --prompt
+
+    config_symlink_uninstall_nobakup --prompt
+
     printf "\n"
     msg "\nCongratulations $(get_user_name), your preferences are set!\n"
     printf "\n"
@@ -489,7 +547,12 @@ new_user_config_repo () {
     printf "\n"
     msg "The last step is to set a primary repo.  This will
     \rbe the default repo used when you run dotsys commands.
-    \rUse the format $(code "github_user_name/repo_name")"
+    \rUse the format $(code "github_user_name/repo_name")
+
+    \rA GitHub.com account is required for syncing your
+    \ryour configuration on multiple machines. If you proceed
+    \rwithout a GitHub.com account you still need to choose
+    \ra user name for your repo."
     printf "\n"
 
     config_primary_repo --prompt
@@ -499,8 +562,7 @@ new_user_config_repo () {
 is_new_user () {
     # Empty user state file is new user
     # ! [ -s "$(state_file "user")" ]
-    get_state_value "user" "primary_repo"
-    return $?
+    ! in_state "user" "primary_repo"
 }
 
 # TOPIC CONFIG
@@ -576,22 +638,6 @@ get_topic_config_val () {
         fi
     done
     return 1
-}
-
-get_system_topics () {
-    #load_topic_config_vars "core"
-    #deps="$(get_topic_config_val "core" "deps")"
-    echo "core shell"
-}
-
-# Add active shell to topic list if not already there
-add_active_shell_to_topics () {
-    if ! [[ "$topics" =~ $ACTIVE_SHELL ]]; then
-        get_user_input "Do you want to add your current shell '$ACTIVE_SHELL' to your topic list?" -r
-        if [ $? -eq 0 ]; then
-            topics="$ACTIVE_SHELL $topics"
-        fi
-    fi
 }
 
 

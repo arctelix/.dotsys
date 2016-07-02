@@ -21,8 +21,10 @@ dotsys_installer () {
     --debug        turn on debug mode
     "
 
-    export ACTIVE_SHELL="${SHELL##*/}"
-    export ACTIVE_LOGIN_SHELL="$ACTIVE_SHELL"
+    if ! [ $ACTIVE_SHELL ]; then
+        export ACTIVE_SHELL="${SHELL##*/}"
+        export ACTIVE_LOGIN_SHELL="$ACTIVE_SHELL"
+    fi
 
     local action
     local force
@@ -94,20 +96,21 @@ dotsys_installer () {
         # Add dotsys/bin files to usr/bin
         # (redundant) must be done before collect user data!
         #task "Installing dotsys core files"
-        #manage_topic_bin link core
+        #manage_topic_bin link dotsys
         alias atest='echo alias test success'
     fi
 
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"
 
+    echo
     success_or_error $? "$action" "the dotsys core system"
-
+    echo
 #    msg "Run the command $(code "dotsys install")"
 #    msg "to install your repo and it's topics\n"
 #    # Reload the shell to get dotsys changes
-#    task "Reloading $ACTIVE_SHELL"
-#    shell reload
+#     task "Reloading $ACTIVE_SHELL"
+#     sudo exec -l $ACTIVE_SHELL $DOTSYS_LIBRARY/install.sh
 
     INSTALLER_RUNNING=false
     if [ "$action" = "install" ]; then

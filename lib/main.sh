@@ -66,6 +66,11 @@ if ! [ "$DOTSYS_REPOSITORY" ];then
     export DOTSYS_REPOSITORY="${DOTSYS_LIBRARY%/lib}"
 fi
 
+if ! [ $ACTIVE_SHELL ]; then
+    export ACTIVE_SHELL="${SHELL##*/}"
+    export ACTIVE_LOGIN_SHELL="$ACTIVE_SHELL"
+fi
+
 . "$DOTSYS_LIBRARY/core.sh"
 . "$DOTSYS_LIBRARY/common.sh"
 . "$DOTSYS_LIBRARY/utils.sh"
@@ -115,6 +120,9 @@ TOPIC_CONFIRMED=
 
 # persist state for symlink actions only
 SYMLINK_CONFIRMED=
+
+# Import existing if no repo version
+SYMLINK_IMPORT_EXISTING=
 
 # Persist action confirmed for all packages
 PACKAGES_CONFIRMED=
@@ -329,7 +337,7 @@ dotsys () {
       update.sh         see action function definitions
     "
 
-    check_for_help "$1"
+    check_forc_help "$1"
 
     local action=
     local config_var
@@ -418,6 +426,7 @@ dotsys () {
         ACTIVE_REPO=
         ACTIVE_REPO_DIR=
         RELOAD_SHELL=
+        SHOW_STATS=0
         export DEBUG
     fi
 
@@ -534,7 +543,7 @@ dotsys () {
         debug "main -> DOTSYS IN LIMITS"
         from_repo="dotsys/dotsys"
 
-        if [ "$action" = "uninstall" ]; then
+        if [ "$action" = "uninstall" ] && ! [ "$topics" ]; then
             # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
             if user_topics_installed; then
                 warn "Dotsys is still in use and cannot be uninstalled until
@@ -545,7 +554,7 @@ dotsys () {
 
         # Bin files must be linked first
         elif [ "$action" = "install" ]; then
-            manage_topic_bin "link" "core"
+            manage_topic_bin "link" "dotsys"
         fi
     fi
 
@@ -623,7 +632,7 @@ dotsys () {
         # Handle no topics found (collect topics from user system)
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
-                msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" $thc)"
+                msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" $hc_topic)"
             else
                 msg "\nThere are no topics installed by dotsys to" "$action\n"
             fi
@@ -655,6 +664,9 @@ dotsys () {
         manage_stubs "$action" "${topics[*]}" --data_collect "$force"
     fi
 
+    # If active shell in topics add dotsys shell to topics
+    add_dotsys_shell_to_topics
+
     # ITERATE TOPICS
 
     debug "main -> TOPIC LOOP START"
@@ -674,7 +686,7 @@ dotsys () {
 
         # ABORT: on platform exclude (after config loaded)
         if topic_excluded "$topic"; then
-            #task "Excluded" "$(printf "%b${topic}" $thc)" "on $PLATFORM"
+            #task "Excluded" "$(printf "%b${topic}" $hc_topic)" "on $PLATFORM"
             continue
         fi
 
@@ -708,7 +720,7 @@ dotsys () {
 
                 # ABORT: uninstall if it's still in use (uninstalled at end as required).
                 if manager_in_use "$topic"; then
-                    warn "Manager" "$(printf "%b$topic" $thc)" "is in use and can not be uninstalled yet."
+                    warn "Manager" "$(printf "%b$topic" $hc_topic)" "is in use and can not be uninstalled yet."
                     ACTIVE_MANAGERS+=("$topic")
                     debug "main -> ABORT MANGER IN USE: Active manager $topic can not be ${action%e}ed."
                     continue
@@ -787,7 +799,7 @@ dotsys () {
             fi
 
             if [ "$action_complete" ]; then
-                task "Already ${action}ed" "$(printf "%b$topic" $thc )" "from $action_complete"
+                task "Already ${action}ed" "$(printf "%b$topic" $hc_topic )" "from $action_complete"
                 continue
             fi
         fi
@@ -799,16 +811,21 @@ dotsys () {
             # running 'dotsys uninstall' will attempt to remove dotsys since it's in the state
             if ! in_limits "dotsys" -r; then continue; fi
 
-            # Dotsys is expicity being uninstalled with 'dotsys uninstall dotsys'
+            # Dotsys is expicity being uninstalled with 'dotsys uninstall dotsys' or 'dotsys uninstall dotsys core'
             get_user_input "$(printf "%bAre you sure you want to remove the 'dotsys' command
                               $spacer and it's required components from your system?%b" $red $rc)" --required
 
-        # CONFIRM TOPIC
+        # SHELL TOPIC IS REQUIRED (when in topic list)
+        elif [ "$topic" = "shell" ]; then
+            task "$(cap_first ${action}ing) shell system"
+
+        # CONFIRM TOPIC (except shell)
         else
             debug "main -> call confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
             confirm_task "$action" "" "${limits[*]:-\b} $topic"
             if ! [ $? -eq 0 ]; then continue; fi
             debug "main -> post confirm_task status: GC=$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED"
+
         fi
 
         # ALL CHECKS DONE START THE ACTION
@@ -890,6 +907,12 @@ dotsys () {
 
     debug "main -> FINISHED"
 
+    # remove dotsys bin commands from user bin
+    if [ "$action" = unisntall ] && in_limits "dotsys" -f && ! topic_in_use core;then
+        debug "UNINSTALLING DOTSYS COMMANDS FROM USER BIN!"
+        manage_topic_bin "unlink" "dotsys"
+    fi
+
     # RELOAD_SHELL WHEN REQUIRED
 
     if [ "$RELOAD_SHELL" ] && ! [ "$recursive" ] && ! [ "$INSTALLER_RUNNING" ];then
@@ -923,6 +946,22 @@ uninstall_inactive () {
     if [ "${inactive[@]}" ]; then
         debug "   uninstall_inactive -> dotsys uninstall ${inactive[@]} ${limits[@]} --recursive"
         dotsys uninstall ${inactive[@]} ${limits[@]} --recursive
+    fi
+}
+
+# Add active shell to topic list if not already there
+add_active_shell_to_topics () {
+    if ! [[ "${topics[*]}" =~ $ACTIVE_SHELL ]]; then
+        get_user_input "Do you want to add your current shell '$ACTIVE_SHELL' to your topic list?" -r
+        if [ $? -eq 0 ]; then
+            topics=("$ACTIVE_SHELL ${topics[*]}")
+        fi
+    fi
+}
+
+add_dotsys_shell_to_topics () {
+    if [[ "${topics[*]}" =~ $ACTIVE_SHELL ]] && [[ "$topics[*]" =~ shell ]]; then
+       topics=("${topics[*]/$ACTIVE_SHELL/shell $ACTIVE_SHELL}")
     fi
 }
 

@@ -20,7 +20,7 @@ flag_reload () {
     local state=1
 
     # Test if topic is current_shell or "required"
-    if [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
+    if ! [ "$ACTIVE_SHELL" ] || [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
         state=0
         flagged="$topic"
         debug "FLAG RELOAD SHELL ($state): $flagged"
@@ -33,13 +33,13 @@ flag_reload () {
 # Supply topic for test only
 # Supply "now" to bypass checks
 reload () {
-
+    local command="$1"
     if [ "$ACTIVE_LOGIN_SHELL" ];then
-        exec -l "$ACTIVE_SHELL"
+        exec -l "$ACTIVE_SHELL $command"
     elif [ "$ACTIVE_SHELL" ]; then
-        exec "$ACTIVE_SHELL"
+        exec "$ACTIVE_SHELL $command"
     else
-        exec "$SHELL" -l
+        exec -l "$SHELL $command"
     fi
 
     # Remove flag for reload
@@ -50,7 +50,7 @@ reload () {
 # Sources all required files for shell initialization
 # all login shell init files must call this function
 shell_init() {
-
+    echo "init_shell $1 $2"
     local shell="$(get_active "$1")"
     local file="$2"
     local login="$3"

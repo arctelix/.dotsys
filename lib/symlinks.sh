@@ -148,6 +148,7 @@ symlink () {
     -d | default  Use default (repo)
     -o | original Use the original version found on system
     -r | repo     Use the repo version if original version is found
+    -n | none     Do not use repo or existing version
     -s | skip     Report state and do nothing
          dryrun   Report state and do nothing
   Example usage:
@@ -204,7 +205,7 @@ symlink () {
 
   # target path matches source (do nothing)
   if [ -L "$dst"  ] && [ "$dst_target" = "$src" ]; then
-      success "Already linked $DRY_RUN" "$(printf "%b$type" $thc )" "$(printf "%b$dst" $thc )"
+      success "Already linked $DRY_RUN" "$(printf "%b$type" $hc_topic )" "$(printf "%b$dst" $hc_topic )"
       return
   fi
 
@@ -237,18 +238,38 @@ symlink () {
   debug "   repo_existing = $repo_existing"
   debug "   repo_target = $repo_target"
 
-  # Get confirmation if file already exists and not confirmed
-  if [ "$dst_existing" ] && [ ! "$confirmed" ]; then
+  # existing and no repo version (import mode)
+  if [ "$dst_existing" ] && ! [ "$repo_existing" ]; then
+
+   # confirm options with user
+    if ! [ "$SYMLINK_IMPORT_EXISTING" ]; then
+        get_user_input "Your repo does not contain a $dst_name file and an
+                $spacer existing version was found. What do you want to do?" -r -v SYMLINK_IMPORT_EXISTING
+        if [ $? -eq 0 ]; then
+            action="original"
+        fi
+
+    # import origianl
+    elif [ "$SYMLINK_IMPORT_EXISTING" = "yes" ];then
+            action="original"
+
+    # Use non existing repo version
+    else
+        action="repo"
+    fi
+
+  # existing and repo version found
+  elif [ "$dst_existing" ] && [ ! "$confirmed" ]; then
 
     message="$(printf "An existing original version of %b$dst_name%b was found:
-               $spacer your repo version: %b${repo_existing:-import existing origianl}%b
+               $spacer your repo version: %b$repo_existing%b
                $spacer existing original: %b$dst_existing%b
                $spacer Which version would you like to use?
                $spacer %b(Don't stress, we'll backup any original files)%b" \
-               $uhc $uc $yellow $uc $yellow $uc $l_blue $rc)"
+               $hc_user $c_user $yellow $c_user $yellow $c_user $l_blue $rc)"
 
     options="$(printf "\n$spacer (%br%b)repo, (%bR%b)all, (%bo%b)original, (%bO%b)all (%bs%b)kip, (%bS%b)all [%b$default%b] : " \
-               $green $rc $green $rc $yellow $rc $yellow $rc $blue $rc $blue $rc $dvc $rc)"
+               $green $rc $green $rc $yellow $rc $yellow $rc $blue $rc $blue $rc $c_default $rc)"
 
     user "$message $options"
 
@@ -262,7 +283,7 @@ symlink () {
             r | repo )action=repo; break;;
             R | Repo )SYMLINK_CONFIRMED=repo; break;;
             s | skip )action=skip; break;;
-            S | Skip )SYMLINK_CONFIRMED=skip; break;;
+            S | skip )SYMLINK_CONFIRMED=skip; break;;
             "") action="$default"; break;;
             * ) msg_invalid_input "$message > invalid '$user_input': "
             ;;
@@ -284,77 +305,91 @@ symlink () {
       skip_reason="$DRY_RUN"
   fi
 
-  local result
+  local result=0
+
+
   if [ "$action" == "skip" ]; then
 
-    success "$(printf "Symlink %s for %b%s%b:" "$skip_reason" $thc "$dst_name" $rc)"
+    success "$(printf "Symlink %s for %b%s%b:" "$skip_reason" $hc_topic "$dst_name" $rc)"
     # incorrect link
     if [ -L "$dst" ]; then
       warn "$(printf "Symlinked $type : %b%s%b
                       $spacer currently linked to : %b%s%b
-                      $spacer should be linked to : %b%s%b" $thc "$dst" $rc $thc "$dst_target" $rc $thc "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" $hc_topic "$dst" $rc $hc_topic "$dst_target" $rc $hc_topic "$src" $rc)"
     # original file not linked
     elif [ "$dst_existing" ] && [ "$dst_target" = "$dst" ]; then
       warn "$(printf "original $type : %b%s%b
-                      $spacer should be linked to : %b%s%b" $thc "$dst" $rc $thc "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" $hc_topic "$dst" $rc $hc_topic "$src" $rc)"
 
     # dest not exist
     else
       warn "$(printf "No $type found at: %b%s%b
-                      $spacer should be linked to : %b%s%b" $thc "$dst" $rc $thc "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" $hc_topic "$dst" $rc $hc_topic "$src" $rc)"
 
     fi
 
-  # keep repo version
-  elif [ "$action" == "repo" ] && [ "$dst_existing" ]; then
-
-    # copy existing to repo
-    if ! [ "$repo_existing" ] && [ "$repo_target" ];then
-        local target_dir="$(dirname "$repo_target")"
-        result=$?
-        if ! [ -d "$target_dir" ]; then
-            mkdir "$(dirname "$repo_target")"
-            result=$?
-        fi
-
-        if [ $result -eq 0 ];then
-            cp "$dst_existing" "$repo_target"
-            result=$?
-        fi
-        success_or_fail $result "move" "original to $repo_target"
-    fi
+  # use repo version
+  elif [[ "$action" = "repo" || "$action" = "none" ]]  && [ "$dst_existing" ]; then
 
     # backup existing version
     remove_and_backup_file "original" "$dst_existing"
 
-  # keep original version
+  # import original version to repo
   elif [ "$action" == "original" ] && [ "$dst_existing" ]; then
 
-    # backup repo version
+    # backup repo version (disable it)
     if [ "$repo_existing" ];then
         remove_and_backup_file "repo" "$repo_existing"
     fi
 
-    # move existing to repo
-    mv "$dst_existing" "$repo_target"
-    success_or_fail $? "move" "original to $repo_target"
+    # Confirm repo target & move existing
+    if [ "$repo_target" ]; then
+
+        # make sure target directory exists
+        local target_dir="$(dirname "$repo_target")"
+        if ! [ -d "$target_dir" ]; then
+            mkdir "target_dir"
+            result=$?
+            success_or_fail $result "create" "directory $target_dir"
+        fi
+
+        # Copy existing to repo target
+        if [ $result -eq 0 ];then
+            cp "$dst_existing" "$repo_target"
+            result=$?
+            success_or_fail $result "copy" "original to $repo_target"
+        fi
+
+        # keep a backup copy of original in original location
+        if [ $result -eq 0 ];then
+            remove_and_backup_file "original" "$dst_existing"
+        fi
+    fi
+
+    if [ $result -eq 0 ];then
+        success "Original existing $dst_name $type imported to repo"
+    else
+        success "Original existing $dst_name $type left in place"
+        action="none"
+    fi
   fi
 
   # Always link the source to dst unless skipped
-  if [ "$action" != "skip" ]; then
+  if [ "$action" != "skip" ] && [ "$action" != "none" ]; then
     # Create native symlinks on Windows.
     export CYGWIN=winsymlinks:nativestrict
     ln -fs "$src" "$dst"
+    result=$?
 
     if [ "$stub_file" ]; then
-        stub_file="\n$spacer stub -> $stub_file"
+        stub_file="\n$spacer stub file -> $stub_file"
     fi
 
     if [ "$repo_target" ]; then
-        repo_target="\n$spacer repo -> $repo_target"
+        repo_target="\n$spacer user file -> $repo_target"
     fi
 
-    success_or_fail $? "link" "$type" "$(printf "%b$dst" $thc)" "$stub_file" "$repo_target"
+    success_or_fail $result "link" "$type" "$(printf "%b$dst" $hc_topic)" "$stub_file" "$repo_target"
   fi
 }
 
@@ -365,10 +400,10 @@ remove_and_backup_file(){
 
   if ! [ -f "$backup" ] ; then
       mv "$file" "$backup"
-      success_or_fail $? "back" "up $desc version of" "$(printf "%b$file" $thc)" "\n$spacer new backup ->" "$(printf "%b$backup" $thc)"
+      success_or_fail $? "back" "up $desc version of" "$(printf "%b$file" $hc_topic)" "\n$spacer new backup ->" "$(printf "%b$backup" $hc_topic)"
   else
       rm -rf "$file"
-      success_or_fail $? "remove" "$desc version of" "$(printf "%b$file" $thc)" "\n$spacer existing backup ->" "$(printf "%b$backup" $thc)"
+      success_or_fail $? "remove" "$desc version of" "$(printf "%b$file" $hc_topic)" "\n$spacer existing backup ->" "$(printf "%b$backup" $hc_topic)"
   fi
 
   return $?
@@ -465,7 +500,7 @@ unlink(){
                 $spacer %bcurrent repo%b : $link_target
                 $spacer Which version of the file would you like to keep?
                 $spacer (%bo%b)riginal, (%bO%b)all, (%br%b)epo, (%bR%b)all, (%bn%b)one, (%bN%b)all [%b$default%b]: " \
-                $uhc "$link_name" $uc \
+                $hc_user "$link_name" $c_user \
                 $green $rc \
                 $yellow $rc \
                 $green $rc $green $rc \
@@ -511,7 +546,7 @@ unlink(){
   if [ "$action" != "skip" ]; then
     # Remove the symlink
     rm -rf "$link_file"
-    success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" $thc )"
+    success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" $hc_topic )"
   fi
 
   # Skip symlink (DRY RUN)
@@ -524,7 +559,7 @@ unlink(){
 
     if ! [ -f "$backup" ];then backup="none";fi
 
-    success "Unlink $skip_reason for" "$(printf "%b$topic's $link_name" $thc)" "
+    success "Unlink $skip_reason for" "$(printf "%b$topic's $link_name" $hc_topic)" "
      $spacer existing $type : $link_file
      $spacer linked to $type: $link_target
      $spacer backup $type%  : $backup"
@@ -532,13 +567,13 @@ unlink(){
   # Restore backup
   elif [ "$action" == "original" ]; then
     restore_backup_file "$link_file"
-    success_or_none $? "restore" "backed up version of" "$(printf "%b$topic's $link_name" $thc )"
+    success_or_none $? "restore" "backed up version of" "$(printf "%b$topic's $link_name" $hc_topic )"
 
   # Keep a copy of repo version
   elif [ "$action" == "repo" ]; then
     if [ -f "$link_target" ]; then
         cp "$link_target" "$link_file"
-        success_or_fail $? "copy" "repo version of" "$(printf "%b$topic's $link_name" $thc )"
+        success_or_fail $? "copy" "repo version of" "$(printf "%b$topic's $link_name" $hc_topic )"
     fi
   fi
 
@@ -607,7 +642,7 @@ manage_topic_bin () {
     local src_bin
     local dst_bin
 
-    if [ "$topic" = "core" ]; then
+    if [ "$topic" = "dotsys" ]; then
         src="$(dotsys_dir)"
         dst_bin="${PLATFORM_USER_BIN}"
     else

@@ -34,10 +34,18 @@ unique_list () {
     echo $seen
 }
 
-remove_string_from_file () {
+remove_file_string () {
     local file="$1"
     local string="$2"
-    ex "+g|$string|d" -cwq "$file"
+    #ex "+g|$string|d" -cwq "$file"
+    sed -i -- "s|$rm_str|g" "$file"
+}
+
+replace_file_string () {
+    local file="$1"
+    local rm_str="$2"
+    local rp_str="$2"
+    sed -i -- "s|$rm_str|$rp_str|g" "$file"
 }
 
 rename_all() {

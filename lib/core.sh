@@ -53,8 +53,8 @@ show_usage () {
 }
 
 # Checks for a help param and displays show_usage if available
-# ex: check_for_help "$1"
-check_for_help () {
+# ex: check_forc_help "$1"
+check_forc_help () {
   if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then show_usage -f; fi
 }
 
@@ -137,7 +137,7 @@ import () {
         func    Function to import
     "
 
-    check_for_help "$1"
+    check_forc_help "$1"
 
     local source
 

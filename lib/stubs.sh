@@ -38,7 +38,7 @@ add_existing_dotfiles () {
                             $spacer current version: %b$stub_dst%b
                             $spacer dotsys version: %b$stub_target%b
                             $spacer Which version would you like to use with dotsys
-                            $spacer (Don't stress, we'll backup the other one)?" $thc $rc $thc $rc $thc $rc)" \
+                            $spacer (Don't stress, we'll backup the other one)?" $hc_topic $rc $hc_topic $rc $hc_topic $rc)" \
                             --true "current" --false "dotsys"
 
                     # keep system version: backup dotsys version before move
@@ -53,8 +53,8 @@ add_existing_dotfiles () {
 
                 else
                     confirm_task "move" "existing config file for" "$topic" \
-                       "$(printf "%bfrom:%b $stub_dst" $thc $rc )" \
-                       "$(printf "%bto:%b $stub_target" $thc $rc )"
+                       "$(printf "%bfrom:%b $stub_dst" $hc_topic $rc )" \
+                       "$(printf "%bto:%b $stub_target" $hc_topic $rc )"
                 fi
 
                 if ! [ $? -eq 0 ]; then continue;fi
@@ -482,15 +482,20 @@ get_topic_stub_target(){
     local stub_src="$2"
     local verify="$3"
     local user_topic_dir="$(topic_dir "$topic" "user")"
-    local taget_file_name="$(basename "${stub_src%%.*}.symlink")"
+    local stub_src_name="$(basename "$stub_src")"
+    local taget_file_name="${stub_src_name%%.*}.symlink"
 
     # Path to user repo file.symlink
     local stub_target="$user_topic_dir/$taget_file_name"
 
-    debug "-- get_topic_stub_target $topic/$taget_file_name"
+    debug "-- get_topic_stub_target from: $stub_src"
+    debug "   user_topic_dir: $user_topic_dir"
+    debug "   target_file_name: $taget_file_name"
+    debug "   stub_target: $stub_target"
 
     # verify user repo file.symlink
     if [ "$verify" = "user" ] && ! [ -f "$stub_target" ]; then
+        debug "   -> from user : NOT FOUND $stub_target"
         return 1
     fi
 
@@ -502,21 +507,22 @@ get_topic_stub_target(){
         else
             stub_target=
         fi
-        debug "   from primary : $stub_target"
+        debug "   -> from primary : $stub_target"
     fi
 
     # Exiting dst file or xisting user repo file.symlink or none
     if ! [ "$verify" ] && ! [ -f "$stub_target" ];then
         # Check for existing stub target (non symlink)
         stub_target="$(get_symlink_dst "$stub_src")"
-        if [ -f "$stub_target" ];then
+        if ! [ -L "$stub_target" ] && [ -f "$stub_target" ];then
             stub_target="${stub_target}.dsbak"
-            debug "   from existing : $stub_target"
 
         # User file does not exist and no existing file
         else
             stub_target=
         fi
+
+        debug "   -> from existing : $stub_target"
     fi
 
     echo "$stub_target"
@@ -525,13 +531,25 @@ get_topic_stub_target(){
 # returns the symlink target for a user tub file
 # See get_topic_stub_target for options
 get_user_stub_target(){
-    # split parts [0]dotfile [1]topic [2]ext
-    local stub_name="$(basename "$1")"
     local verify="$2"
-    local stub_parts=( ${stub_name//./ } )
-    local stub_topic="${stub_parts[1]}"
     # empty if user topic does not exist
-    echo "$(get_topic_stub_target "$stub_topic" "$stub_file" "$verify")"
+    echo "$(get_topic_stub_target $(split_user_stub_name "$1") "$verify")"
+}
+
+update_user_stub_target () {
+    local user_stub="$1"
+    local current_target="$2"
+    local new_target="$2"
+    replace_file_string "$user_stub" "$current_target" "$new_target"
+}
+
+# split user stub name file.topic.stub
+split_user_stub_name () {
+    local stub_name="$(basename "$1")"
+    # split parts [0]stub_file [1]stub_topic [2]stub_ext
+    local parts=( ${stub_name//./ } )
+    # return "topic file_name"
+    echo "${parts[1]} ${parts[0]}"
 }
 
 # Convert a stub file to user stub file name
@@ -682,7 +700,7 @@ manage_source () {
 
     # REMOVE FROM FILE
     if [ "$action" = "uninstall" ];then
-        remove_string_from_file "$write_target" "$formatted_source"
+        remove_file_string "$write_target" "$formatted_source"
         success_or_fail $? "remove" "source $src_file \n$spacer from -> $write_target"
         modified="remove"
 
