@@ -49,7 +49,8 @@ replace_file_string () {
 }
 
 rename_all() {
-    . "$DOTSYS_LIBRARY/terminalio.sh"
+    import input get_user_input
+
     local files="$(find "$1" -type f -name "$2")"
     local file
     local new
@@ -110,4 +111,14 @@ array_contains () {
 escape_sed() {
  sed \
   -e 's/\&/\\\&/g'
+}
+
+fix_line_separators () {
+    if ! cmd_exists dos2unix; then reutrn; fi
+
+    local files="$(find "$DOTSYS_REPOSITORY" -type f -not -path "$DOTSYS_REPOSITORY/\.*")"
+    local file
+    while IFS=$'\n' read -r file; do
+        dos2unix "$file"
+    done <<< "$files"
 }
