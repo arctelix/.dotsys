@@ -76,16 +76,9 @@ topic_dir () {
         path="$(repo_dir "$repo")/$topic"
     fi
 
-    # Return empty path when user requested and does not exist
-    if ! [ -d "$path" ] && [ "$restrict" = "user" ]; then
-        #debug "   -> PATH NOT FOUND $repo + $topic = $path"
-        echo ""
-        return 1
-    else
-        #debug "   -> FOUND $repo + $topic = $path"
-        echo "$path"
-    fi
-    return 0
+    # Return and Test for path
+    echo "$path"
+    [ -d "$path" ]
 }
 
 # converts supplied repo or active repo to full path

@@ -332,7 +332,7 @@ manage_remote_repo (){
       status )      task="$1" ;;
       --message )   message="$1" ;;
       --confirmed )   confirmed="--confirmed" ;;
-      * ) invalid_option;;
+      * ) invalid_option "$1";;
     esac
     shift
     done
@@ -509,7 +509,7 @@ git_commit () {
     while [[ $# > 0 ]]; do
         case "$1" in
         -s |--silent )      silent="true" ;;
-        *)  invalid_option ;;
+        *)  invalid_option "$1";;
         esac
         shift
     done

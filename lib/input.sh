@@ -119,15 +119,13 @@ get_user_input () {
     fi
 
     # put options on new line
-    if [ "$hint" ] || [ "${extra[0]}" ]; then
+    if [ "$hint" ] || [ "${extra[0]}" ] || [ "$CONFIRMED_VAR" ]; then
        options="\n$spacer $options"
     fi
 
     # format hint
     if [ "$hint" ]; then
        hint="$hint "
-    else
-       hint="\b"
     fi
 
     # format extra options
@@ -146,7 +144,7 @@ get_user_input () {
     # Get user input
     default="${default:-$true}"
     question=$(printf "$question $options ${hint}[%b${default}%b]" $c_default $rc)
-    debug "      get_user_input before question"
+    debug "      get_user_input fore question"
     user "${question}: "
     debug "      get_user_input after  question"
     local state=0
@@ -189,7 +187,7 @@ get_user_input () {
                     break
                     ;;
                 help )
-                    msgc_help "$(printf "$help")"
+                    msg_help "$(printf "$help")"
                     ;;
                 [${extra_regex}] )
                     state=0
@@ -305,105 +303,4 @@ confirm_task () {
     task "You skipped $action for $prefix" "$(printf "%b$topic" $hc_topic)" "$lines"
     return 1
   fi
-}
-
-# USAGE & HELP SYSTEM
-
-# Display invalid option message and exit
-invalid_option () {
-    if ! [ "$1" ]; then return;fi
-    error "invalid option: $1"
-    show_usage
-    exit
-}
-
-invalid_limit () {
-    error "invalid limit: $1"
-    show_usage
-    exit
-}
-
-# Confirms provided param list is longer then a specified length.
-# also checks for a help request
-# Shows error with basic usage on fail
-# ex: required_params 2 $@
-required_params () {
-  local required=$1
-  shift
-  check_forc_help "$1"
-  if ! (( $# >= $required )); then
-    error "Requires ${#required} parameters and $# supplied."
-    show_usage
-  fi
-
-}
-
-# Confirms a list of var names are set
-required_vars () {
-  local missing=
-  local recieved=
-  local p
-  for p in $@; do
-    if ! [ "${!p}" ]; then
-      missing+="<${p}> "
-    else
-      recieved+="<${p}> "
-    fi
-  done
-  if [ "$missing" ]; then
-    error "Missing or incorrect parameters $missing
-    recieved: $recieved"
-    show_usage
-  fi
-}
-
-# A short cut method handle uncaught case
-# Sets a specified list of variable names to the current param value.
-# Catches invalid options (unspecified in case and prefixed with -).
-# Catches too many params provided
-# Displays error message and basic usage on fail
-# ex: uncaught_case "$1" "var_name" "var_name"
-uncaught_case (){
- local uc_c_val="$1"
- shift
- local set_var
- local uc_p_names="$@"
- local us_p_name
-
- # Skip blank values
- if [ ! "$uc_c_val" ];then return;fi
-
- for us_p_name in $uc_p_names; do
-    if [[ "$uc_c_val" == "-"* ]]; then
-        printf "Invalid parameter '$uc_c_val'"
-        show_usage
-    fi
-    # if the supplied variable name is not set
-    if [ -z "${!us_p_name}" ]; then
-      local eval_exp="${us_p_name}=\"$uc_c_val\""
-      eval "$eval_exp"
-      set_var="$us_p_name"
-      break
-    fi
- done
-
- if [ -z "$set_var" ] && [ "$uc_c_val" ]; then
-   local uc_c_vals=""
-   for us_p_name in $uc_p_names;do
-        uc_c_vals+="${us_p_name}=${!us_p_name}\n"
-   done
-
-
-   error "Too many params:
-   \r${uc_c_vals}\rhave been set and got value: $uc_c_val"
-   show_usage
- fi
-}
-
-# Check if next param is value or option
-get_opt_val () {
-    local next_val="$1"
-    if [[ "$next_val" != "-"* ]]; then
-        echo "$next_val"
-    fi
 }

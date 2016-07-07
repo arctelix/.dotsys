@@ -81,7 +81,7 @@ platform_user_bin () {
 
   if [ "$missing_var" ]; then
 
-    msgc_help "You need to set the environment variable $missing_var to the absolute
+    msg_help "You need to set the environment variable $missing_var to the absolute
             \rpath of your system root where usr/local/bin resides.
             \rex:/c/msys/1.0 or /c/cygwin"
 

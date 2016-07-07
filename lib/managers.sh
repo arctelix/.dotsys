@@ -116,8 +116,8 @@ run_manager_task () {
 
      # convert topic to package name
      load_topic_config_vars "$topic"
-     local pkg_name="$(get_topic_config_val $topic "pkg_name")"
-     if ! [ "$pkg_name" ]; then pkg_name="$(get_topic_config_val $topic $manager)"; fi
+     local pkg_name="$(get_topic_config_val $topic $manager)"
+     if ! [ "$pkg_name" ]; then pkg_name="$(get_topic_config_val $topic "package_name")"; fi
      if ! [ "$pkg_name" ]; then pkg_name="$topic"; fi
 
      debug "   run_manager_task for $manager: $topic CONVERTED to package name '$pkg_name' "
@@ -228,7 +228,7 @@ get_package_list () {
   case "$2" in
     -i | packages ) option=packages ;;
     -f | file )     option=file ;;
-    * ) invalid_option ;;
+    * ) invalid_option "$1";;
   esac
 
   # get packages from state

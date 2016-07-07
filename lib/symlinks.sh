@@ -193,7 +193,11 @@ symlink () {
 
   # Set default for confirmed
   if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="$default";fi
-  local confirmed="$SYMLINK_CONFIRMED"
+  local confirmed="$(config_symlink_confirmed)"
+  if [ "$confirmed" = "confirm" ]; then confirmed="";fi
+  local confirmed_norepo="$(config_symlink_norepo)"
+  if [ "$confirmed_norepo" = "confirm" ]; then confirmed_norepo="";fi
+
 
   debug "-- symlink src   = $src"
   debug "   symlink dst  -> $dst"
@@ -242,20 +246,15 @@ symlink () {
   if [ "$dst_existing" ] && ! [ "$repo_existing" ]; then
 
    # confirm options with user
-    if ! [ "$SYMLINK_IMPORT_EXISTING" ]; then
-        get_user_input "Your repo does not contain a $dst_name file and an
-                $spacer existing version was found. What do you want to do?" -r -v SYMLINK_IMPORT_EXISTING
+    if ! [ "$confirmed_norepo" ]; then
+        get_user_input "Do you want to import the existing original $dst_name $type
+                $spacer from your home directory or just use the repo stub file?" \
+                --true "original" --false "repo" -r -v SYMLINK_NOREPO --clear
         if [ $? -eq 0 ]; then
             action="original"
         fi
-
-    # import origianl
-    elif [ "$SYMLINK_IMPORT_EXISTING" = "yes" ];then
-            action="original"
-
-    # Use non existing repo version
     else
-        action="repo"
+        action="$confirmed_norepo"
     fi
 
   # existing and repo version found
@@ -447,6 +446,10 @@ unlink(){
 
   # Set default for confirmed
   if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="original";fi
+  local confirmed="$(config_unlink_confirmed)"
+  if [ "$confirmed" = "confirm" ]; then confirmed="";fi
+  local confirmed_nobackup="$(config_unlink_nobackup)"
+  if [ "$confirmed_nobackup" = "confirm" ]; then confirmed_nobackup="";fi
 
   # File does not exits
   if [ ! -f "$link_file" ] && [ ! -L "$link_file" ]; then
@@ -477,66 +480,63 @@ unlink(){
         link_target="${link_target%.stub}.symlink"
   fi
 
-  if ! [ "$SYMLINK_CONFIRMED" ]; then
 
-      # No original file exists
-      if ! [ -f "$backup" ]; then
+  # No original file exists & repo has original file
+  if ! [ -f "$backup" ] && [ -f "$link_target" ]; then
 
-          # repo has original file
-          if [ -f "$link_target" ]; then
-              get_user_input "No backup of $link_name was found,
-                      $spacer keep a copy of the repo version?" \
-                      --true "repo" --false "none" --confvar "SYMLINK_CONFIRMED" --required --clear
-              if [ $? -eq 0 ]; then action=repo ;fi
-          fi
-
-      # original file & repo file exist (not stub)
-      elif [ -f "$link_target" ]; then
-
-        local default="original"
-
-        message="$(printf "Two versions of the $type %b%s%b were found:
-                $spacer %boriginal backup%b : $backup
-                $spacer %bcurrent repo%b : $link_target
-                $spacer Which version of the file would you like to keep?
-                $spacer (%bo%b)riginal, (%bO%b)all, (%br%b)epo, (%bR%b)all, (%bn%b)one, (%bN%b)all [%b$default%b]: " \
-                $hc_user "$link_name" $c_user \
-                $green $rc \
-                $yellow $rc \
-                $green $rc $green $rc \
-                $yellow $rc $yellow $rc \
-                $blue $rc $blue $rc \
-                $dark_gray $rc)"
-
-        user "$message"
-
-        while true; do
-          # Read from tty, needed because we read in outer loop.
-          read user_input < /dev/tty
-
-          case "$user_input" in
-            o | original )action=original; break;;
-            O | Original )SYMLINK_CONFIRMED=original; break;;
-            r | repo )action=repo; break;;
-            R | Repo )SYMLINK_CONFIRMED=repo; break;;
-            n | none )action=none;break ;;
-            N | None )SYMLINK_CONFIRMED=none; break ;;
-            "") action="$default"; break ;;
-            * ) msg_invalid_input "$message invalid entry '$user_input' : "
-              ;;
-          esac
-        done
-
-        clear_lines "$message" ${clear:-0}
-
-      # no file available to keep
+      if ! [ "$confirmed_nobackup" ]; then
+          get_user_input "No backup of $link_name was found, keep a copy
+                  $spacer of the repo version or none?" \
+                  --true "repo" --false "none" --confvar "UNLINK_NOBACKUP" --required --clear
+          if [ $? -eq 0 ]; then action=repo ;fi
       else
-        action=none
+          action="$confirmed_nobackup"
       fi
 
+  # original file & repo file exist (not stub)
+  elif ! [ "$confirmed" ] && [ -f "$link_target" ]; then
 
+    local default="original"
 
+    message="$(printf "Two versions of the $type %b%s%b were found:
+            $spacer %boriginal backup%b : $backup
+            $spacer %bcurrent repo%b : $link_target
+            $spacer Which version of the file would you like to keep?
+            $spacer (%bo%b)riginal, (%bO%b)all, (%br%b)epo, (%bR%b)all, (%bn%b)one, (%bN%b)all [%b$default%b]: " \
+            $hc_user "$link_name" $c_user \
+            $green $rc \
+            $yellow $rc \
+            $green $rc $green $rc \
+            $yellow $rc $yellow $rc \
+            $blue $rc $blue $rc \
+            $dark_gray $rc)"
+
+    user "$message"
+
+    while true; do
+      # Read from tty, needed because we read in outer loop.
+      read user_input < /dev/tty
+
+      case "$user_input" in
+        o | original )action=original; break;;
+        O | Original )SYMLINK_CONFIRMED=original; break;;
+        r | repo )action=repo; break;;
+        R | Repo )SYMLINK_CONFIRMED=repo; break;;
+        n | none )action=none;break ;;
+        N | None )SYMLINK_CONFIRMED=none; break ;;
+        "") action="$default"; break ;;
+        * ) msg_invalid_input "$message invalid entry '$user_input' : "
+          ;;
+      esac
+    done
+
+    clear_lines "$message" ${clear:-0}
+
+  # no file available to keep
+  else
+    action=none
   fi
+
 
   action=${action:-$SYMLINK_CONFIRMED}
 
@@ -666,7 +666,7 @@ manage_topic_bin () {
     while [[ $# > 0 ]]; do
         case "$1" in
         -s | --silent )      silent="true" ;;
-        *)  invalid_option ;;
+        *)  invalid_option "$1";;
         esac
         shift
     done

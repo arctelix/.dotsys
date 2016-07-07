@@ -1,17 +1,15 @@
+#!/bin/sh
+
 install () {
-    upgrade
+    npm install npm -g
 }
 
 upgrade () {
-    sudo npm install npm -g
+    install
 }
 
 update () {
-    upgrade
+    install
 }
 
-freeze () {
-    npm ls
-}
-
-$@
+"$@"

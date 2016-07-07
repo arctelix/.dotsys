@@ -78,7 +78,8 @@ fi
 . "$DOTSYS_LIBRARY/output.sh"
 . "$DOTSYS_LIBRARY/input.sh"
 . "$DOTSYS_LIBRARY/config_yaml.sh"
-. "$DOTSYS_LIBRARY/configuration.sh"
+. "$DOTSYS_LIBRARY/config_load.sh"
+. "$DOTSYS_LIBRARY/config_user.sh"
 . "$DOTSYS_LIBRARY/state.sh"
 . "$DOTSYS_LIBRARY/platforms.sh"
 . "$DOTSYS_LIBRARY/scripts.sh"
@@ -337,7 +338,7 @@ dotsys () {
       update.sh         see action function definitions
     "
 
-    check_forc_help "$1"
+    check_for_help "$1"
 
     local action=
     local config_var
@@ -408,8 +409,8 @@ dotsys () {
                         fi ;;
         --log)          LOG_FILE="true";;
         --cfg)          cfg_mode="$2"; shift;;
-        --*)            invalid_option ;;
-        -*)             invalid_limit ;;
+        --*)            invalid_option "$1";;
+        -*)             invalid_limit "$1";;
         *)              topics+=("$1") ;;
     esac
     shift
@@ -955,6 +956,8 @@ add_active_shell_to_topics () {
         get_user_input "Do you want to add your current shell '$ACTIVE_SHELL' to your topic list?" -r
         if [ $? -eq 0 ]; then
             topics=("$ACTIVE_SHELL ${topics[*]}")
+            topic_dir=
+            mkdir "$(repo_dir)/$ACTIVE_SHELL"
         fi
     fi
 }

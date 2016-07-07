@@ -4,7 +4,8 @@
 # Author: arctelix
 
 import platforms
-import state
+import config_user config_shell_prompt
+
 
 shell_debug () {
     if [ "$DEBUG_SHELL" = true ]; then
@@ -33,13 +34,13 @@ flag_reload () {
 # Supply topic for test only
 # Supply "now" to bypass checks
 reload () {
-    local command="$1"
+    local script="$1"
     if [ "$ACTIVE_LOGIN_SHELL" ];then
-        exec -l "$ACTIVE_SHELL $command"
+        exec -l $ACTIVE_SHELL $script
     elif [ "$ACTIVE_SHELL" ]; then
-        exec "$ACTIVE_SHELL $command"
+        exec $ACTIVE_SHELL $script
     else
-        exec -l "$SHELL $command"
+        exec -l $SHELL $script
     fi
 
     # Remove flag for reload
@@ -50,7 +51,7 @@ reload () {
 # Sources all required files for shell initialization
 # all login shell init files must call this function
 shell_init() {
-    echo "init_shell $1 $2"
+    print "init_shell $1 $2"
     local shell="$(get_active "$1")"
     local file="$2"
     local login="$3"
@@ -210,7 +211,7 @@ set_prompt () {
     local shell="${1:-$ACTIVE_SHELL}"
 
     # Only use dotsys prompt if enabled by user
-    if ! state get_state_value "dotsys" "dsprompt";then return;fi
+    if ! config_shell_prompt; then return; fi
 
     if [ "$shell" = "zsh" ];then
         autoload -Uz colors && colors

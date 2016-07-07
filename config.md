@@ -43,31 +43,36 @@ Please submit pull requests for your topic configs!  Look at `.dotsys/builtins` 
 TOPIC CONFIG (topic/dotsys.cfg)
 -------------------------------
   
-Specify a manager if required ( app, cmd, topic )
+Specify a manager if required (default: none):
+app: Use OS aplication manager
+cmd: Use system command manager
+topic_name: The name of any manager enabled topic
 
-    manager: cmd
+    manager: <app, cmd, topic_name>
     
-Modify test to determine if topic installed on system (default: topic_name)
+Specify test to determine if topic is installed on system (default: topic directory name)
 				            
-    installed_test: [shell test] 
+    installed_test: <topic name>
     
-Modify package name (default topic__name):
+Specify package name for all managers (default: topic directory name):
 
-    name: package_name
+    package_name: <package name>
      				           
-modify package name for specific manager: 
+Specify the package name for specific manager:
 
-    brew: package_name
+    brew: <package name>
     	
-List topic dependencies:
+Add topic dependencies (use topic directory names):
 
     deps:
-      - topic_name
+      - <topic name>
 
-symlinks (override $HOME directroy as destination)
+Overide symlink destination (default: $HOME):
+src_name: The repo source file name (no prefix or .symlink extension)
+dst_name: The exact destination file name with prefix and extension
 
     symlinks:
-      - file.symlink->$HOME/subdir/_file
+      - src_name->$HOME/subdir/_dst_name
       
 Install topic from a different repo:
 

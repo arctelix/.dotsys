@@ -1,13 +1,11 @@
-#!/usr/bin/env bash
-
-import paths
+#!/bin/sh
 
 state_dir () {
-  echo "$(paths dotsys_dir)/state"
+  echo "$DOTSYS_REPOSITORY/state"
 }
 
 state_file () {
-    echo "$(paths state_dir)/${1}.state"
+    echo "$(state_dir)/${1}.state"
 }
 # adds key:value if key:value does not exist (value optional)
 state_install() {
@@ -205,7 +203,7 @@ get_state_value () {
 
   # State file does not exist yet so pretend it's ok (pre install)
   if ! [ -f "$file" ]; then return 0;fi
-  #debug "   - get_state_value grep: ^$key:.*$:"
+  debug "   - get_state_value grep: ^$key:.*$:"
   local lines
   lines=($(grep "^$key:.*$" "$file"))
   ret=$?
@@ -243,7 +241,7 @@ get_state_value () {
   fi
 
   debug "   - get_state_value found lines: ${lines[*]}
-     -> val = ($ret) $val"
+     -> exit code = $ret | val =  $val"
 
   return $ret
 }

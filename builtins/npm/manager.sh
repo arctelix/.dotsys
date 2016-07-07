@@ -2,17 +2,18 @@
 
 install () {
   npm install -g $@
-  return $?
 }
 
 uninstall () {
   npm uninstall -g $@
-  return $?
 }
 
 upgrade () {
-  install $@
-  return $?
+  npm update -g $@
 }
 
-$@ # Required for function execution
+freeze () {
+  npm ls -g $@
+}
+
+"$@" # Required for function execution

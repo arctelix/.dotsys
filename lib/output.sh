@@ -3,82 +3,6 @@
 # Terminal output
 # Author: arctelix
 
-# COLORS
-
-black="\e[0;30m"
-black_bold="\e[01;30m"
-
-red="\e[0;31m"
-dark_red="\e[01;31m"
-
-green="\e[0;32m"
-dark_green="\e[01;32m"
-
-yellow="\e[0;33m"
-dark_yellow="\e[01;33m"
-
-blue="\e[0;34m"
-dark_blue="\e[01;34m"
-
-magenta="\e[0;35m"
-dark_magenta="\e[01;35m"
-
-cyan="\e[0;36m"
-dark_cyan="\e[01;36m"
-
-light_gray="\e[0;37m"
-light_gray_bold="\e[01;37m"
-
-dark_gray="\e[0;90m"
-dark_gray_bold="\e[01;90m"
-
-l_red="\e[0;91m"
-l_red_bold="\e[01;91m"
-
-l_green="\e[0;92m"
-l_green_bold="\e[01;92m"
-
-l_yellow="\e[0;93m"
-l_yellow_bold="\e[01;93m"
-
-l_blue="\e[94m"
-l_blue_bold="\e[1;94m"
-
-l_magenta="\e[0;95m"
-l_magenta_bold="\e[01;95m"
-
-l_cyan="\e[0;96m"
-l_cyan_bold="\e[01;96m"
-
-white="\e[0;97m"
-white_bold="\e[01;97m"
-
-rc="\e[0m" #reset color
-
-clear_line="\r\e[K"
-clear_line_above="\e[1A\r\e[K"
-
-spacer="\r\e[K        " # indent from screen edge
-indent="        " # indent from current position
-
-# topic highlight color
-hc_topic=""
-
-# user color
-c_user=$white
-# user highlight color
-hc_user=$white_bold
-
-# default value color
-c_default=$l_blue
-
-# code highlight color
-c_code=$magenta
-c_help=$l_blue
-
-#previous color
-pc=
-
 # BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE THESE METHODS )
 
 user () {
@@ -124,7 +48,7 @@ compile_text () {
     shift; shift
     local i=0
     for a in "$@";do
-        if is_even $i ; then
+        if [[ $((i % 2)) -eq 0 ]] ; then
             printf "%b%b " $color "$a"
         else
             printf "%b%b " $hcolor "$a"
@@ -153,7 +77,7 @@ msg () {
   log "MSG" "$@"
 }
 
-msgc_help () {
+msg_help () {
   printf  "\r%b%b%b\n" $c_help "$1" $rc
   log "HELP" "$@"
 }
@@ -393,6 +317,7 @@ output_script() {
 #  debug "=========read_tty $@"
 
    local state
+   local pstate
 
    debug "output_script $@"
 
@@ -411,9 +336,10 @@ output_script() {
 #   sh --init-file -i "$@" 2>&1 | indent_lines
 
    sh "$@"
-   state=${PIPESTATUS[0]}
+   state=$?
    debug "   output_script state=$state"
-   return ${state:-$?}
+   #pstate=${PIPESTATUS[0]}
+   return ${pstate:-$state}
 
 #  unset -f read
 #  debug "=========read_tty unset"

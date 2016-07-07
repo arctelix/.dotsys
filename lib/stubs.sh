@@ -102,7 +102,7 @@ manage_stubs () {
         -t | --task )         task="task" ;;
         -d | --data_update )  data="$1"; data_mode="update" ;;
         -d | --data_collect ) data="$1"; data_mode="collect" ;;
-        *)  invalid_option ;;
+        *)  invalid_option "$1";;
         esac
         shift
     done
@@ -125,7 +125,7 @@ manage_stubs () {
 
     for topic in ${topics[@]}; do
         # Abort no user topic and not a required stub file topic
-        if ! [ "$(topic_dir "$topic" "user")" ] && ! is_required_stub; then
+        if ! [ -d "$(topic_dir "$topic" "user")" ] && ! is_required_stub; then
             continue
         fi
         manage_topic_stubs "$action" "$topic" "$data" "$task" "$force"
@@ -157,7 +157,7 @@ manage_topic_stubs () {
         -t | --task )         task="task" ;;
         -d | --data_update )  data_mode="update" ;;
         -d | --data_collect ) data_mode="collect" ;;
-        *)  invalid_option ;;
+        *)  invalid_option "$1";;
         esac
         shift
     done
@@ -510,8 +510,8 @@ get_topic_stub_target(){
         debug "   -> from primary : $stub_target"
     fi
 
-    # Exiting dst file or xisting user repo file.symlink or none
-    if ! [ "$verify" ] && ! [ -f "$stub_target" ];then
+    # Exiting dst file or existing user repo file.symlink or none
+    if ! [ "$verify" ] && ! [ -f "$stub_target" ] && in_limits "dotsys" -r;then
         # Check for existing stub target (non symlink)
         stub_target="$(get_symlink_dst "$stub_src")"
         if ! [ -L "$stub_target" ] && [ -f "$stub_target" ];then
