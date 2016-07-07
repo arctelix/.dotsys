@@ -33,14 +33,14 @@ alias sfl='echo $SHELL_FILES_LOADED'
 # DOTSYS MODIFY PATH
 
 # user-installed superceeds system
-export PATH="/usr/local/bin:$PATH"
+export PATH="$PLATFORM_USER_BIN:$PATH"
 
 # dotsys-installed superceeds all
 export PATH="$DOTSYS_USER_BIN:$PATH"
 
 # PLATFORM SPECIFIC CONFIG
 
-if [ "$DOTSYS_PLATFORM_SPE" = mac ] ; then
+if [ "$DOTSYS_PLATFORM_SPE" = mac ] || [ "$DOTSYS_PLATFORM_GEN" = windows ] ; then
     export ARCHFLAGS="-arch x86_64"
 fi
 
