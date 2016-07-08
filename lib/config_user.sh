@@ -32,7 +32,6 @@ config_user_var () {
     user_input_opts=()
 
     while [[ $# > 0 ]]; do
-        print "   config_user_var case: $1"
         case "$1" in
         -p | --prompt )   prompt="$2"; shift ;;
         -d | --default )  default="$2"; shift ;;
@@ -82,7 +81,7 @@ config_user_var () {
         set_state_value "user" "$var" "$val"
 
     # Return exit code as required
-    elif [ $val -eq 0 ] || [ $val -eq 1 ]; then
+    elif [ "$val" = "0" ] || [ "$val" = "1" ]; then
         debug "   config_user_var return val = $val"
         return $val
 
@@ -142,17 +141,17 @@ config_shell_prompt () {
     config_user_var "shell_prompt" "$1" --bool --prompt "$prompt"
 }
 
-config_symlink_install_option () {
+config_symlink_option () {
     local prompt="When installing topic dotfiles, which version do you want to use?
           $spacer repo     : Use your repo versions and backup existing originals (typical).
           $spacer original : Import existing originals and backup repo versions (new repo).
           $spacer skip     : Do not install repo version (dry run).
           $spacer confirm  : Confirm each dotfile as required."
-    config_user_var "symlink_install_option" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "symlink_option" "$1" -d "confirm" --prompt "$prompt" \
     --options omit --extra repo --extra original --extra skip --extra confirm
 }
 
-config_symlink_install_norepo () {
+config_symlink_norepo () {
     local prompt="When installing stub files, if exiting originals are found that
           $spacer do not exist in your repo, which version do you want to use?
           $spacer repo     : Use the stub file only (typical).
@@ -160,27 +159,27 @@ config_symlink_install_norepo () {
           $spacer skip     : Do not install repo version (dry run).
           $spacer confirm  : Confirm each dotfile as required."
 
-    config_user_var "symlink_install_norepo" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "symlink_norepo" "$1" -d "confirm" --prompt "$prompt" \
     --options omit --extra repo --extra original --extra skip --extra confirm
 }
 
-config_symlink_uninstall_option () {
+config_unlink_option () {
     local prompt="When un-installing dotfiles, which version do you want to keep?
           $spacer repo     : Keep a copy of your repo version in use.
           $spacer original : Restore and use the original backup file.
           $spacer none     : Remove the repo version and leave the backup un-restored
           $spacer confirm  : Confirm each dotfile as required."
-    config_user_var "symlink_uninstall_option" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "unlink_option" "$1" -d "confirm" --prompt "$prompt" \
     --options omit --extra repo --extra original --extra none --extra confirm
 }
 
-config_symlink_uninstall_nobakup () {
+config_unlink_nobakup () {
     local prompt="When un-installing dotfiles and no original backup exists,
           $spacer what would you like to do?
           $spacer repo     : Keep a copy of your repo version in use.
           $spacer none     : Remove the repo version and leave the backup un-restored
           $spacer confirm  : Confirm each dotfile as required."
-    config_user_var "symlink_uninstall_nobakup" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "unlink_nobakup" "$1" -d "confirm" --prompt "$prompt" \
     --options omit --extra repo --extra original --extra none --extra confirm
 }
 

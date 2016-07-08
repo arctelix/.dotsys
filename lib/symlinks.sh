@@ -193,7 +193,7 @@ symlink () {
 
   # Set default for confirmed
   if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="$default";fi
-  local confirmed="$(config_symlink_confirmed)"
+  local confirmed="$(config_symlink_option)"
   if [ "$confirmed" = "confirm" ]; then confirmed="";fi
   local confirmed_norepo="$(config_symlink_norepo)"
   if [ "$confirmed_norepo" = "confirm" ]; then confirmed_norepo="";fi
@@ -446,7 +446,7 @@ unlink(){
 
   # Set default for confirmed
   if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="original";fi
-  local confirmed="$(config_unlink_confirmed)"
+  local confirmed="$(config_unlink_option)"
   if [ "$confirmed" = "confirm" ]; then confirmed="";fi
   local confirmed_nobackup="$(config_unlink_nobackup)"
   if [ "$confirmed_nobackup" = "confirm" ]; then confirmed_nobackup="";fi
