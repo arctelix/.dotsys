@@ -532,6 +532,10 @@ unlink(){
 
     clear_lines "$message" ${clear:-0}
 
+  # Restore the backup
+  elif [ -f "$backup" ]; then
+    action=original
+
   # no file available to keep
   else
     action=none
@@ -637,6 +641,7 @@ manage_topic_bin () {
 
     local action="$1"
     local topic="$2"
+    shift; shift
 
     local src
     local src_bin
@@ -657,7 +662,7 @@ manage_topic_bin () {
         return
     fi
 
-    local usage="link_topic_bin [<option>]"
+    local usage="manage_topic_bin [<option>]"
     local usage_full="
     -s | --silent        Suppress command already exists warning
     "

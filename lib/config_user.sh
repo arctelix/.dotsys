@@ -13,23 +13,24 @@ config_user_var () {
         -d | --default <val>     Default value for user input
         -b | --bool )            Variable is a boolean value
         -e | --edit )            Edit only mode (error if var does not exist)
-        -t | --test )            Do not echo value just return status
     "
 
-    local var="$1"
-    shift
-
+    local var="$1"; shift
     local set
     local prompt
     local default
     local user_input
     local val
     local ec
-    local ret_test
     local non_bool="--options omit"
     local edit_only
     local user_input_opts
     user_input_opts=()
+
+    if [ "$1" = "--prompt" ]; then
+        set="$1"
+        shift
+    fi
 
     while [[ $# > 0 ]]; do
         case "$1" in
@@ -37,7 +38,6 @@ config_user_var () {
         -d | --default )  default="$2"; shift ;;
         -b | --bool )     non_bool="";;
         -e | --edit )     edit_only="$1";;
-        -t | --test )     ret_test="$1";;
         -* | --* )        user_input_opts+=( "$1" "$2" );shift;;
         *)  uncaught_case "$1" "set";;
         esac
@@ -45,10 +45,12 @@ config_user_var () {
     done
 
     val="$(get_state_value "user" "$var")"
-
-    # Check for exit code required
     ec=$?
-    if ! [ "$val" ] || [ "$ret_test" ];then val=$ec; fi
+
+    # Set exit code
+    if ! [ "$val" ]; then val=$ec; fi
+
+    debug "-- config_user_var $var s:$set v:$val"
 
     if [ "$set" ];then
 
@@ -59,6 +61,12 @@ config_user_var () {
         if [ "$set" = "--prompt" ]; then
             if ! [ "$prompt" ]; then
                 prompt="Provide a value for $(echo "$var" | tr '_' ' ')"
+            fi
+
+            # Convert bool to yes/no
+            if [ $ec -eq 0 ]; then
+                if [ "$val" = "0" ]; then val=yes
+                elif [ "$val" = "1" ]; then val=no;fi
             fi
 
             debug "   config_user_var: prompt:$prompt d:$default bool:$non_bool"
@@ -173,7 +181,7 @@ config_unlink_option () {
     --options omit --extra repo --extra original --extra none --extra confirm
 }
 
-config_unlink_nobakup () {
+config_unlink_nobackup () {
     local prompt="When un-installing dotfiles and no original backup exists,
           $spacer what would you like to do?
           $spacer repo     : Keep a copy of your repo version in use.
@@ -244,13 +252,13 @@ new_user_config () {
   $spacer NEW USERS should choose 'confirm' to evaluate each file individually."
     printf "\n"
 
-    config_symlink_install_option --prompt
+    config_symlink_option --prompt
 
-    config_symlink_install_norepo --prompt
+    config_symlink_norepo --prompt
 
-    config_symlink_uninstall_option --prompt
+    config_unlink_option --prompt
 
-    config_symlink_uninstall_nobakup --prompt
+    config_unlink_nobackup --prompt
 
     printf "\n"
     msg "\nCongratulations $(get_user_name), your preferences are set!\n"

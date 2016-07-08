@@ -2,8 +2,7 @@
 
 install () {
     choco install "$@"
-    cmd
-    refreshenv
+    #TODO: Need a way to add chocolaty paths to cygn path after install
 }
 
 uninstall () {

@@ -494,6 +494,7 @@ git_commit () {
 
     local repo="$1"
     local message="$2"
+    shift; shift
     local local_repo="$local_repo"
     local remote_repo="$remote_repo"
     local result
