@@ -700,7 +700,7 @@ manage_source () {
 
     # REMOVE FROM FILE
     if [ "$action" = "uninstall" ];then
-        remove_file_string "$write_target" "$formatted_source"
+        replace_file_string "$write_target" "$formatted_source" ""
         success_or_fail $? "remove" "source $src_file \n$spacer from -> $write_target"
         modified="remove"
 

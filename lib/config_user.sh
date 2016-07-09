@@ -144,7 +144,7 @@ config_show_stats () {
 }
 
 config_shell_prompt () {
-    print "-- config_shell_prompt: $*"
+    dprint "-- config_shell_prompt: $*"
     local prompt="Use the dotsys shell prompt?"
     config_user_var "shell_prompt" "$1" --bool --prompt "$prompt"
 }

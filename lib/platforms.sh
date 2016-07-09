@@ -7,25 +7,25 @@ PLATFORMS="linux windows mac freebsd openbsd ubuntu debian archlinux cygwin msys
 
 get_platform () {
 
-  if [ -n "$PLATFORM" ]; then
+  if [ "$PLATFORM" ]; then
     printf "$PLATFORM"
     return
   fi
 
   local platform
 
-  if [ "$(uname)" == "Darwin" ]; then
+  if [ "$(uname)" = "Darwin" ]; then
     platform="linux-mac"
   elif [ "$(uname -s)" = "FreeBSD" ]; then
     platform="linux-freebsd"
-  elif [ "$(uname -s)" == "OpenBSD" ]; then
+  elif [ "$(uname -s)" = "OpenBSD" ]; then
     platform="linux-openbsd"
-  elif [ "$(uname -s)" == "Linux" ]; then
+  elif [ "$(uname -s)" = "Linux" ]; then
     platform="linux"
-  elif [ "$(uname -o)" == "Cygwin" ]; then
+  elif [ "$(uname -o)" = "Cygwin" ]; then
     platform="windows-cygwin"
-    babun >/dev/null 2>&1 && platform="windows-babun"
-  elif [ "$(uname -o)" == "Msys" ]; then
+    command -v babun > /dev/null 2>&1 && platform="windows-babun"
+  elif [ "$(uname -o)" = "Msys" ]; then
     platform="windows-msys"
   else
     platform="unknown"

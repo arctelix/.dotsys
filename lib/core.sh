@@ -105,7 +105,7 @@ debug_import () {
 }
 
 # a print function that does not interfere with function output
-print () {
+dprint () {
     printf "%b%b%b\n" $c_debug "$1" $rc 1>&2
 }
 

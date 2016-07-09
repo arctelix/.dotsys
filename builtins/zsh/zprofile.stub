@@ -8,7 +8,9 @@ setopt shwordsplit # split unquoted variable words
 
 {INIT_SHELL_LOGIN}
 
-# LOAD BASH PROFILE SYMLINK
+shell_debug "> start zprofile"
+
+# LOAD ZSH ZPROFILE SYMLINK
 
 {STUB_TARGET}
 

@@ -6,6 +6,17 @@
 
 setopt shwordsplit # split unquoted variable words
 
+# INIT DOTSYS SHELL
+
+# shell_init already called this file
+if [ "$SHELL_INITIALISED" ] && [ "$0" = "-zsh" ];then
+    return
+fi
+
+{INIT_SHELL}
+
+shell_debug "> start zshrc"
+
 # Enable history
 
 autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
@@ -14,10 +25,6 @@ zle -N down-line-or-beginning-search
 
 [[ -n "${key[Up]}"   ]] && bindkey "${key[Up]}"   up-line-or-beginning-search
 [[ -n "${key[Down]}" ]] && bindkey "${key[Down]}" down-line-or-beginning-search
-
-# INIT DOTSYS SHELL
-
-{INIT_SHELL}
 
 # LOAD ZSH FILES
 

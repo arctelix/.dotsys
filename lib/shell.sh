@@ -3,13 +3,23 @@
 # Shell functions
 # Author: arctelix
 
-import platforms
+import platforms platform_user_home
+import platforms get_platform
 import config_user config_shell_prompt
 
+DEBUG_SHELL="true"
+SHELL_OUT="true"
+DOTSYS_PROMPT=""
 
 shell_debug () {
     if [ "$DEBUG_SHELL" = true ]; then
-        printf "%b%b%b\n" "\e[0;92m" "$1" "\e[0m" 1>&2
+        printf "%b%b%b\n" $c_debug "$1" $rc 1>&2
+    fi
+}
+
+shell_out () {
+    if [ "$SHELL_OUT" = true ]; then
+        printf "%b%b%b\n" "\e[0;92m" "$1" $rc 1>&2
     fi
 }
 
@@ -51,7 +61,7 @@ reload () {
 # Sources all required files for shell initialization
 # all login shell init files must call this function
 shell_init() {
-    print "init_shell $1 $2"
+    dprint "init_shell $1 $2"
     local shell="$(get_active "$1")"
     local file="$2"
     local login="$3"
@@ -61,10 +71,6 @@ shell_init() {
         echo "already initialized $shell" 1>&2
         return
     fi
-
-    shell_debug "INITIALIZEING $shell $login from $file"
-    #shell_debug "  shell:$shell file:$file"
-    #shell_debug "  profile:$profile rc:$shellrc"
 
     # Change shells requires new environment
     if [ "$ACTIVE_SHELL" ] && [ "$ACTIVE_SHELL" != "$shell" ];then
@@ -78,23 +84,25 @@ shell_init() {
         echo "exec $shell complete" 1>&2
     fi
 
-    SHELL_INITIALISED="$shell"
 
-    set_prompt "$shell"
-
-    local home="$(platforms platform_user_home)"
+    local home="$(platform_user_home)"
+    local platform="$(get_platform)"
     local profile="$(get_file "profile" "$shell")"
     local shellrc="$(get_file "rcfile" "$shell")"
-    local loaded_files
-    loaded_files=("$file")
 
+    SHELL_INITIALISED="$shell"
     ACTIVE_SHELL="$SHELL_INITIALISED"
+    SHELL_FILES_LOADED+=("$file")
+
+    shell_out "INITIALIZEING $shell $login from $file"
 
     # load global rc file
     [ "$file" != ".shellrc" ] && load_source_file "$home/.shellrc" "RCFILE"
 
-    # Load shells unique rc file ie:.zshrc if it exists
-    [ "$file" != "$shellrc" ] && load_source_file "$home/$shellrc" "RCFILE"
+    # zsh loads .zshrc on it's own after profile so skip it here
+    #if ! [ "$ACTIVE_SHELL" = "zsh" ];then
+        [ "$file" != "$shellrc" ] && load_source_file "$home/$shellrc" "RCFILE"
+    #fi
 
     if [ "$login" ];then
 
@@ -106,28 +114,29 @@ shell_init() {
         # Load shells unique profile ie:.zsh_profile if it exists
         [ "$file" != "$profile" ] && load_source_file "$home/$profile" "PROFILE"
 
-        shell_debug "> LOADING PROFILE $file"
+        shell_out "> LOADING PROFILE $file"
     else
-        shell_debug "> LOADING RCFILE $file"
+        shell_out "> LOADING RCFILE $file"
     fi
 
-    export SHELL_FILES_LOADED="${loaded_files[*]}"
+    set_prompt
 }
 
 load_source_file(){
     local file="$1"
     local init_file="$2"
     local file_name="$(basename "$file")"
+    local topic="$(basename "$(dirname "$file")")"
 
     if [ ! -f "$file" ]; then return;fi
 
     if [ "$init_file" ]; then
-        shell_debug "> LOADING $init_file $file_name"
+        shell_out "> LOADING $init_file $file_name"
     else
-        shell_debug "  - loading $file_name"
+        shell_out "  - loading $topic/$file_name"
     fi
     source "$file"
-    loaded_files+=("$file_name")
+    SHELL_FILES_LOADED+=("$file_name")
 }
 
 
@@ -206,18 +215,29 @@ is_shell_topic () {
 }
 
 
-# Sets the dotsys prompt for each shel
+# Sets the dotsys prompt for the active shell
+# Omit mode arg to check for user preference
+# or use 'on' or 'off' to force
 set_prompt () {
-    local shell="${1:-$ACTIVE_SHELL}"
+
+    local mode="$1"
+    local dsprompt
 
     # Only use dotsys prompt if enabled by user
-    if ! config_shell_prompt; then return; fi
+    if ! [ "$mode" ] && ! config_shell_prompt; then return; fi
 
-    if [ "$shell" = "zsh" ];then
+    if [ "$ACTIVE_SHELL" = "zsh" ];then
         autoload -Uz colors && colors
-        PROMPT="$fg[green]|DS|$reset_color $PROMPT"
-
+        dsprompt="$fg[green]|DS|$reset_color"
     else
-        PS1="\e[0;92m|DS|\e[0m $PS1"
+        dsprompt="\e[0;92m|DS|\e[0m"
+    fi
+
+    # Toggle off
+    if [ "$mode" = "off" ]; then
+        PS1="${PS1/$dsprompt}"
+    # Toggle on
+    elif [ "$PS1" = "${PS1/$dsprompt}" ]; then
+        PS1="$dsprompt$PS1"
     fi
 }

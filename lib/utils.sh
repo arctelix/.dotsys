@@ -34,13 +34,6 @@ unique_list () {
     echo $seen
 }
 
-remove_file_string () {
-    local file="$1"
-    local string="$2"
-    #ex "+g|$string|d" -cwq "$file"
-    sed -i -- "s|$rm_str|g" "$file"
-}
-
 replace_file_string () {
     local file="$1"
     local rm_str="$2"
