@@ -75,11 +75,11 @@ run_manager_task () {
 
   # make sure the topic manager is installed on system
   if [ "$action" = "install" ] && ! is_installed "system" "$manager"; then
-     info "${action}ing manager" "$(printf "%b$manager" $hc_topic)" "for" "$(printf "%b${topics[*]}" $hc_topic)"
+     info "${action}ing manager" "$(printf "%b$manager" "$hc_topic")" "for" "$(printf "%b${topics[*]}" "$hc_topic")"
      # install the manager
      dotsys "$action" "$manager" ${limits[@]} --recursive
      debug "run_manager_task -> END RECURSION continue : run_manager_task $manager $action t:$topic $force"
-     info "Manager ${action%e}ed, resuming" "$( printf "%b$action ${topics[*]}" $hc_topic)"
+     info "Manager ${action%e}ed, resuming" "$( printf "%b$action ${topics[*]}" "$hc_topic")"
   fi
 
   # abort update & freeze actions (nothing to do)
@@ -96,14 +96,14 @@ run_manager_task () {
      if [ "$action" = "install" ] && [ ! "$force" ] && is_installed "$manager" "$topic" --manager ; then
         # Only show the message if is actually installed on manager state
         if is_installed "$manager" "$topic"; then
-            success "The package for" "$( printf "%b$topic" $hc_topic)," "was already ${action}ed by dotsys"
+            success "The package for" "$( printf "%b$topic" "$hc_topic")," "was already ${action}ed by dotsys"
         fi
         continue
      # check if already uninstalled (not testing for repo!)
      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic" --manager; then
         # Only show the message if is actually uninstalled on manager state
         if ! is_installed "$manager" "$topic"; then
-            success "The package for" "$( printf "%b$topic" $hc_topic)," "was already ${action}ed by dotsys"
+            success "The package for" "$( printf "%b$topic" "$hc_topic")," "was already ${action}ed by dotsys"
         fi
         continue
      fi
@@ -192,7 +192,7 @@ manage_dependencies () {
     else
         # only show the message for first dependency
         if ! [ "$task_shown" ]; then
-          info "Installing" "$( printf "%b$topic" $hc_topic)'s" "dependencies $DRY_RUN"
+          info "Installing" "$( printf "%b$topic" "$hc_topic")'s" "dependencies $DRY_RUN"
           task_shown="true"
         fi
         # install
@@ -203,7 +203,7 @@ manage_dependencies () {
           fi
         # already installed
         else
-          success "Dependency Already installed $DRY_RUN:" "$( printf "%b$dep" $hc_topic)"
+          success "Dependency Already installed $DRY_RUN:" "$( printf "%b$dep" "$hc_topic")"
         fi
         # Add dep to deps state
         state_install "deps" "$dep" "$ACTIVE_REPO/$topic"
@@ -211,7 +211,7 @@ manage_dependencies () {
   done
 
   if [ "$action" = "install" ]; then
-    info "Dependencies ${action%e}ed, resuming" "$( printf "%b$action $topic" $hc_topic)"
+    info "Dependencies ${action%e}ed, resuming" "$( printf "%b$action $topic" "$hc_topic")"
   fi
 
 }
@@ -304,7 +304,7 @@ manage_packages () {
 
     debug "   manage_packages final packages: $packages"
 
-    task "${action}ing $DRY_RUN" "$(printf "%b$manager's" $hc_topic)" "packages"
+    task "${action}ing $DRY_RUN" "$(printf "%b$manager's" "$hc_topic")" "packages"
 
     run_manager_task "$manager" "$action" $packages "$force" --packages
 }

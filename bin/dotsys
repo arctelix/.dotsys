@@ -76,15 +76,24 @@ if [ "$init" = "test" ]; then
   source "$DOTSYS_LIBRARY/main.sh"
   DEBUG=true
   echo
-  warn "You are in dotsys test mode!"
+  msg_warn "You are in dotsys test mode!"
   echo
   #eval "$1"
   "$@"
 
-# Reset dotsys files (for testing installer)
+# Reset dotsys files (for testing purposes! YOU COULD MESS YOUR SHIT UP WITH THIS!)
 elif [ "$init" = "reset_files" ]; then
   type="$2"
   shift; shift
+
+  msg_warn "WARNING: THIS IS A DESTRUCTIVE COMMAND!"
+  printf "Are you sure you want to reset $type?
+        \rtype 'yes' or any key to abort : "
+
+  read -r user_input
+  if [ "$user_input" != "yes" ]; then
+      exit
+  fi
 
   if ! [ "$type" ] || [ "$type" = "backups" ]; then
     backups="$(find "$HOME" -mindepth 1 -maxdepth 1 -type f -name "*$1.dsbak")"

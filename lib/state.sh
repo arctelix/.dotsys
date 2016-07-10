@@ -286,7 +286,7 @@ freeze_state() {
     local file="$(state_file "$state")"
     if ! [ -s "$file" ]; then return;fi
 
-    task "Freezing" "$(printf "%b$state state:" $hc_topic)"
+    task "Freezing" "$(printf "%b$state state:" "$hc_topic")"
     while IFS='' read -r line || [[ -n "$line" ]]; do
         #echo " - $line"
         freeze_msg "${line%:*}" "${line#*:}"

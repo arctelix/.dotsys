@@ -633,7 +633,7 @@ dotsys () {
         # Handle no topics found (collect topics from user system)
         if ! [ "$list" ]; then
             if [ "$action" = "install" ]; then
-                msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" $hc_topic)"
+                msg "\nThere are no topics in" "$( printf "%b$(repo_dir "$(get_active_repo)")\n" "$hc_topic")"
             else
                 msg "\nThere are no topics installed by dotsys to" "$action\n"
             fi
@@ -687,7 +687,7 @@ dotsys () {
 
         # ABORT: on platform exclude (after config loaded)
         if topic_excluded "$topic"; then
-            #task "Excluded" "$(printf "%b${topic}" $hc_topic)" "on $PLATFORM"
+            #task "Excluded" "$(printf "%b${topic}" "$hc_topic")" "on $PLATFORM"
             continue
         fi
 
@@ -721,7 +721,7 @@ dotsys () {
 
                 # ABORT: uninstall if it's still in use (uninstalled at end as required).
                 if manager_in_use "$topic"; then
-                    warn "Manager" "$(printf "%b$topic" $hc_topic)" "is in use and can not be uninstalled yet."
+                    warn "Manager" "$(printf "%b$topic" "$hc_topic")" "is in use and can not be uninstalled yet."
                     ACTIVE_MANAGERS+=("$topic")
                     debug "main -> ABORT MANGER IN USE: Active manager $topic can not be ${action%e}ed."
                     continue
@@ -800,7 +800,7 @@ dotsys () {
             fi
 
             if [ "$action_complete" ]; then
-                task "Already ${action}ed" "$(printf "%b$topic" $hc_topic )" "from $action_complete"
+                task "Already ${action}ed" "$(printf "%b$topic" "$hc_topic" )" "from $action_complete"
                 continue
             fi
         fi

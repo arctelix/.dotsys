@@ -156,7 +156,7 @@ manage_repo (){
             # ok to remove unused repo without confirm
             else
                repo_status="unused"
-               task "Uninstall $repo_status repo:" "$(printf "%b$repo" $hc_topic)"
+               task "Uninstall $repo_status repo:" "$(printf "%b$repo" "$hc_topic")"
                confirmed="true"
             fi
 
@@ -166,7 +166,7 @@ manage_repo (){
 
             # Check for git and convert to install
             if ! [ -d "${local_repo}/.git" ];then
-                warn "The local repo" "$(printf "%b$repo" $hc_topic)" "is not initialized for git."
+                warn "The local repo" "$(printf "%b$repo" "$hc_topic")" "is not initialized for git."
                 action="install"
             fi
         fi
@@ -177,7 +177,7 @@ manage_repo (){
     if [ "$complete" ]; then
         # Only show the complete message when we are installing a repo!
         if in_limits "repo" -r; then
-            task "Already ${action%e}ed:" "$(printf "%b$repo" $hc_topic)"
+            task "Already ${action%e}ed:" "$(printf "%b$repo" "$hc_topic")"
         fi
         return
     # CONFIRM
@@ -301,7 +301,7 @@ manage_repo (){
     fi
 
     # Success / fail message
-    success_or_fail $action_status "$action" "$repo_status repo" "$(printf "%b$local_repo" $hc_topic)"
+    success_or_fail $action_status "$action" "$repo_status repo" "$(printf "%b$local_repo" "$hc_topic")"
     return $action_status
 }
 
@@ -433,7 +433,7 @@ manage_remote_repo (){
        task="diverged"
 
     elif [ "$state" = "up-to-date" ];then
-       success "Local repo is" "$(printf "%bup to date" $hc_topic )" "with remote:" "$remote_repo"
+       success "Local repo is" "$(printf "%bup to date" "$hc_topic" )" "with remote:" "$remote_repo"
        # check for uncommitted changes (aborted by user)
        state="$(git status --porcelain | indent_lines)"
        if [ -n "$state" ]; then
@@ -443,10 +443,10 @@ manage_remote_repo (){
        task="up-to-date"
 
     elif [ "$task" = "auto" ]; then
-       info "Auto determined git status:" "$(printf "%b$state" $hc_topic )"
+       info "Auto determined git status:" "$(printf "%b$state" "$hc_topic" )"
        task="$state"
     elif [ "$task" != "$state" ];then
-        warn "A $task was requested, but a" "$(printf "%b$state" $hc_topic )" "is required, please resolve the conflict"
+        warn "A $task was requested, but a" "$(printf "%b$state" "$hc_topic" )" "is required, please resolve the conflict"
     fi
 
 
@@ -567,14 +567,21 @@ init_remote_repo () {
     git_commit "$repo" "initialize remote"
 
     # Git hub will prompt for the user password
-    local resp=`curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"`
-    success_or_fail $? "create" "$(printf "%b$repo_status" $hc_topic)" "remote repo" "$(printf "%b$remote_repo" $hc_topic )" \
-                    "$(msg "$spacer However, The local repo is ready for topics...")"
+    curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}" > /dev/null
+    success_or_fail $? "create" "$(printf "%b$repo_status" "$hc_topic")" "remote repo" "$(printf "%b$remote_repo" "$hc_topic" )"
+    if ! [ $? -eq 0 ]; then
+        "$(msg "$spacer However, The local repo is ready for topics...")"
 
-    cd "$local_repo"
-    git push -u origin "$branch" 2>&1 | indent_lines
-    success_or_fail $? "push" "$(printf "%b$repo_status" $hc_topic)" "repo" "$(printf "%b$remote_repo@$branch" $hc_topic)" \
-                    "$(msg "$spacer However, The local repo is ready for topics...")"
+    # Push to remote
+    else
+        cd "$local_repo"
+        git push -u origin "$branch" 2>&1 | indent_lines
+        success_or_fail $? "push" "$(printf "%b$repo_status" "$hc_topic")" "repo" "$(printf "%b$remote_repo@$branch" "$hc_topic")"
+    fi
+
+
+
+
     cd "$OWD"
 }
 
@@ -725,7 +732,7 @@ setup_git_config () {
             repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
             local cred="$(get_credentialc_helper)"
             git config "--$cfg" credential.helper "$cred"
-            success "git $cfg credential set to:" "$(printf "%b$cred" $hc_topic)"
+            success "git $cfg credential set to:" "$(printf "%b$cred" "$hc_topic")"
 
         # local config
         elif [ "$cfg" = "local" ]; then
@@ -741,15 +748,15 @@ setup_git_config () {
 
             set_state_value "user" "${state_prefix}_user_name" "$authorname"
             git config "--$cfg" user.name "$authorname"
-            success "git $cfg author set to:" "$(printf "%b$authorname" $hc_topic )"
+            success "git $cfg author set to:" "$(printf "%b$authorname" "$hc_topic" )"
 
             set_state_value "user" "${state_prefix}_user_email" "$authoremail"
             git config "--$cfg" user.email "$authoremail"
-            success "git $cfg email set to:" "$(printf "%b$authoremail" $hc_topic )"
+            success "git $cfg email set to:" "$(printf "%b$authoremail" "$hc_topic" )"
 
             # source users existing repo gitconfig.symlink or gitconfig.local.symlink
             git config "--$cfg" include.path "$repo_gitconfig"
-            success "git $cfg include set to:" "$(printf "%b$repo_gitconfig" $hc_topic)"
+            success "git $cfg include set to:" "$(printf "%b$repo_gitconfig" "$hc_topic")"
 
             # create stub file
             if [ "$cfg" = "global" ]; then
@@ -824,11 +831,11 @@ copy_topics_to_repo () {
     local mode
 
 
-    local question="$(printf "Would you like to %badd%b existing topics from %b%s%b
-                    $spacer %b(You will be asked to confirm each topic before import)%b" \
-                    $hc_topic $rc \
-                    $hc_topic "$root_dir" $rc \
-                    $dark_gray $rc )"
+    local question="$(printf "Would you like to search for existing topics in
+                    $spacer directory: %b%s%b
+                    $spacer %b(You will confirm each topic before import)%b" \
+                    "$hc_topic" "$root_dir" $rc \
+                    $c_help $rc )"
 
     local hint="$(printf "\b, or %bpath/to/directory%b" $yellow $rc)"
 
@@ -887,11 +894,11 @@ copy_topics_to_repo () {
 
     # Importable found
     if [ "${found_dirs[*]}" ]; then
-        task "Import topics found in:" "$(printf "\n%b$root_dir:" $hc_topic)"
+        task "Import topics found in:" "$(printf "\n%b$root_dir:" "$hc_topic")"
         msg "$(echo "${found_dirs[@]}" | indent_list)"
     # noting to import
     else
-       info "Importable topics not found in:" "$(printf "\nb$root_dir:" $hc_topic)"
+       info "Importable topics not found in:" "$(printf "\n$spacer $root_dir:" "$hc_topic")"
        return
     fi
 
@@ -906,7 +913,7 @@ copy_topics_to_repo () {
     # Confirm each file to move/copy
     local topic
     for topic in ${found_dirs[@]}; do
-        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:" $hc_topic ) $root_dir" "$(printf "%bto:" $hc_topic ) $repo_dir"
+        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:" "$hc_topic" ) $root_dir" "$(printf "%bto:" "$hc_topic" ) $repo_dir"
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
             #local topic="${t##*/}"
@@ -918,7 +925,7 @@ copy_topics_to_repo () {
             fi
             printf "$rc"
 
-            success_or_fail $? "$mode" "$(printf "%b$topic%b -> %b$repo_dir%b" $hc_topic $rc $hc_topic $rc)"
+            success_or_fail $? "$mode" "$(printf "%b$topic%b -> %b$repo_dir%b" "$hc_topic" $rc "$hc_topic" $rc)"
 
         else
           clear_lines "" 2 # clear two lines of
@@ -932,10 +939,10 @@ confirm_make_primary_repo (){
     # if repo is same as state, bypass check
     if [ "$(state_primary_repo)" = "$repo" ]; then return ; fi
 
-    get_user_input "$(printf "Would you like to make this your primary repo:\n$spacer %b$(repo_dir "$repo")%b" $hc_topic $rc)" --required
+    get_user_input "$(printf "Would you like to make this your primary repo:\n$spacer %b$(repo_dir "$repo")%b" "$hc_topic" $rc)" --required
     if [ $? -eq 0 ]; then
         state_primary_repo "$repo"
-        success "New primary repo:" "$(printf "%b$repo" $hc_topic)"
+        success "New primary repo:" "$(printf "%b$repo" "$hc_topic")"
     fi
 }
 

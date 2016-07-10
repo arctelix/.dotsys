@@ -80,8 +80,13 @@ hc_user=$white_bold
 # default value color
 c_default=$l_blue
 
-# code highlight color
+# default value color
+c_default=$l_blue
+
+# code color
 c_code=$magenta
+
+# help color
 c_help=$l_blue
 
 #previous color
@@ -111,6 +116,10 @@ dprint () {
 
 error () {
   printf  "\r\n%b%bERROR:  %b$*%b\n\n" $clear_line $dark_red $red $rc 1>&2
+}
+
+msg_warn () {
+  printf  "\r%b%b%b%b\n" $clear_line $red "$1" $rc
 }
 
 # USAGE & HELP SYSTEM

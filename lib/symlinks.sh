@@ -209,7 +209,7 @@ symlink () {
 
   # target path matches source (do nothing)
   if [ -L "$dst"  ] && [ "$dst_target" = "$src" ]; then
-      success "Already linked $DRY_RUN" "$(printf "%b$type" $hc_topic )" "$(printf "%b$dst" $hc_topic )"
+      success "Already linked $DRY_RUN" "$(printf "%b$type" "$hc_topic" )" "$(printf "%b$dst" "$hc_topic" )"
       return
   fi
 
@@ -220,12 +220,12 @@ symlink () {
 
   # Test for existing original
   if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]; then
-    # not a link, so exits
-    if ! [ -L "$dst" ] && ! is_stub_file "$src"; then
+    # not a link, so its an exiting file
+    if ! [ -L "$dst" ]; then
       dst_existing="$dst"
 
-    # exists only if dst target exists
-    elif [ -f "$dst_target" ]; then
+    # exists only if dst target exists and target is not .stub or .symlink
+    elif [ -f "$dst_target" ] && ! is_symlinked "$dst_target"; then
       dst_existing="$dst"
     fi
   fi
@@ -309,21 +309,21 @@ symlink () {
 
   if [ "$action" == "skip" ]; then
 
-    success "$(printf "Symlink %s for %b%s%b:" "$skip_reason" $hc_topic "$dst_name" $rc)"
+    success "$(printf "Symlink %s for %b%s%b:" "$skip_reason" "$hc_topic" "$dst_name" $rc)"
     # incorrect link
     if [ -L "$dst" ]; then
       warn "$(printf "Symlinked $type : %b%s%b
                       $spacer currently linked to : %b%s%b
-                      $spacer should be linked to : %b%s%b" $hc_topic "$dst" $rc $hc_topic "$dst_target" $rc $hc_topic "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" "$hc_topic" "$dst" $rc "$hc_topic" "$dst_target" $rc "$hc_topic" "$src" $rc)"
     # original file not linked
     elif [ "$dst_existing" ] && [ "$dst_target" = "$dst" ]; then
       warn "$(printf "original $type : %b%s%b
-                      $spacer should be linked to : %b%s%b" $hc_topic "$dst" $rc $hc_topic "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" "$hc_topic" "$dst" $rc "$hc_topic" "$src" $rc)"
 
     # dest not exist
     else
       warn "$(printf "No $type found at: %b%s%b
-                      $spacer should be linked to : %b%s%b" $hc_topic "$dst" $rc $hc_topic "$src" $rc)"
+                      $spacer should be linked to : %b%s%b" "$hc_topic" "$dst" $rc "$hc_topic" "$src" $rc)"
 
     fi
 
@@ -388,7 +388,7 @@ symlink () {
         repo_target="\n$spacer user file -> $repo_target"
     fi
 
-    success_or_fail $result "link" "$type" "$(printf "%b$dst" $hc_topic)" "$stub_file" "$repo_target"
+    success_or_fail $result "link" "$type" "$(printf "%b$dst" "$hc_topic")" "$stub_file" "$repo_target"
   fi
 }
 
@@ -399,10 +399,10 @@ remove_and_backup_file(){
 
   if ! [ -f "$backup" ] ; then
       mv "$file" "$backup"
-      success_or_fail $? "back" "up $desc version of" "$(printf "%b$file" $hc_topic)" "\n$spacer new backup ->" "$(printf "%b$backup" $hc_topic)"
+      success_or_fail $? "back" "up $desc version of" "$(printf "%b$file" "$hc_topic")" "\n$spacer new backup ->" "$(printf "%b$backup" "$hc_topic")"
   else
       rm -rf "$file"
-      success_or_fail $? "remove" "$desc version of" "$(printf "%b$file" $hc_topic)" "\n$spacer existing backup ->" "$(printf "%b$backup" $hc_topic)"
+      success_or_fail $? "remove" "$desc version of" "$(printf "%b$file" "$hc_topic")" "\n$spacer existing backup ->" "$(printf "%b$backup" "$hc_topic")"
   fi
 
   return $?
@@ -550,7 +550,7 @@ unlink(){
   if [ "$action" != "skip" ]; then
     # Remove the symlink
     rm -rf "$link_file"
-    success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" $hc_topic )"
+    success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" "$hc_topic" )"
   fi
 
   # Skip symlink (DRY RUN)
@@ -563,7 +563,7 @@ unlink(){
 
     if ! [ -f "$backup" ];then backup="none";fi
 
-    success "Unlink $skip_reason for" "$(printf "%b$topic's $link_name" $hc_topic)" "
+    success "Unlink $skip_reason for" "$(printf "%b$topic's $link_name" "$hc_topic")" "
      $spacer existing $type : $link_file
      $spacer linked to $type: $link_target
      $spacer backup $type%  : $backup"
@@ -571,13 +571,13 @@ unlink(){
   # Restore backup
   elif [ "$action" == "original" ]; then
     restore_backup_file "$link_file"
-    success_or_none $? "restore" "backed up version of" "$(printf "%b$topic's $link_name" $hc_topic )"
+    success_or_none $? "restore" "backed up version of" "$(printf "%b$topic's $link_name" "$hc_topic" )"
 
   # Keep a copy of repo version
   elif [ "$action" == "repo" ]; then
     if [ -f "$link_target" ]; then
         cp "$link_target" "$link_file"
-        success_or_fail $? "copy" "repo version of" "$(printf "%b$topic's $link_name" $hc_topic )"
+        success_or_fail $? "copy" "repo version of" "$(printf "%b$topic's $link_name" "$hc_topic" )"
     fi
   fi
 
@@ -722,6 +722,10 @@ manage_topic_bin () {
 
         fi
     done <<< "$files"
+}
+
+is_symlinked () {
+    [ "$1" != "${1%.stub}" ] || [ "$1" != "${1%.symlink}" ]
 }
 
 

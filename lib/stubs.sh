@@ -9,8 +9,8 @@ add_existing_dotfiles () {
     local topic
     local topic_stubs
 
-    confirm_task "add" "any existing original dotfiles from your system to" "dotsys" \
-         "(we'll confirm each file before moving it)"
+    confirm_task "add" "existing original dotfiles to" "dotsys" \
+                 "(we'll confirm each file before moving it)"
     if ! [ $? -eq 0 ]; then return;fi
 
     # iterate builtin topics
@@ -28,7 +28,8 @@ add_existing_dotfiles () {
         while IFS=$'\n' read -r stub_src; do
             debug "src = $stub_src"
             stub_dst="$(get_symlink_dst "$stub_src")"
-            stub_target="$(get_topic_stub_target "$topic" "$stub_src" "user")"
+            stub_name="$(basename "$stub_dst")"
+            stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
             #user_stub_file="$(dotsys_user_stub_file "$topic" "$stub_src")"
 
             # Check for existing original file only (symlinks will be taken care of during stub process)
@@ -38,7 +39,7 @@ add_existing_dotfiles () {
                             $spacer current version: %b$stub_dst%b
                             $spacer dotsys version: %b$stub_target%b
                             $spacer Which version would you like to use with dotsys
-                            $spacer (Don't stress, we'll backup the other one)?" $hc_topic $rc $hc_topic $rc $hc_topic $rc)" \
+                            $spacer (Don't stress, we'll backup the other one)?" "$hc_topic" $rc "$hc_topic" $rc "$hc_topic" $rc)" \
                             --true "current" --false "dotsys"
 
                     # keep system version: backup dotsys version before move
@@ -52,9 +53,9 @@ add_existing_dotfiles () {
                     fi
 
                 else
-                    confirm_task "move" "existing config file for" "$topic" \
-                       "$(printf "%bfrom:%b $stub_dst" $hc_topic $rc )" \
-                       "$(printf "%bto:%b $stub_target" $hc_topic $rc )"
+                    confirm_task "move" "existing $stub_name to" "$topic" \
+                       "$(printf "%bfrom:%b $stub_dst" "$hc_topic" $rc )" \
+                       "$(printf "%bto:%b $stub_target" "$hc_topic" $rc )"
                 fi
 
                 if ! [ $? -eq 0 ]; then continue;fi

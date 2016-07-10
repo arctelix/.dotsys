@@ -77,7 +77,7 @@ topic_exists () {
   # Verify user defined directories
   if [ "$restrict" ] && ! [ -d "$(topic_dir $topic "$restrict")" ]; then
     if ! [ "$recursive" ];then
-        fail "The topic" "$(printf "%b$topic" $hc_topic)" ",was not found in repo:
+        fail "The topic" "$(printf "%b$topic" "$hc_topic")" ",was not found in repo:
         $spacer $(topic_dir $topic "$restrict")"
     fi
     ret=1
@@ -85,7 +85,7 @@ topic_exists () {
   # Verify built in or & user defined directories
   elif ! [ -d "$(topic_dir $topic)" ]; then
     if ! [ "$recursive" ];then
-        fail "The topic" "$(printf "%b$topic" $hc_topic)" ",was not found in dotsys builtins or repo:
+        fail "The topic" "$(printf "%b$topic" "$hc_topic")" ",was not found in dotsys builtins or repo:
         $spacer $(topic_dir $topic "active") $ACTIVE_REPO"
     fi
     ret=1

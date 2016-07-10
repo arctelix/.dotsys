@@ -297,10 +297,10 @@ confirm_task () {
   confirmed="${confirmed:-${!CONFIRMED_VAR}}"
 
   if [ "$confirmed" != "false" ]; then
-    task "$(cap_first "${action%e}")ing $DRY_RUN $prefix" "$(printf "%b$topic" $hc_topic)" "$lines"
+    task "$(cap_first "${action%e}")ing $DRY_RUN $prefix" "$(printf "%b$topic" "$hc_topic")" "$lines"
     return 0
   else
-    task "You skipped $action for $prefix" "$(printf "%b$topic" $hc_topic)" "$lines"
+    task "You skipped $action for $prefix" "$(printf "%b$topic" "$hc_topic")" "$lines"
     return 1
   fi
 }

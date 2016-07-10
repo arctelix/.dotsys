@@ -99,11 +99,11 @@ run_script (){
       state=$?
     fi
 
-    success_or_fail $state "exicute" "script $DRY_RUN" "$(printf "%b$script" $hc_topic )" "on" "$(printf "%b$PLATFORM" $hc_topic)"
+    success_or_fail $state "exicute" "script $DRY_RUN" "$(printf "%b$script" "$hc_topic" )" "on" "$(printf "%b$PLATFORM" "$hc_topic")"
 
   # missing required
   elif [ "$required" ]; then
-    fail "Script not found $DRY_RUN" "$(printf "%b$script" $hc_topic )" "on" "$(printf "%b$PLATFORM" $hc_topic)"
+    fail "Script not found $DRY_RUN" "$(printf "%b$script" "$hc_topic" )" "on" "$(printf "%b$PLATFORM" "$hc_topic")"
     state=11
 
   # missing ok
@@ -190,13 +190,13 @@ run_script_func () {
 
           # Required function success/fail
           if [ "$required" ]; then
-              success_or_fail $state "$action" "$prefix" "$(printf "%b$topic" $hc_topic)" "$message" "$script_name"
+              success_or_fail $state "$action" "$prefix" "$(printf "%b$topic" "$hc_topic")" "$message" "$script_name"
 
           # Only show success for not required
           #elif [ $status -eq 0 ]; then
           # On second thought, this is helpful
           else
-              success_or_fail $state "$action" "$prefix" "$(printf "%b$topic" $hc_topic)" "$message" "$script_name"
+              success_or_fail $state "$action" "$prefix" "$(printf "%b$topic" "$hc_topic")" "$message" "$script_name"
           fi
 
       # Required script fail

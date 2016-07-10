@@ -114,7 +114,7 @@ platform_user_home () {
       home="$(printf "%s" "$($USERPROFILE)")"
       ;;
     * )
-      fail "Cannot determine home directories for" "$( printf "%b$platform" $hc_topic)"
+      fail "Cannot determine home directories for" "$( printf "%b$platform" "$hc_topic")"
       ;;
   esac
 

@@ -121,7 +121,7 @@ create_config_yaml() {
 
         # last node
         if [ "$i" = "$_cfg_yaml_last_node" ]; then
-            success "Saved $cfg_mode config file for" "$(printf "%b${repo}" $hc_topic)" "to
+            success "Saved $cfg_mode config file for" "$(printf "%b${repo}" "$hc_topic")" "to
              $spacer -> $yaml_file"
             _cfg_yaml_last_node=""
         fi
