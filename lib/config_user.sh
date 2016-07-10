@@ -238,8 +238,10 @@ new_user_config () {
     print_logo
 
     printf "\n"
-    msg "Before getting started lets set some common default values."
-    printf "\n"
+    msg "Before getting started lets set some common default values.
+       \rThese values can be changed at any time with the commands:\n"
+    msg "Run this configuration again: \n> $(code "dotsys config\n")\n"
+    msg "Set a specific config value: \n> $(code "dotsys config <var> [value, --prompt]")\n"
 
     config_user_name --prompt
 
