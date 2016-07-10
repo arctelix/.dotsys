@@ -4,7 +4,7 @@
 # Author: arctelix
 
 import platforms platform_user_home
-import platforms get_platform
+import platforms generic_platform
 import config_user config_shell_prompt
 
 DEBUG_SHELL="true"
@@ -77,7 +77,7 @@ shell_init() {
         unset ACTIVE_SHELL
         echo "exec $shell" 1>&2
         if [ "$ACTIVE_LOGIN_SHELL" ] || [ "$login" ];then
-            exec $shell -l
+            exec -l $shell
         else
             exec $shell
         fi
@@ -86,23 +86,26 @@ shell_init() {
 
 
     local home="$(platform_user_home)"
-    local platform="$(get_platform)"
     local profile="$(get_file "profile" "$shell")"
     local shellrc="$(get_file "rcfile" "$shell")"
 
     SHELL_INITIALISED="$shell"
+    SHELL_LOADING="true"
     ACTIVE_SHELL="$SHELL_INITIALISED"
     SHELL_FILES_LOADED+=("$file")
+
+    # Prevent crlf line ending errors on windows bash
+    if [ $shell = "bash" ] && [ "$(generic_platform)" = "windows" ]; then
+        set -o igncr >/dev/null 2>&1
+    fi
 
     shell_out "INITIALIZEING $shell $login from $file"
 
     # load global rc file
     [ "$file" != ".shellrc" ] && load_source_file "$home/.shellrc" "RCFILE"
 
-    # zsh loads .zshrc on it's own after profile so skip it here
-    #if ! [ "$ACTIVE_SHELL" = "zsh" ];then
-        [ "$file" != "$shellrc" ] && load_source_file "$home/$shellrc" "RCFILE"
-    #fi
+    # load shells uniqu rc file
+    [ "$file" != "$shellrc" ] && load_source_file "$home/$shellrc" "RCFILE"
 
     if [ "$login" ];then
 
@@ -120,6 +123,9 @@ shell_init() {
     fi
 
     set_prompt
+
+    # Prevent reloading of shell files
+    SHELL_LOADING="false"
 }
 
 load_source_file(){

@@ -350,7 +350,7 @@ collect_user_data () {
     debug "-- collect user data for : $topic/$stub_name"
 
     # SHELL INIT VARS
-    local init_shell_login="INIT_SHELL=\"$topic .$stub_name login\"; source \"\$(dotsys source init_shell)\""
+    local init_shell_login="INIT_SHELL=\"$topic .$stub_name login\"; source \"\$(dotsys source init_shell)\" \|\| return"
     local init_shell="${init_shell_login/login}"
 
     local var

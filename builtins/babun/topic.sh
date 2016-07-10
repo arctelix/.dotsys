@@ -17,8 +17,8 @@ install () {
     setx PATH=%PATH%;C:\Users\arcte\.babun\cygwin\bin
 
     # Remove duplicate sourcing of .zprofile
-    cd /cygdrive/c/Users/arcte/.babun/cygwin/usr/local/etc
-    replace_file_string 'babun.zsh' 'test -f "$homedir/.zprofile" && source "$homedir/.zprofile"' ''
+    replace_file_string '/cygdrive/c/Users/arcte/.babun/cygwin/usr/local/etc/babun.zsh' \
+                        'test -f "$homedir/.zprofile" && source "$homedir/.zprofile"' ''
 }
 
 "$@"

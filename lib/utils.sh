@@ -106,16 +106,23 @@ escape_sed() {
   -e 's/\&/\\\&/g'
 }
 
-# Convert windows line separators to unix
-fix_line_separators () {
+# Convert windows line endings to unix as required
+fix_crlf () {
+
     if ! cmd_exists dos2unix; then reutrn; fi
 
-    local files="$(find "$DOTSYS_REPOSITORY" -type f -not -path "$DOTSYS_REPOSITORY/\.*")"
+    local files
+
+    if [ "$1" = "system" ]; then
+        files="$(find "$DOTSYS_REPOSITORY" -type f -not -path "$DOTSYS_REPOSITORY/\.*")"
+    elif [ "$1" ]; then
+        files="$(find "$1" -type f -not -path "$1/\.*")"
+    else
+        files="$(find . -type f -not -path ".*/\.*")"
+    fi
+
     local file
     while IFS=$'\n' read -r file; do
-        if grep -qI $'\r' "$file"; then
-            echo "fixing: $file"
-            dos2unix "$file"
-        fi
+        dos2unix "$file"
     done <<< "$files"
 }

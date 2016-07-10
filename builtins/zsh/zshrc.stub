@@ -8,11 +8,6 @@ setopt shwordsplit # split unquoted variable words
 
 # INIT DOTSYS SHELL
 
-# shell_init already called this file
-if [ "$SHELL_INITIALISED" ] && [ "$0" = "-zsh" ];then
-    return
-fi
-
 {INIT_SHELL}
 
 shell_debug "> start zshrc"
