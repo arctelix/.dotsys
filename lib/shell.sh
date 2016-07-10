@@ -144,7 +144,7 @@ shell_init() {
     fi
 
     # Add the system logo to prompt
-    set_prompt
+    shell_prompt
 
     # Prevent reloading of shell files
     SHELL_LOADING="false"
@@ -246,7 +246,7 @@ is_shell_topic () {
 # Sets the dotsys prompt for the active shell
 # Omit mode arg to check for user preference
 # or use 'on' or 'off' to force
-set_prompt () {
+shell_prompt () {
 
     local mode="$1"
     local dsprompt

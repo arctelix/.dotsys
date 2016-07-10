@@ -373,8 +373,9 @@ For example vim's vimrc.sources file looks like this:
    
 ### .<topic>    
 
-Any topic in dotsys with a .stub file and a .dources file can source files from other topics, 
-any file found with an extension matching the topic name will be added to the stub file.
+Any topic in dotsys with a .stub file and a .sources file can source files from other topics.
+Simply add the topic name as a file extension and it will get sourced by that topic on load.
+For example `some_file.vim` will be sourced by vim on load.
 
 ##### The following are built in to dotsys:
 |file extention|purpose                                                             |
@@ -389,9 +390,9 @@ any file found with an extension matching the topic name will be added to the st
 ##### Loading order
 |file name     | loading order                                                      |
 |:-------------|:-------------------------------------------------------------------|
-|path.\*       | Sourced first for a given topic extention                          |
-|funcitons.\*  | Sourced second for a given topic extention                         |
-|aliases.\*    | Sourced third for a given topic extention                          |
+|path.\*       | Sourced first for a given topic extension                          |
+|funcitons.\*  | Sourced second for a given topic extension                         |
+|aliases.\*    | Sourced third for a given topic extension                          |
 |\*.\*         | All other files names are sourced in alphabetical order            |
 
 
@@ -403,14 +404,17 @@ any file found with an extension matching the topic name will be added to the st
     The *.shell extenion replaces the *.sh extenion as to not interfere
     imported systems that do not utilize stub files. 
      
-    .exclude-platforms is replaced by dotsys.cfg files. 
-    
+    .exclude-platforms is replaced by dotsys.cfg files.
+
 
 Anatomy of a dotsys.cfg file
 ----------------------------
 
 https://github.com/arctelix/.dotsys/blob/master/config.md
 
+Shell System
+------------
+https://github.com/arctelix/.dotsys/blob/master/shell.md
 
 
 How do I learn more about dotsys and it's features ?
