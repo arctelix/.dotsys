@@ -487,8 +487,8 @@ unlink(){
       if ! [ "$confirmed_nobackup" ]; then
           get_user_input "No backup of $link_name was found, keep a copy
                   $spacer of the repo version or none?" \
-                  --true "repo" --false "none" --confvar "UNLINK_NOBACKUP" --required --clear
-          if [ $? -eq 0 ]; then action=repo ;fi
+                  --true "none" --false "repo" --confvar "UNLINK_NOBACKUP" --required --clear
+          if ! [ $? -eq 0 ]; then action=repo ;fi
       else
           action="$confirmed_nobackup"
       fi

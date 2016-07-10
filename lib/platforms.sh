@@ -122,6 +122,15 @@ platform_user_home () {
   echo "$home"
 }
 
+platform_required_topics () {
+    local platform="$(get_platform)"
+    case $platform in
+    windows-cygwin ) echo "cygwin";;
+    windows-msys ) echo "msys";;
+    windows-babun ) echo "babun";;
+    esac
+
+}
 topic_excluded () {
   local topic=$1
   local platform="${1:-$(get_platform)}"
