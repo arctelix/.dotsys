@@ -918,7 +918,7 @@ dotsys () {
 
     if [ "$RELOAD_SHELL" ] && ! [ "$recursive" ] && ! [ "$INSTALLER_RUNNING" ];then
         task "Reloading $RELOAD_SHELL"
-        shell reload
+        shell shell_reload
     fi
 }
 
@@ -953,7 +953,7 @@ uninstall_inactive () {
 # Add active shell to topic list if not already there
 add_active_shell_to_topics () {
     if ! [[ "${topics[*]}" =~ $ACTIVE_SHELL ]]; then
-        get_user_input "Do you want to add your current shell '$ACTIVE_SHELL' to your topic list?" -r
+        get_user_input "Do you want to add the current shell '$ACTIVE_SHELL' to your topic list?" -r
         if [ $? -eq 0 ]; then
             topics=("$ACTIVE_SHELL ${topics[*]}")
             topic_dir=
@@ -963,7 +963,8 @@ add_active_shell_to_topics () {
 }
 
 add_dotsys_shell_to_topics () {
-    if [[ "${topics[*]}" =~ $ACTIVE_SHELL ]] && [[ "$topics[*]" =~ shell ]]; then
+    # if shell is not in the topic list and active shell is, add shell to topic list
+    if [[ "${topics[*]}" =~ $ACTIVE_SHELL ]] && ! [[ "$topics[*]" =~ shell ]]; then
        topics=("${topics[*]/$ACTIVE_SHELL/shell $ACTIVE_SHELL}")
     fi
 }

@@ -238,7 +238,7 @@ manage_user_stub () {
 
         # DO NOT DELETE shell stub, but remove target
         if is_required_stub "$topic"; then
-            stub_tar=""
+            stub_tar="not-installed-${stub_name}.symlink"
 
         # delete the stub file
         elif [ -f "$stub_dst" ]; then
@@ -277,24 +277,9 @@ manage_user_stub () {
     if [ $? -eq 0 ]; then
         local prefix
 
-        if [ "$stub_tar" ]; then
-            # Use load_source_file for shell topics
-            if is_shell_topic; then
-                prefix="load_source_file "
-            fi
-
-#            # check if target is .dstarget
-#            local dstarget_src="${stub_tar%.dstarget}"
-#            if [ "$stub_tar" != "${dstarget_src}" ];then
-#                # create dstarget from original
-#                if [ -f "$dstarget_src" ]; then
-#                    cp "$dstarget_src" "${stub_tar}"
-#                fi
-#
-#            # remove unused .dstarget
-#            elif [ -f "${stub_tar}.dstarget" ];then
-#                cp "$dstarget_src" "${stub_tar}"
-#            fi
+        # Use load_source_file for shell topics
+        if is_shell_topic; then
+            prefix="load_source_file "
         fi
 
         sed -e "s|{STUB_TARGET}|$prefix'$stub_tar'|g" "$stub_out" > "$stub_tmp"
@@ -302,7 +287,7 @@ manage_user_stub () {
 
         if ! [ "$target_ok" ];then
             output="
-            $spacer Stub Target : ${stub_tar:-not-installed-${stub_name}.symlink}"
+            $spacer Stub Target : ${stub_tar}"
         fi
 
     fi
