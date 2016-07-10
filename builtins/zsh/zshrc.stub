@@ -10,7 +10,7 @@ setopt shwordsplit # split unquoted variable words
 
 {INIT_SHELL}
 
-shell_debug "> start zshrc"
+debug_shell "> start zshrc"
 
 # Enable history
 

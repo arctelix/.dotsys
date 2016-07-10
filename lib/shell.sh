@@ -6,19 +6,20 @@
 import platforms platform_user_home
 import platforms generic_platform
 import config_user config_shell_prompt
+import config_user config_shell_output
+import config_user config_shell_debug
 
-DEBUG_SHELL="true"
-SHELL_OUT="true"
-DOTSYS_PROMPT=""
+# use 'reload --debug' to activate shell load debug
+DEBUG_SHELL="false"
 
-shell_debug () {
+debug_shell () {
     if [ "$DEBUG_SHELL" = true ]; then
         printf "%b%b%b\n" $c_debug "$1" $rc 1>&2
     fi
 }
 
-shell_out () {
-    if [ "$SHELL_OUT" = true ]; then
+shell_loaded_out () {
+    if [ "$SHELL_LOADING_OUTPUT" = true ] || [ "$DEBUG_SHELL" = true ]; then
         printf "%b%b%b\n" "\e[0;92m" "$1" $rc 1>&2
     fi
 }
@@ -41,27 +42,40 @@ flag_reload () {
 }
 
 # Resources active shell files
-# Supply topic for test only
-# Supply "now" to bypass checks
-reload () {
-    local script="$1"
+shell_reload () {
+    local shell="${1:-$ACTIVE_SHELL}"
+    local script=$2
+
+    # Remove flag for shell reload
+    export RELOAD_SHELL=""
+
     if [ "$ACTIVE_LOGIN_SHELL" ];then
-        exec -l $ACTIVE_SHELL $script
-    elif [ "$ACTIVE_SHELL" ]; then
-        exec $ACTIVE_SHELL $script
+        exec -l $shell $script
+    elif [ "$shell" ]; then
+        exec $shell $script
     else
         exec -l $SHELL $script
     fi
-
-    # Remove flag for reload
-    export RELOAD_SHELL=""
 }
 
+# Activate/deactivate shell debug mode
+shell_debug () {
+    local state=0
+    if [ "$DEBUG_SHELL" = "true" ]; then
+        state=1
+    fi
+
+    config_shell_debug $state
+
+    shell_reload
+}
 
 # Sources all required files for shell initialization
 # all login shell init files must call this function
 shell_init() {
-    dprint "init_shell $1 $2"
+
+    debug_shell "init_shell $1 $2"
+
     local shell="$(get_active "$1")"
     local file="$2"
     local login="$3"
@@ -75,31 +89,38 @@ shell_init() {
     # Change shells requires new environment
     if [ "$ACTIVE_SHELL" ] && [ "$ACTIVE_SHELL" != "$shell" ];then
         unset ACTIVE_SHELL
-        echo "exec $shell" 1>&2
-        if [ "$ACTIVE_LOGIN_SHELL" ] || [ "$login" ];then
-            exec -l $shell
-        else
-            exec $shell
-        fi
-        echo "exec $shell complete" 1>&2
+        debug_shell "exec $shell"
+        shell_reload $shell
+        return
     fi
 
+    # INITIALIZE SHELL
 
     local home="$(platform_user_home)"
     local profile="$(get_file "profile" "$shell")"
     local shellrc="$(get_file "rcfile" "$shell")"
 
-    SHELL_INITIALISED="$shell"
-    SHELL_LOADING="true"
-    ACTIVE_SHELL="$SHELL_INITIALISED"
-    SHELL_FILES_LOADED+=("$file")
+    SHELL_INITIALISED="$shell"      # Prevent calling this function from init_shell
+    SHELL_LOADING="$shell"          # Prevent execution of config files when set 'false'
+    ACTIVE_SHELL="$shell"           # Currently active shell
+    SHELL_FILES_LOADED=("$file")    # All sourced shell files
+
+    # Check if user wants to see the output
+    if config_shell_output; then
+        SHELL_LOADING_OUTPUT="true"
+    fi
+
+    # Check for debug mode
+    if config_shell_debug; then
+        DEBUG_SHELL="true"
+    fi
 
     # Prevent crlf line ending errors on windows bash
     if [ $shell = "bash" ] && [ "$(generic_platform)" = "windows" ]; then
         set -o igncr >/dev/null 2>&1
     fi
 
-    shell_out "INITIALIZEING $shell $login from $file"
+    shell_loaded_out "INITIALIZEING $shell $login from $file"
 
     # load global rc file
     [ "$file" != ".shellrc" ] && load_source_file "$home/.shellrc" "RCFILE"
@@ -117,11 +138,12 @@ shell_init() {
         # Load shells unique profile ie:.zsh_profile if it exists
         [ "$file" != "$profile" ] && load_source_file "$home/$profile" "PROFILE"
 
-        shell_out "> LOADING PROFILE $file"
+        shell_loaded_out "> LOADING PROFILE $file"
     else
-        shell_out "> LOADING RCFILE $file"
+        shell_loaded_out "> LOADING RCFILE $file"
     fi
 
+    # Add the system logo to prompt
     set_prompt
 
     # Prevent reloading of shell files
@@ -137,9 +159,9 @@ load_source_file(){
     if [ ! -f "$file" ]; then return;fi
 
     if [ "$init_file" ]; then
-        shell_out "> LOADING $init_file $file_name"
+        shell_loaded_out "> LOADING $init_file $file_name"
     else
-        shell_out "  - loading $topic/$file_name"
+        shell_loaded_out "  - loading $topic/$file_name"
     fi
     source "$file"
     SHELL_FILES_LOADED+=("$file_name")

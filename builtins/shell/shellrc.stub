@@ -6,6 +6,8 @@
 
 {INIT_SHELL}
 
+debug_shell "> start shellrc"
+
 # DOTSYS VARIABLES
 
 export ACTIVE_SHELL="$ACTIVE_SHELL"

@@ -89,7 +89,7 @@ pc=
 
 # DEBUGGING
 
-DEBUG_IMPORT="true"
+DEBUG_IMPORT="false"
 
 # Prints debug messages when DEBUG=true
 debug () {

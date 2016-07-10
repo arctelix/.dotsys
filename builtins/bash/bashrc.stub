@@ -6,6 +6,8 @@
 
 {INIT_SHELL}
 
+debug_shell "> start bashrc"
+
 # LOAD BASH FILES
 
 {STUB_TARGET}

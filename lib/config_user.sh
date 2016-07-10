@@ -1,6 +1,7 @@
 #!/bin/sh
 
 import state get_state_value
+import state set_state_value
 import state in_state
 
 # USER CONFIG
@@ -16,7 +17,6 @@ config_user_var () {
     "
 
     local var="$1"; shift
-    local set
     local prompt
     local default
     local user_input
@@ -39,7 +39,7 @@ config_user_var () {
         -b | --bool )     non_bool="";;
         -e | --edit )     edit_only="$1";;
         -* | --* )        user_input_opts+=( "$1" "$2" );shift;;
-        *)  uncaught_case "$1" "set";;
+        *)  if ! [ "$set" ]; then set="$1";fi;;
         esac
         shift
     done
@@ -144,9 +144,18 @@ config_show_stats () {
 }
 
 config_shell_prompt () {
-    dprint "-- config_shell_prompt: $*"
     local prompt="Use the dotsys shell prompt?"
     config_user_var "shell_prompt" "$1" --bool --prompt "$prompt"
+}
+
+config_shell_debug () {
+    local prompt="Debug the shell loading process?"
+    config_user_var "shell_debug" "$1" --bool --prompt "$prompt"
+}
+
+config_shell_output () {
+    local prompt="Show sourced files on shell load?"
+    config_user_var "shell_output" "$1" --bool --prompt "$prompt"
 }
 
 config_symlink_option () {
@@ -246,7 +255,10 @@ new_user_config () {
 
     config_use_stubs --prompt
 
-    # TODO : Implement these config variables in symlinks
+    config_shell_prompt --prompt
+
+    config_shell_output --prompt
+
     printf "\n"
     info "The following options allow for hands free install and uninstall.
   $spacer NEW USERS should choose 'confirm' to evaluate each file individually."

@@ -6,6 +6,8 @@
 
 {INIT_SHELL_LOGIN}
 
+debug_shell "> start bash_profile"
+
 # LOAD BASH PROFILE SYMLINK
 
 {STUB_TARGET}

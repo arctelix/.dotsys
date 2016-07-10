@@ -80,8 +80,9 @@ if [ "$init" = "test" ]; then
   echo
   #eval "$1"
   "$@"
-# Return path for sourcing
-elif [ "$init" = "reset" ]; then
+
+# Reset dotsys files (for testing installer)
+elif [ "$init" = "reset_files" ]; then
   type="$2"
   shift; shift
 

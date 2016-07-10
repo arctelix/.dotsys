@@ -6,6 +6,8 @@
 
 {INIT_SHELL_LOGIN}
 
+debug_shell "> start profile"
+
 # LOAD PROFILE SYMLINK
 
 {STUB_TARGET}
