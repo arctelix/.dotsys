@@ -958,7 +958,8 @@ uninstall_inactive () {
 # Add active shell to topic list if not already there
 add_active_shell_to_topics () {
     if ! [[ "${topics[*]}" =~ $ACTIVE_SHELL ]]; then
-        get_user_input "Do you want to add the current shell '$ACTIVE_SHELL' to your topic list?" -r
+        get_user_input "The current shell '$ACTIVE_SHELL' is not in your repo,
+                $spacer add it now?" -r
         if [ $? -eq 0 ]; then
             topics=("$ACTIVE_SHELL ${topics[*]}")
             topic_dir=

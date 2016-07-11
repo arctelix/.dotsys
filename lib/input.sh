@@ -249,15 +249,19 @@ confirm_task () {
   debug "   CONFIRMED_VAR value=${!CONFIRMED_VAR}"
 
   if ! [ "${!CONFIRMED_VAR}" ] && ! [ "$confirmed" ]; then
+      local options
+      local text
 
-      local text="$(printf "Would you like to %b%s%b %s %b%s%b%b?
-         $spacer (%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : " \
-         $hc_user "$action" $rc "$prefix" $hc_user "$topic" $rc "$lines" \
-         $yellow $rc \
-         $yellow $rc \
-         $yellow $rc \
-         $yellow $rc \
-         $c_default $rc)"
+      if [ "$CONFIRMED_VAR" ]; then
+          options="$(printf "(%by%b)es, (%bY%b)es all, (%bn%b)o, (%bN%b)o all [%byes%b] : "  \
+                     $yellow $rc $yellow $rc $yellow $rc $yellow $rc $c_default $rc)"
+      else
+          options="$(printf "(%by%b)es, (%bn%b)o, [%byes%b] : "  \
+                     $yellow $rc $yellow $rc $c_default $rc)"
+      fi
+
+      text="$(printf "Would you like to %b%s%b %s %b%s%b%b? \n$spacer $options" \
+             "$hc_user" "$action" $rc "$prefix" "$hc_user" "$topic" $rc "$lines" )"
 
       user "$text"
 

@@ -119,11 +119,13 @@ user_stub_dir() {
 get_user_or_builtin_file () {
     local topic="$1"
     local find_file="$2"
+
+    debug "-- get_user_or_builtin_file $topic $find_file"
+
     local u_dir="$(topic_dir "$topic" "user")"
     local u_files=()
     local b_dir="$(topic_dir "$topic" "builtin")"
     local b_files=()
-
 
     # check user directory for file
     if [ -d "$u_dir" ]; then
@@ -131,8 +133,8 @@ get_user_or_builtin_file () {
     fi
 
     # check builtin directory for file
-    if ! [ "$file" ] && [ -d "$b_dir" ];then
-        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file") )
+    if [ -d "$b_dir" ];then
+        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" -not -name '\.*') )
     fi
 
     local file

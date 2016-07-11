@@ -182,10 +182,19 @@ manage_repo (){
         return
     # CONFIRM
     else
-        confirm_task "$action" "" "$repo_status repo $repo:$branch" "-> $local_repo" --confvar "GLOBAL_CONFIRMED"
-        if ! [ $? -eq 0 ]; then return; fi
-    fi
+        confirm_task "$action" "" "$repo_status repo $repo:$branch" "-> $local_repo" --confvar "REPO_CONFIRMED"
+        if ! [ $? -eq 0 ]; then
+            if [ "$action" = install ]; then
 
+                msg_help "$spacer A repo must be installed before it can be used:
+                          $spacer to install another repo locally use : " "dotsys install user/repo\n" \
+                         "$spacer to install topics from another repo : " "dotsys install from user/repo"
+                exit
+            else
+                return
+            fi
+        fi
+    fi
 
     local action_status=1
 
@@ -247,7 +256,7 @@ manage_repo (){
 
             # preview repo and confirm install
             if [ "$repo_status" != "new" ]; then
-                confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg"
+                confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg" --confvar ""
                 if [ "$?" -eq 0 ]; then
                     create_config_yaml "$repo" | indent_lines
                     if [ $? -eq 0 ]; then
@@ -453,7 +462,7 @@ manage_remote_repo (){
 
     # perform task for git
     if [ "$task" = "push" ] || [ "$task" = "pull" ];then
-        confirm_task "$task" "" "$remote_repo" "$confirmed"
+        confirm_task "$task" "" "$remote_repo" "$confirmed" --confvar "GIT_CONFIRMED"
         if ! [ $? -eq 0 ]; then return 1; fi
 
         result="$(git "$task" origin "$branch" 2>&1)"
@@ -472,7 +481,7 @@ init_local_repo (){
     local local_repo="$local_repo"
     local remote_repo="$remote_repo"
 
-    confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo"
+    confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo" --confvar "GIT_CONFIRMED"
     if ! [ $? -eq 0 ]; then exit; fi
 
     cd "$local_repo"
@@ -559,7 +568,7 @@ init_remote_repo () {
     local remote_repo="$remote_repo"
     local OWD="$PWD"
 
-    confirm_task "initialize" "remote" "repo:" "$remote_repo"
+    confirm_task "initialize" "remote" "repo:" "$remote_repo" --confvar "GIT_CONFIRMED"
     if ! [ $? -eq 0 ]; then return; fi
 
 
@@ -659,13 +668,14 @@ install_required_repo_files () {
 
 setup_git_config () {
     local repo="$1"
-    local options="${2:-global local}"
+    local options
+    options=("${2:-global local}")
     local template="$(builtin_topic_dir "git")/gitconfig.template"
     local repo_dir="$(repo_dir "$repo")"
     local OWD="$PWD"
 
-    if [ "$options" != global ]; then
-        confirm_task "configure" "git for" "$repo"
+    if [ "$options" = local ]; then
+        confirm_task "configure" "git for" "$repo" --confvar "GIT_CONFIRMED"
         if [ $? -eq 1 ]; then return; fi
     fi
 
@@ -676,7 +686,7 @@ setup_git_config () {
     local local_prefix="git_${repo%/*}_${repo##*/}"
     local state_prefix
 
-    for cfg in $options; do
+    for cfg in "${options[@]}"; do
 
         # state prifx for cfg
         if [ "$cfg" = "local" ]; then
@@ -704,10 +714,12 @@ setup_git_config () {
 
         if [ "$cfg" = "local" ]; then
             if ! [ "$authorname" ] || ! [ "$authoremail" ]; then
-                get_user_input "Use the global author settings for your repo?"
-                if [ $? -eq 0 ]; then
-                    continue
+                if [ "$options" = local ]; then
+                    msg "$spacer global author name = $global_authorname"
+                    msg "$spacer global author email = $global_authoremail"
                 fi
+                get_user_input "Use the global author settings for your repo?" --confvar "GIT_CONFIRMED"
+                if [ $? -eq 0 ]; then continue; fi
             fi
         fi
 
@@ -913,7 +925,7 @@ copy_topics_to_repo () {
     # Confirm each file to move/copy
     local topic
     for topic in ${found_dirs[@]}; do
-        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:" "$hc_topic" ) $root_dir" "$(printf "%bto:" "$hc_topic" ) $repo_dir"
+        confirm_task "$mode" "" "$topic" "$(printf "%bfrom:" "$hc_topic" ) $root_dir" "$(printf "%bto:" "$hc_topic" ) $repo_dir" --confvar "COPY_TOPIC_CONFIRMED"
         if [ $? -eq 0 ]; then
             clear_lines "" 2 #clear task confirm
             #local topic="${t##*/}"

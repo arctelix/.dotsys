@@ -88,6 +88,7 @@ c_code=$magenta
 
 # help color
 c_help=$l_blue
+hc_help=$dark_blue
 
 #previous color
 pc=

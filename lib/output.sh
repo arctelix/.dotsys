@@ -78,7 +78,8 @@ msg () {
 }
 
 msg_help () {
-  printf  "\r%b%b%b\n" $c_help "$1" $rc
+  local text="$(compile_text $c_help $c_code "$@")"
+  printf  "\r%b%b%b\n" $c_help "$text" $rc
   log "HELP" "$@"
 }
 

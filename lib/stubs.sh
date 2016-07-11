@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Stub functions
+# Author: arctelix
 
 # Checks user's system for existing configs and move to repo
 # Make sure this only happens for new user install process
@@ -9,16 +11,20 @@ add_existing_dotfiles () {
     local topic
     local topic_stubs
 
-    confirm_task "add" "existing original dotfiles to" "dotsys" \
-                 "(we'll confirm each file before moving it)"
+    confirm_task "search" "for existing dotfiles to" "import" \
+                 "(each file wil be confirmed individually)"
     if ! [ $? -eq 0 ]; then return;fi
 
     # iterate builtin topics
     for topic in $(get_dir_list "$(dotsys_dir)/builtins"); do
-
+        task "Searching for existing $topic dotfiles"
         # iterate topic sub files
         local topic_dir="$(repo_dir "$repo")/$topic"
         local stub_files="$(get_topic_stub_sources "$topic")"
+
+        # Prevent loop on blank value
+        if ! [ "$stub_files" ]; then continue; fi
+
         local stub_dst
         local stub_target
         local stub_src
@@ -26,7 +32,7 @@ add_existing_dotfiles () {
         debug "  add_existing_dotfiles topic_dir = $topic_dir"
         debug "  add_existing_dotfiles stub_files = $stub_files"
         while IFS=$'\n' read -r stub_src; do
-            debug "src = $stub_src"
+            debug "   - stub src = $stub_src"
             stub_dst="$(get_symlink_dst "$stub_src")"
             stub_name="$(basename "$stub_dst")"
             stub_target="$(get_topic_stub_target "$topic" "$stub_src")"
@@ -71,7 +77,6 @@ add_existing_dotfiles () {
             fi
         done <<< "$stub_files"
     done
-
 }
 
 # Collects all required user data at start of process

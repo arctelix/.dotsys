@@ -3,8 +3,6 @@
 # Symlink functions
 # Author: arctelix
 
-# All functions pertaining to symlinks
-
 # Manage all topic symlinks
 # options:
 # --unlink | -u |  : (followed by unlink option)

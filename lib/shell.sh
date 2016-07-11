@@ -35,7 +35,7 @@ flag_reload () {
     if ! [ "$active_shell" ] || [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
         state=0
         flagged="$topic"
-        dprint "FLAG RELOAD SHELL ($state): $flagged"
+        debug "FLAG RELOAD SHELL ($state): $flagged"
     fi
     echo "$flagged"
     return $state

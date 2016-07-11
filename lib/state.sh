@@ -203,12 +203,11 @@ get_state_value () {
 
   # State file does not exist yet so pretend it's ok (pre install)
   if ! [ -f "$file" ]; then return 0;fi
-  debug "   - get_state_value grep: ^$key:.*$:"
+
   local lines
   lines=($(grep "^$key:.*$" "$file"))
   ret=$?
   local val="${lines#*:}"
-  #debug "   - get_state_value lines: $lines"
 
   if [ "$val" = "1" ] || [ "$val" = "0" ]; then
     ret=$val
@@ -240,7 +239,7 @@ get_state_value () {
       done
   fi
 
-  debug "   - get_state_value found lines: ${lines[*]}
+  debug "   - get_state_value (^$key:.*$:) found lines: ${lines[*]}
      -> exit code = $ret | val =  $val"
 
   return $ret

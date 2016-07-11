@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# User config functions
+# Author: arctelix
+
 import state get_state_value
 import state set_state_value
 import state in_state
