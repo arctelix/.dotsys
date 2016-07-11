@@ -281,16 +281,25 @@ freeze_states() {
     done
 }
 
-freeze_state() {
+freeze_state () {
+    task "Freezing" "$(printf "%b$state state:" "$hc_topic")"
+    list_state "$1" freeze
+}
+
+list_state () {
     local state="$1"
+    local mode="$2"
     local file="$(state_file "$state")"
     if ! [ -s "$file" ]; then return;fi
 
-    task "Freezing" "$(printf "%b$state state:" "$hc_topic")"
     while IFS='' read -r line || [[ -n "$line" ]]; do
-        #echo " - $line"
-        freeze_msg "${line%:*}" "${line#*:}"
-
+        if [ "$mode" = freeze ]; then
+            freeze_msg "${line%:*}" "${line#*:}"
+        elif [ "$mode" = color ]; then
+            printf "%b${line%:*}%b : ${line#*:}\n" $green $rc
+        else
+            echo "$line"
+        fi
     done < "$file"
 }
 

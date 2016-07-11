@@ -32,10 +32,10 @@ flag_reload () {
     local state=1
 
     # Test if topic is current_shell or "required"
-    if ! [ "$ACTIVE_SHELL" ] || [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
+    if ! [ "$active_shell" ] || [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
         state=0
         flagged="$topic"
-        debug "FLAG RELOAD SHELL ($state): $flagged"
+        dprint "FLAG RELOAD SHELL ($state): $flagged"
     fi
     echo "$flagged"
     return $state

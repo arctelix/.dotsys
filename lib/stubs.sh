@@ -245,6 +245,7 @@ manage_user_stub () {
         elif [ -f "$stub_dst" ]; then
             rm "$stub_dst"
             success_or_fail $? "remove" "stub file:" "${topic}/$stub_name"
+            RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
             return
         fi
     fi

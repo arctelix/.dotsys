@@ -184,7 +184,8 @@ That's cool, what else does it do ?
 - Automatically backs up any original files (safety first!).
 - Management and organization of OS settings and versions (soon).
 - Stub file template variables to automate collection of user data.
-- Topics are easy to create and distribute.
+- Topics are easy to create, share, and sync between machines.
+- Detailed logging of all actions
 - An API you already know how to use.
 - AND MANY MORE FEATURES
 

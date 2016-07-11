@@ -191,12 +191,23 @@ symlink () {
   local options
   local default="repo"
 
-  # Set default for confirmed
-  if [ "$SYMLINK_CONFIRMED" = "default" ]; then SYMLINK_CONFIRMED="$default";fi
-  local confirmed="$(config_symlink_option)"
-  if [ "$confirmed" = "confirm" ]; then confirmed="";fi
-  local confirmed_norepo="$(config_symlink_norepo)"
-  if [ "$confirmed_norepo" = "confirm" ]; then confirmed_norepo="";fi
+
+  if [ "$SYMLINK_CONFIRMED" ]; then
+      # Set default for confirmed
+      if [ "$SYMLINK_CONFIRMED" = "default" ]; then
+        SYMLINK_CONFIRMED="$default"
+        SYMLINK_NOREPO="$default"
+      else
+        SYMLINK_NOREPO="$SYMLINK_CONFIRMED"
+      fi
+  else
+      SYMLINK_CONFIRMED="$(config_symlink_option)"
+      if [ "$SYMLINK_CONFIRMED" = "confirm" ]; then SYMLINK_CONFIRMED="";fi
+      SYMLINK_NOREPO="${SYMLINK_NOREPO:-$(config_symlink_norepo)}"
+      if [ "$SYMLINK_NOREPO" = "confirm" ]; then SYMLINK_NOREPO="";fi
+  fi
+
+
 
 
   debug "-- symlink src   = $src"
@@ -246,7 +257,7 @@ symlink () {
   if [ "$dst_existing" ] && ! [ "$repo_existing" ]; then
 
    # confirm options with user
-    if ! [ "$confirmed_norepo" ]; then
+    if ! [ "$SYMLINK_NOREPO" ]; then
         get_user_input "Do you want to import the existing original $dst_name $type
                 $spacer from your home directory or just use the repo stub file?" \
                 --true "original" --false "repo" -r -v SYMLINK_NOREPO --clear
@@ -254,11 +265,11 @@ symlink () {
             action="original"
         fi
     else
-        action="$confirmed_norepo"
+        action="$SYMLINK_NOREPO"
     fi
 
   # existing and repo version found
-  elif [ "$dst_existing" ] && [ ! "$confirmed" ]; then
+  elif [ "$dst_existing" ] && [ ! "$SYMLINK_CONFIRMED" ]; then
 
     message="$(printf "An existing original version of %b$dst_name%b was found:
                $spacer your repo version: %b$repo_existing%b

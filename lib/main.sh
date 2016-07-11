@@ -175,7 +175,9 @@ dotsys () {
                     re-sources bin, re-sources stubs
     freeze          Output installed state to terminal
                     use --log option to freeze to file
-    config          Configure options 'config <var_name> [<set value or --prompt>]'
+    config          Get or set values for user options
+                    All : 'dotsys config [--prompt>]'
+                    One : 'dotsys config <var_name> [<value or --prompt>]'
 
     <topics> optional:
 
@@ -467,6 +469,9 @@ dotsys () {
 
         # Run full user config (no variable name supplied)
         if ! [ "$config_var" ]; then
+            list_state "user" "color"
+
+        elif [ "$config_var" = "--prompt" ]; then
             new_user_config
             new_user_config_repo
 
@@ -474,13 +479,14 @@ dotsys () {
         elif cmd_exists "$config_func"; then
             $config_func "$config_val"
             state=$?
-            if [ $state -eq 1 ]; then error_msg="error: $config_func"; fi
+            if [ $state -eq 1 ]; then error_msg="config function error: $config_func"; fi
 
         # use generic function
         else
             config_user_var "$config_var" "$config_val" --edit
             state=$?
-            if [ $state -eq 1 ]; then error_msg="not found: $config_var "; fi
+            if [ $state -eq 1 ]; then error_msg="config variable not found: $config_var "; fi
+
         fi
 
         if [ "$config_val" ]; then
@@ -902,7 +908,6 @@ dotsys () {
             debug "main -> REPO NO LONGER USED uninstalling"
             manage_repo "uninstall" "$ACTIVE_REPO" "$force"
             debug "main -> FINISHED (repo uninstalled)"
-            exit
         fi
     fi
 
@@ -916,7 +921,7 @@ dotsys () {
 
     # RELOAD_SHELL WHEN REQUIRED
 
-    if [ "$RELOAD_SHELL" ] && ! [ "$recursive" ] && ! [ "$INSTALLER_RUNNING" ];then
+    if ! [ "$recursive" ] && [ "$RELOAD_SHELL" ] && ! [ "$INSTALLER_RUNNING" ];then
         task "Reloading $RELOAD_SHELL"
         shell shell_reload
     fi
