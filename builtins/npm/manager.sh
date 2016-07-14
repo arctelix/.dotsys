@@ -1,6 +1,7 @@
 #!/bin/sh
 
 install () {
+  dprint "nmp install called : $*"
   npm install -g $@
 }
 

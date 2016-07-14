@@ -333,12 +333,3 @@ manager_in_use () {
     return $r
 }
 
-topic_in_use () {
-    local topic="${1:-$topic}"
-    # If the topic is a key in deps.state then it can not be
-    # uninstalled until all it's dependant topics are uninstalled.
-    in_state "deps" "$topic" "$ACTIVE_REPO"
-    local r=$?
-    debug "   - topic_in_use: $topic = $r"
-    return $r
-}

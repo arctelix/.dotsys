@@ -1,16 +1,15 @@
 #!/bin/sh
 
 install () {
-    choco install "$@"
-    #TODO: Need a way to add chocolaty paths to cygn path after install
+    choco install "$@" --yes
 }
 
 uninstall () {
-    choco uninstall "$@"
+    choco uninstall "$@" --yes
 }
 
 upgrade () {
-    choco upgrade "$@"
+    choco upgrade "$@" --yes
 }
 
 freeze () {
