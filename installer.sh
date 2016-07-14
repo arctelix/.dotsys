@@ -65,12 +65,17 @@ dotsys_installer () {
     get_user_input "Would you like to install dotsys?" --confvar ""
     if ! [ $? -eq 0 ]; then  exit; fi
 
-    new_user_config
-
     # make sure PLATFORM_USER_BIN is on path
+    PLATFORM_USER_BIN="$(platform_user_bin)"
+
+    if [ $? -eq 1 ]; then
+        read -p "PRESS ANY KEY TO ABORT"
+        exit 1
+    fi
+
     if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
-        export PATH=$PATH:/usr/local/bin
-        debug "added /usr/local/bin to path: $PATH"
+        export PATH="$PLATFORM_USER_BIN:$PATH"
+        task "added $PLATFORM_USER_BIN to path: $PATH"
     fi
 
     # create required files and directories
@@ -98,7 +103,10 @@ dotsys_installer () {
         #task "Installing dotsys core files"
         #manage_topic_bin link dotsys
         alias atest='echo alias test success'
+
+        new_user_config
     fi
+
 
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"
@@ -112,7 +120,7 @@ dotsys_installer () {
 #     task "Reloading $ACTIVE_SHELL"
 #     sudo exec -l $ACTIVE_SHELL $DOTSYS_LIBRARY/install.sh
 
-    INSTALLER_RUNNING=false
+    INSTALLER_RUNNING=""
     if [ "$action" = "install" ]; then
         task "Install user repo and topics\n"
         dotsys "$action" from ""

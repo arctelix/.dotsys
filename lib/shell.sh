@@ -9,8 +9,10 @@ import config_user config_shell_prompt
 import config_user config_shell_output
 import config_user config_shell_debug
 
-# use 'reload --debug' to activate shell load debug
-DEBUG_SHELL="false"
+# use 'shell_debug' to activate shell load debug
+if config_shell_debug;then
+    DEBUG_SHELL=true
+fi
 
 debug_shell () {
     if [ "$DEBUG_SHELL" = true ]; then
@@ -20,7 +22,7 @@ debug_shell () {
 
 shell_loaded_out () {
     if [ "$SHELL_LOADING_OUTPUT" = true ] || [ "$DEBUG_SHELL" = true ]; then
-        printf "%b%b%b\n" "\e[0;92m" "$1" $rc 1>&2
+        printf "%b%b%b\n" "\e[0;92m" "$1" $rc
     fi
 }
 
@@ -30,6 +32,8 @@ flag_reload () {
     local flagged="$2"
     local active_shell="$ACTIVE_SHELL"
     local state=1
+
+    debug "-- flag_reload $ACTIVE_SHELL"
 
     # Test if topic is current_shell or "required"
     if ! [ "$active_shell" ] || [ "$topic" = "$active_shell" ] || [ "$topic" = "shell" ];then
@@ -49,6 +53,9 @@ shell_reload () {
     # Remove flag for shell reload
     export RELOAD_SHELL=""
 
+    # The following error occurs when installing and zsh is active shell
+    # locking failed for /cygdrive/c/Users/arcte/.zsh_history: no such file or directory
+    # once the shell is reloaded the error no longer occurs and seems harmless
     if [ "$ACTIVE_LOGIN_SHELL" ];then
         exec -l $shell $script
     elif [ "$shell" ]; then

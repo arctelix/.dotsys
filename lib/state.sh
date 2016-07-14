@@ -96,7 +96,6 @@ is_installed () {
 
     # Check if installed on system, not managed by dotsys
     if ! [ "$installed" -eq 0 ]; then
-        local installed_test="$(get_topic_config_val "$key" "installed_test")"
 
         # installed on system
         if cmd_exists "${installed_test:-$key}"; then
@@ -132,8 +131,11 @@ is_installed () {
 
         # not installed on system
         else
-            installed=1
-            debug "   not installed on system -> $installed"
+            # Topics installed on windows may not be on path yet
+            local installed_test="$(get_topic_config_val "$key" "installed_test")"
+            find_windows_cmd "${installed_test:-$key}"
+            installed=$?
+            debug "   cmd installed on system (checked windows)  -> $installed"
         fi
     fi
 
@@ -408,4 +410,42 @@ get_installed_topics () {
         fi
 
     done < "$(state_file "dotsys")"
+}
+
+topic_in_use () {
+    local topic="${1:-$topic}"
+    # If the topic is a key in deps.state then it can not be
+    # uninstalled until all it's dependant topics are uninstalled.
+    in_state "deps" "$topic" "$ACTIVE_REPO"
+    local r=$?
+    debug "   - topic_in_use: $topic = $r"
+    return $r
+}
+
+
+# Attempts to locate commands and add a local reference to them
+# Windows apps are not installed to known locations so we need to
+# search for manager commands or managed topic installs will fail
+find_windows_cmd () {
+
+    if [ "$(generic_platform)" != windows ];then return; fi
+    if ! [ "$1" ];then echo "find_windows_cmd : a command must be supplied"; exit; fi
+    if cmd_exists "$1"; then return; fi
+
+    local find_cmd="$1"
+
+    debug "-- find_windows_cmd : $find_cmd"
+
+    local cmds="$( find "$HOME/AppData/Local/" "$HOME/AppData/Roaming/" "/cygdrive/c/Program Files" -maxdepth 3 -type f -name "$find_cmd" -not -path "*/Temp/*" )"
+
+    local path
+    while read -r path || [[ -n "$path" ]] ; do
+         if [ ! "$path" ]; then continue; fi
+         debug "   adding windows cmd : $path"
+         eval "$find_cmd (){
+            '$path' \"\$@\"
+         }"
+         return 0
+    done <<<"$cmds"
+    return 1
 }

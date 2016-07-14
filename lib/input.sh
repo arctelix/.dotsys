@@ -80,7 +80,6 @@ get_user_input () {
         options="\b"
         true="omit"
         false="omit"
-        invalid=
     elif [ "$options" ]; then
         true="omit"
         false="omit"
@@ -112,12 +111,6 @@ get_user_input () {
         false=
     fi
 
-    # Make all input valid and require confirm
-    if ! [ "$true" ] || ! [ "$false" ]; then
-        confirmed=
-        invalid=
-    fi
-
     # put options on new line
     if [ "$hint" ] || [ "${extra[0]}" ] || [ "$CONFIRMED_VAR" ]; then
        options="\n$spacer $options"
@@ -141,19 +134,27 @@ get_user_input () {
     debug "      get_user_input: extra_regex=$extra_regex"
     debug "      get_user_input: confirm=$confirmed invalid=$invalid"
 
+    # Allow any response if no options
+    if ! [ "$options" ] || [ "$options" = "\b" ]; then
+        debug "      get_user_input: no options so any input ok"
+        invalid=""
+    fi
+
     # Get user input
     default="${default:-$true}"
-    question=$(printf "$question $options ${hint}[%b${default}%b]" $c_default $rc)
-    debug "      get_user_input fore question"
+    question="$(printf "$question $options ${hint}[%b${default}%b]" $c_default $rc)"
+
     user "${question}: "
-    debug "      get_user_input after  question"
-    local state=0
+
+    local state
     if ! [ "$confirmed" ]; then
 
         while true; do
             read user_input < /dev/tty
 
             user_input="${user_input:-$default}"
+
+            debug "   user_input=$user_input"
 
             case "$user_input" in
                 "") # any input is ok
@@ -188,16 +189,30 @@ get_user_input () {
                     ;;
                 help )
                     msg_help "$(printf "$help")"
+
                     ;;
-                [${extra_regex}] )
-                    state=0
-                    break
-                    ;;
-                * ) # any input is ok
+                * )
+                    # Check for extra options
+                    if [ "$extra" ];then
+                        debug "   get_user_input: checking EXTRA OPTIONS MATCH $user_input"
+                        for opt in "${extra[@]}"; do
+                            if [[ "$opt" =~ ^$user_input ]]; then
+                                debug "   get_user_input: $user_input MATCHED -> $opt"
+                                user_input="$opt"
+                                state=0
+                                break
+                            fi
+                        done
+                        if [ $state -eq 0 ];then break;fi
+                    fi
+
+                    # any input is ok
                     if ! [ "$invalid" ]; then
+                        debug "   get_user_input: NO INVALID ANSWER"
                         state=0
                         break
                     fi
+
                     # use invalid message
                     msg_invalid_input "$question > $invalid : "
                     ;;

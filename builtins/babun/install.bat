@@ -1,13 +1,23 @@
+@ECHO OFF
 
-# Sets $HOME to user's windows home rather then .babun/home/<username>
-setx HOME $env:userprofile
+set profile_home=y
+set /p profile_home="Would you like to make the cygwin home directory the same as your windows user profile: %USERPROFILE%? (y)es (n)o [y] : "
 
-# now install babun
-# Im still confused if its better to install babun in an elevated prompt or not?
-choco install babun
+if /I %profile_home%==y (
+  :: Sets $HOME to user's windows home rather then .babun/home/<username>
+  setx HOME "%USERPROFILE%" 1>nul
+)
 
-# Add cygwin bin to path so we get use of those tools on command line
-setx PATH=%PATH%;C:\Users\arcte\.babun\cygwin\bin
+:: install babun
+
+choco install babun -y
+
+if %ERRORLEVEL%==1 (
+  echo [ fail ] Failed to install babun
+  goto :eof
+) else (
+  echo [  ok  ] Installed babun
+)
 
 
 

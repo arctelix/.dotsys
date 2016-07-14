@@ -24,7 +24,7 @@ get_platform () {
     platform="linux"
   elif [ "$(uname -o)" = "Cygwin" ]; then
     platform="windows-cygwin"
-    command -v babun > /dev/null 2>&1 && platform="windows-babun"
+    [ "$BABUN_HOME" ] && platform="windows-babun"
   elif [ "$(uname -o)" = "Msys" ]; then
     platform="windows-msys"
   else
@@ -37,40 +37,63 @@ get_platform () {
 
 platform_user_bin () {
 
-  if [ ! "$1" ] && [ -n "$PLATFORM_USER_BIN" ]; then
-    echo "$PLATFORM_USER_BIN"
-    return
-  fi
+#  if [ ! "$1" ] && [ -n "$PLATFORM_USER_BIN" ]; then
+#    echo "$PLATFORM_USER_BIN"
+#    return
+#  fi
 
   local bin_path="/usr/local/bin"
   local missing_var
+  local example
   local platform="${1:-$(get_platform)}"
 
+  debug "-- platform_user_bin: $platform"
+
+  if [ -d $bin_path ];then
+    debug "   user bin path ok: $bin_path"
+    echo "$bin_path"
+    return 0
+  fi
+
   case "$platform" in
-      linux* )
-          echo "$bin_path"
-          return
-      ;;
-      *cygwin | *babun ) bin_path="$CYGWIN_HOME/$bin_path"
+
+      *cygwin | *babun )
+
+          if ! [ "$CYGWIN_HOME" ]; then
+              if [ "$platform" = "windows-babun" ]; then
+                CYGWIN_HOME="/cygdrive/c/.babun/cygwin/"
+              else
+                CYGWIN_HOME="/cygdrive/c/cygwin"
+              fi
+              debug "set CYGWIN_HOME=$CYGWIN_HOME"
+          fi
+
+          bin_path="$CYGWIN_HOME$bin_path"
 
           if ! [ -d "$bin_path" ]; then
               missing_var="CYGWIN_HOME"
+              example="/cygdrive/c/cygwin"
           else
               echo "$(printf "%s" "$(cygpath --unix "$bin_path")")"
               return
           fi
       ;;
-      *msys ) bin_path="$MSYS_HOME/$bin_path"
+      *msys )
 
           if ! [ "$MSYS_HOME" ]; then
               MSYS_HOME="/c/msys/1.0"
               bin_path="$MSYS_HOME/$bin_path"
           fi
+
+          bin_path="$MSYS_HOME$bin_path"
+
           #TODO: Need solution to cygpath for msys
           if ! [ -d "$bin_path" ]; then
               missing_var="MSYS_HOME"
+              example="/c/msys/1.0"
+
           else
-              echo "$MSYS_HOME"
+              echo "$bin_path"
               return
           fi
 
@@ -81,13 +104,13 @@ platform_user_bin () {
 
   if [ "$missing_var" ]; then
 
-    msg_help "You need to set the environment variable $missing_var to the absolute
-            \rpath of your system root where usr/local/bin resides.
-            \rex:/c/msys/1.0 or /c/cygwin"
+    msg_help "You need to set the environment variable $missing_var to the
+            \rabsolute path of your system root where usr/local/bin resides.
+            \rfor example: $missing_var=$example"
 
   fi
 
-  exit
+  return 1
 }
 
 # Gets full path to users home directory based on platform

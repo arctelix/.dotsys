@@ -693,6 +693,8 @@ manage_topic_bin () {
     local files=("$(find "$src_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
     local file
     while IFS=$'\n ' read -r file; do
+        debug "$topic : linking bin file $file
+        -> $dst_file"
 
         # test for exitsing command
         local command="$(basename "$file")"

@@ -920,7 +920,7 @@ dotsys () {
     fi
 
     # RELOAD_SHELL WHEN REQUIRED
-
+    debug "main -> CHECK RELOAD: flag:$RELOAD_SHELL recursive:$recursive i:$INSTALLER_RUNNING"
     if ! [ "$recursive" ] && [ "$RELOAD_SHELL" ] && ! [ "$INSTALLER_RUNNING" ];then
         task "Reloading $RELOAD_SHELL"
         shell shell_reload

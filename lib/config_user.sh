@@ -13,14 +13,16 @@ import state in_state
 config_user_var () {
     local usage="config_user_var [value to set] [<option>]"
     local usage_full="
-        -p | --prompt <text>     Prompt for user value [optional prompt text]
+        -p | --prompt <text>     Prompt for user value
+        -r | --ptext  <text>     Prompt text override
         -d | --default <val>     Default value for user input
         -b | --bool )            Variable is a boolean value
         -e | --edit )            Edit only mode (error if var does not exist)
     "
 
     local var="$1"; shift
-    local prompt
+    local set
+    local ptext
     local default
     local user_input
     local val
@@ -30,15 +32,11 @@ config_user_var () {
     local user_input_opts
     user_input_opts=()
 
-    if [ "$1" = "--prompt" ]; then
-        set="$1"
-        shift
-    fi
-
     while [[ $# > 0 ]]; do
         case "$1" in
-        -p | --prompt )   prompt="$2"; shift ;;
-        -d | --default )  default="$2"; shift ;;
+        -p | --prompt )   set="$1";;
+        -t | --ptext )    ptext="$2"; shift ;;
+        -d | --default )  default="${2#*\\}"; shift ;;
         -b | --bool )     non_bool="";;
         -e | --edit )     edit_only="$1";;
         -* | --* )        user_input_opts+=( "$1" "$2" );shift;;
@@ -50,9 +48,6 @@ config_user_var () {
     val="$(get_state_value "user" "$var")"
     ec=$?
 
-    # Set exit code
-    if ! [ "$val" ]; then val=$ec; fi
-
     debug "-- config_user_var $var s:$set v:$val"
 
     if [ "$set" ];then
@@ -62,18 +57,21 @@ config_user_var () {
 
         # Set from user input
         if [ "$set" = "--prompt" ]; then
-            if ! [ "$prompt" ]; then
-                prompt="Provide a value for $(echo "$var" | tr '_' ' ')"
+            if ! [ "$ptext" ]; then
+                ptext="Provide a value for $(echo "$var" | tr '_' ' ')"
             fi
 
             # Convert bool to yes/no
-            if [ $ec -eq 0 ]; then
-                if [ "$val" = "0" ]; then val=yes
-                elif [ "$val" = "1" ]; then val=no;fi
+            if ! [ "$val" ] && in_state "user" "$var"; then
+                if [ "$ec" -eq 0 ]; then val=yes
+                elif [ "$ec" -eq 1 ]; then val=no;fi
             fi
 
-            debug "   config_user_var: prompt:$prompt d:$default bool:$non_bool"
-            get_user_input "$prompt " --default "${val:-$default}" $non_bool "${user_input_opts[@]}"
+            # Remove chars form defaults
+            default="$(echo "$default" | tr -d '\r' | tr -d '\n')"
+
+            debug "   config_user_var: prompt:$ptext d:$default bool:$non_bool"
+            get_user_input "$ptext " --default "${val:-$default}" $non_bool "${user_input_opts[@]}"
             val="$user_input"
 
         # Set from value
@@ -88,17 +86,15 @@ config_user_var () {
         # Convert to boolean value
         if [ "$val" = "yes" ]; then val=0
         elif [ "$val" = "no" ]; then val=1;fi
-
         set_state_value "user" "$var" "$val"
+        ec=$?
 
     # Return exit code as required
-    elif [ "$val" = "0" ] || [ "$val" = "1" ]; then
-        debug "   config_user_var return val = $val"
-        return $val
-
-    else
+    elif [ "$val" ] && [ "$val" != "0" ] && [ "$val" != "1" ]; then
         echo "$val"
     fi
+
+    return $ec
 }
 
 # All user options require a function called "config_<variable name>"
@@ -137,28 +133,28 @@ config_primary_repo () {
 config_show_logo () {
     local prompt="Show the dotsys logo when working on multiple topics?
             $spacer (it's helpful)"
-    config_user_var "show_logo" "$1" --bool --prompt "$prompt"
+    config_user_var "show_logo" "$1" --bool --ptext "$prompt"
 }
 
 config_show_stats () {
     local prompt="Show the dotsys stats when working on multiple topics?
             $spacer (it's helpful)?"
-    config_user_var "show_stats" "$1" --bool --prompt "$prompt"
+    config_user_var "show_stats" "$1" --bool --ptext "$prompt"
 }
 
 config_shell_prompt () {
     local prompt="Use the dotsys shell prompt?"
-    config_user_var "shell_prompt" "$1" --bool --prompt "$prompt"
+    config_user_var "shell_prompt" "$1" --bool --ptext "$prompt"
 }
 
 config_shell_debug () {
     local prompt="Debug the shell loading process?"
-    config_user_var "shell_debug" "$1" --bool --prompt "$prompt"
+    config_user_var "shell_debug" "$1" --bool --ptext "$prompt"
 }
 
 config_shell_output () {
     local prompt="Show sourced files on shell load?"
-    config_user_var "shell_output" "$1" --bool --prompt "$prompt"
+    config_user_var "shell_output" "$1" --bool --ptext "$prompt"
 }
 
 config_symlink_option () {
@@ -167,7 +163,7 @@ config_symlink_option () {
           $spacer original : Import existing originals and backup repo versions (new repo).
           $spacer skip     : Do not install repo version (dry run).
           $spacer confirm  : Confirm each dotfile as required."
-    config_user_var "symlink_option" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "symlink_option" "$1" -d "confirm" --ptext "$prompt" \
     --options omit --extra repo --extra original --extra skip --extra confirm
 }
 
@@ -179,27 +175,27 @@ config_symlink_norepo () {
           $spacer skip     : Do not install repo version (dry run).
           $spacer confirm  : Confirm each dotfile as required."
 
-    config_user_var "symlink_norepo" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "symlink_norepo" "$1" -d "confirm" --ptext "$prompt" \
     --options omit --extra repo --extra original --extra skip --extra confirm
 }
 
 config_unlink_option () {
     local prompt="When un-installing dotfiles, which version do you want to keep?
           $spacer repo     : Keep a copy of your repo version in use.
-          $spacer original : Restore and use the original backup file.
-          $spacer none     : Remove the repo version and leave the backup un-restored
+          $spacer original : Restore and use the original backup file. (typical)
+          $spacer none     : Remove the repo version and do not restore backup.
           $spacer confirm  : Confirm each dotfile as required."
-    config_user_var "unlink_option" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "unlink_option" "$1" -d "confirm" --ptext "$prompt" \
     --options omit --extra repo --extra original --extra none --extra confirm
 }
 
 config_unlink_nobackup () {
     local prompt="When un-installing dotfiles and no original backup exists,
-          $spacer what would you like to do?
+          $spacer which version do you want to keep?
           $spacer repo     : Keep a copy of your repo version in use.
-          $spacer none     : Remove the repo version and leave the backup un-restored
+          $spacer none     : Remove the repo version (typical).
           $spacer confirm  : Confirm each dotfile as required."
-    config_user_var "unlink_nobakup" "$1" -d "confirm" --prompt "$prompt" \
+    config_user_var "unlink_nobakup" "$1" -d "confirm" --ptext "$prompt" \
     --options omit --extra repo --extra original --extra none --extra confirm
 }
 
@@ -216,7 +212,7 @@ config_use_stubs () {
     fi
 
     local user_input
-    config_user_var "use_stub_files" "$1" --bool --prompt "$prompt"
+    config_user_var "use_stub_files" "$1" --bool --ptext "$prompt"
     local ret=$?
 
     if [ "$1" = "--prompt" ] && [ $ret -eq 0 ]; then
@@ -241,40 +237,38 @@ new_user_config () {
     print_logo
 
     printf "\n"
-    msg "Before getting started lets set some common default values.
-       \rThese values can be changed at any time with the commands:\n"
-    msg "Run this configuration again: \n> $(code "dotsys config\n")\n"
-    msg "Set a specific config value: \n> $(code "dotsys config <var> [value, --prompt]")\n"
+
+    info "Set System Configuration Values:"
+    msg_help "$spacer These values can be changed at any time with the commands:\n"
+    msg_help "$spacer Run this configuration again: \n$spacer> $(code "dotsys config\n")\n"
+    msg_help "$spacer Set a specific config value: \n$spacer> $(code "dotsys config <var> [value, --prompt]")\n"
+
+    printf "\n"
+
+    task "Set Default User Variables:"
 
     config_user_name --prompt
-
     config_user_email --prompt
 
     printf "\n"
-    msg "Now just a few more configuration options."
-    printf "\n"
+
+    task "Set System Options:"
 
     config_show_logo --prompt
-
     config_show_stats --prompt
-
     config_use_stubs --prompt
-
     config_shell_prompt --prompt
-
     config_shell_output --prompt
 
     printf "\n"
-    info "The following options allow for hands free install and uninstall.
-  $spacer NEW USERS should choose 'confirm' to evaluate each file individually."
-    printf "\n"
+
+    task "Set Hands Free Options:"
+    msg_help "$spacer The following options allow for hands free install and uninstall.
+              $spacer NEW USERS should choose 'confirm' to evaluate each file individually."
 
     config_symlink_option --prompt
-
     config_symlink_norepo --prompt
-
     config_unlink_option --prompt
-
     config_unlink_nobackup --prompt
 
     printf "\n"
@@ -284,12 +278,11 @@ new_user_config () {
 
 new_user_config_repo () {
 
-    printf "\n"
     msg "The last step is to set a primary repo.  This will
     \rbe the default repo used when you run dotsys commands.
-    \rUse the format $(code "github_user_name/repo_name")
-
-    \rA GitHub.com account is required for syncing your
+    \rUse the format $(code "github_user_name/repo_name")"
+    printf "\n"
+    msg_help "A GitHub.com account is required for syncing your
     \ryour configuration on multiple machines. If you proceed
     \rwithout a GitHub.com account you still need to choose
     \ra user name for your repo."

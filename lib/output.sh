@@ -252,7 +252,8 @@ msg_invalid_input (){
 clear_lines () {
     printf "$clear_line"
     if ! [ "$1" ];then return;fi
-    local lines=$(printf "$1" | wc -l)
+    local lines=$(printf "%b" "$1" | wc -l)
+    dprint "$lines"
     lines=$lines+1 #clears all lines
     local sub=${2:-0} # add (+#) or subtract (-#) lines to clear
     local c
@@ -307,20 +308,21 @@ print_stats () {
 # FORMAT SCRIPT OUTPUT
 
 output_script() {
-#  read(){
-#      #debug "=========read"
-#      if [[ $1 = -p ]]; then
-#      set -- "$1" "$2"$'\n' "${@:3}"
-#      fi
-#      builtin read "$@"
-#  }
-#  export -f read
-#  debug "=========read_tty $@"
 
    local state
    local pstate
 
    debug "output_script $@"
+
+#   read(){
+#      dprint "=========read $*"
+#      if [[ $1 = -p ]]; then
+#      set -- "$1" "$2"$'\n' "${@:3}"
+#      fi
+#      builtin read "$@"
+#    }
+#    export -f read
+#    dprint "=========read_tty $@"
 
    #TODO: Tried everything imaginable to indent lines & still get prompts
 #   echo "---------------"
@@ -336,15 +338,21 @@ output_script() {
 #   echo "---------------"
 #   sh --init-file -i "$@" 2>&1 | indent_lines
 
-   sh "$@"
-   state=$?
-   debug "   output_script state=$state"
-   #pstate=${PIPESTATUS[0]}
-   return ${pstate:-$state}
+   local script="$1"
+   shift
 
-#  unset -f read
-#  debug "=========read_tty unset"
-#  "$@"
+   # DO NOT USE "$@"  HERE (script executes params)
+   (source "$script")
+
+   state=$?
+   pstate=${PIPESTATUS[0]}
+
+   debug "   output_script state=$state pstate=${PIPESTATUS[0]}"
+
+#   unset -f read
+#   dprint "=========read_tty unset"
+
+   return ${pstate:-$state}
 }
 
 test_read_tty () {
