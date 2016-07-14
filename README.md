@@ -197,9 +197,14 @@ More details to come, stay tuned...
 WARNING!
 --------
 
-THIS IS A WORK IN PROGRESS AND ONLY SUFFICIENTLY TESTED ON MAC OSX WITH BASH!
-The infrastructure for all platforms exists, but has not been tested
-and will likely have platform specific issues that need to be tweaked.
+THIS IS A WORK IN PROGRESS!
+The infrastructure for all platforms exists, but they have not all been full 
+tested and will likely have minor platform specific issues that need fixing.
+
+TESTED PLATFORMS:
+- linux-mac (OSX El Capitan)
+- windows-babun (windows8/windows10)
+- windows-cygwin (windows8/windows10)
 
 If you are interested in helping out that would be awesome!
 Please submit your pull requests!
