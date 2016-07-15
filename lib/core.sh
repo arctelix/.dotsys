@@ -287,7 +287,7 @@ script_func_exists() {
 # Test if script exists
 script_exists() {
   if [ -f "$1" ]; then
-      chmod u+x "$1"
+      chmod 755 "$1"
       return 0
   fi
   return 1

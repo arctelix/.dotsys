@@ -725,7 +725,7 @@ manage_topic_bin () {
             return
 
         elif [ "$action" = "link" ]; then
-            chmod u+x "$file"
+            chmod 755 "$file"
             symlink "$file" "$dst_file"
 
         elif [ "$action" = "unlink" ]; then

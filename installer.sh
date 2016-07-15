@@ -11,6 +11,8 @@ dotsys_installer () {
     # Let main know that we're running from installer
     INSTALLER_RUNNING=true
 
+    chmod -R 755 "$DOTSYS_REPOSITORY"
+
     source "$DOTSYS_LIBRARY/main.sh"
 
     local usage="dotsys_installer <action>"
