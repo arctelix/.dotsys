@@ -12,10 +12,6 @@ upgrade () {
     choco upgrade "$@" --yes
 }
 
-freeze () {
-    choco list "$@"
-}
-
 search () {
     choco search "$@"
 }

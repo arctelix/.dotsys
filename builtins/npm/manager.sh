@@ -13,8 +13,4 @@ upgrade () {
   npm update -g $@
 }
 
-freeze () {
-  npm ls -g $@
-}
-
 "$@" # Required for function execution

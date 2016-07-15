@@ -187,37 +187,32 @@ is_shell_topic () {
     [[ "shell bash zsh ksh" =~ $topic ]]
 }
 
+# Executes commands as sudo only when necessary
 dsudo () {
 
-    # Check for real sudo (windows)
+    # Check for real sudo (windows is bs)
     if ! sudo -h >/dev/null 2>&1 ; then "$@"; return $?; fi
 
     local result
-    local rv=1
-
-    # Try command
-    result="$("$@" 2>&1)"
+    local rv
+    result="$("$@" >/dev/null 2>&1)"
     rv=$?
 
-    # Command failed and password required
-    if ! [ $rv -eq 0 ]; then
+    # Get sudo password if cmd fails and is required
+    if ! [ $rv -eq 0 ] && ! sudo -n true >/dev/null 2>&1; then
+        task "The admin password is required to alter some files"
+        sudo -v -p "$spacer Enter password : "
+    fi
 
-        # Get sudo password and try again
-        if ! sudo -n true >/dev/null 2>&1; then
-            info "Please enter your password to install system files"
-            sudo -v && sudo "$@"
-            rv=$?
+    # Try sudo if original failed
+    if ! [ $rv -eq 0 ];then
+        sudo "$@"
 
-        # Echo original error
-        else
-            echo "$result" 1>&2
-        fi
-
-    # Command success
-    else
+    # echo the original result on success
+    elif [ "$result" ];then
         echo "$result"
     fi
 
-    return $rv
+    return $?
 }
 

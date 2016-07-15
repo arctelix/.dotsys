@@ -5,11 +5,11 @@ install () {
 #    find_windows_cmd npm
 #    # updating npm on install seems a bit excessive..
 #    npm install npm -g
-    pass
+    return 0
 }
 
 uninstall () {
-    pass
+    return 0
 }
 
 upgrade () {
@@ -18,6 +18,10 @@ upgrade () {
 
 update () {
     npm install npm -g
+}
+
+freeze () {
+  npm ls -g $@
 }
 
 "$@"
