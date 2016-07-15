@@ -1,11 +1,11 @@
 #!/bin/bash
 
 install () {
-  dsudo apt-get install "$@"
+  dsudo apt-get install -y "$@"
 }
 
 uninstall () {
-  dsudo apt-get remove "$@"
+  dsudo apt-get remove -y "$@"
 }
 
 update () {
@@ -13,7 +13,7 @@ update () {
 }
 
 upgrade () {
-  dsudo apt-get dist-upgrade "$@"
+  dsudo apt-get dist-upgrade -y "$@"
 }
 
 search () {
