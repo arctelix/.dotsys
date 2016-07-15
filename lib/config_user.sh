@@ -196,7 +196,7 @@ config_unlink_nobackup () {
           $spacer none     : Remove the repo version (typical).
           $spacer confirm  : Confirm each dotfile as required."
     config_user_var "unlink_nobakup" "$1" -d "confirm" --ptext "$prompt" \
-    --options omit --extra repo --extra original --extra none --extra confirm
+    --options omit --extra repo --extra none --extra confirm
 }
 
 config_use_stubs () {
@@ -238,10 +238,12 @@ new_user_config () {
 
     printf "\n"
 
-    info "Set System Configuration Values:"
-    msg_help "$spacer These values can be changed at any time with the commands:\n"
-    msg_help "$spacer Run this configuration again: \n$spacer> $(code "dotsys config\n")\n"
-    msg_help "$spacer Set a specific config value: \n$spacer> $(code "dotsys config <var> [value, --prompt]")\n"
+    info "Set Your Custom System Configuration Values
+  $spacer modify values at any time with the commands:"
+    msg_help "$spacer Run this configuration again:
+              $spacer > $(code "dotsys config\n")"
+    msg_help "$spacer Set a specific config value:
+              $spacer > $(code "dotsys config <var> [value, --prompt]")"
 
     printf "\n"
 

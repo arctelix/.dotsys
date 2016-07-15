@@ -340,7 +340,7 @@ load_topic_config_vars () {
 get_topic_config_val () {
     # Dashes are removed from topic names
     # since dashes are not valid in variable names
-    local topic="$(echo "$1" | tr '-' '')"
+    local topic="${1/-}"
     shift
 
     local splat="$(specific_platform)"

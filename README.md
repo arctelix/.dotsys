@@ -212,10 +212,17 @@ Please submit your pull requests!
 Installation
 ============
 
-1) First download and extract the dotsys repository to a location 
+1) First download and extract the dotsys repository from GitHub to a location 
 of your choosing (your home directory or .dotfiles directory are good choices).
 
 NOTE: The dotsys root directory must be named ".dotsys" witht the "."
+
+You can also download & extract the repository with curl & unzip:
+
+    curl -Lk https://github.com/arctelix/.dotsys/archive/master.zip -o .dotsys.zip
+    unzip .dotsys.zip
+    mv .dotsys-master .dotsys
+    rm .dotsys.zip
 
 ## All platforms (except pre windows 10 w/Bash)
 
@@ -242,8 +249,8 @@ OPTIONS 1&2:
 3) Now follow the steps for All Platforms
 
 
-Gettting Started with dotfiles and dotsys
------------------------------------------
+Getting Started with dotfiles and dotsys
+----------------------------------------
 If you have never managed your dotfiles before Dotsys makes it easy!
 If you already have a dotfile management system it's easy to migrate!
 
