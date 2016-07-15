@@ -48,7 +48,7 @@ dotsys_installer () {
 
     action="${action:-install}"
 
-    print_logo
+    print_logo --force
 
     debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
     debug "ACTIVE_SHELL: $ACTIVE_SHELL"
@@ -96,19 +96,8 @@ dotsys_installer () {
 
         success_or_error $? "$action" "dotsys files and directories"
 
-        # some initial values for user state
-#        state_install "user" "show_stats" "0"
-#        state_install "user" "show_logo" "0"
-
-        # Add dotsys/bin files to usr/bin
-        # (redundant) must be done before collect user data!
-        #task "Installing dotsys core files"
-        #manage_topic_bin link dotsys
-        alias atest='echo alias test success'
-
         new_user_config
     fi
-
 
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"

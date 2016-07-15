@@ -148,6 +148,8 @@ INSTALLED=()
 
 # Current platform
 PLATFORM="$(get_platform)"
+PLATFORM_S="$(specific_platform)"
+PLATFORM_G="$(generic_platform)"
 PLATFORM_USER_BIN="$(platform_user_bin)"
 PLATFORM_USER_HOME="$(platform_user_home)"
 
@@ -561,6 +563,7 @@ dotsys () {
 
         # Bin files must be linked first
         elif [ "$action" = "install" ]; then
+
             manage_topic_bin "link" "dotsys"
         fi
     fi

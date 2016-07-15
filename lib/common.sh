@@ -187,3 +187,37 @@ is_shell_topic () {
     [[ "shell bash zsh ksh" =~ $topic ]]
 }
 
+dsudo () {
+
+    # Check for real sudo (windows)
+    if ! sudo -h >/dev/null 2>&1 ; then "$@"; return $?; fi
+
+    local result
+    local rv=1
+
+    # Try command
+    result="$("$@" 2>&1)"
+    rv=$?
+
+    # Command failed and password required
+    if ! [ $rv -eq 0 ]; then
+
+        # Get sudo password and try again
+        if ! sudo -n true >/dev/null 2>&1; then
+            info "Please enter your password to install system files"
+            sudo -v && sudo "$@"
+            rv=$?
+
+        # Echo original error
+        else
+            echo "$result" 1>&2
+        fi
+
+    # Command success
+    else
+        echo "$result"
+    fi
+
+    return $rv
+}
+

@@ -22,6 +22,7 @@ get_platform () {
     platform="linux-openbsd"
   elif [ "$(uname -s)" = "Linux" ]; then
     platform="linux"
+    uname -v | grep -q 'Ubuntu' && platform="linux-ubuntu"
   elif [ "$(uname -o)" = "Cygwin" ]; then
     platform="windows-cygwin"
     [ "$BABUN_HOME" ] && platform="windows-babun"

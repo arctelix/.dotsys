@@ -262,8 +262,10 @@ clear_lines () {
 
 print_logo (){
 
-if ! get_state_value "user" "show_logo" || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
-    return
+if [ "$1" != "--force" ]; then
+    if ! config_show_logo || [ $SHOW_LOGO -eq 1 ] || ! verbose_mode; then
+        return
+    fi
 fi
 
 local message="Welcome To Dotsys $(get_user_name)"

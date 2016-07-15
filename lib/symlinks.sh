@@ -384,9 +384,9 @@ symlink () {
 
   # Always link the source to dst unless skipped
   if [ "$action" != "skip" ] && [ "$action" != "none" ]; then
-    # Create native symlinks on Windows.
+
     export CYGWIN=winsymlinks:nativestrict
-    ln -fs "$src" "$dst"
+    dsudo ln -fs "$src" "$dst"
     result=$?
 
     if [ "$stub_file" ]; then
@@ -407,10 +407,10 @@ remove_and_backup_file(){
   local backup="${file}.dsbak"
 
   if ! [ -f "$backup" ] ; then
-      mv "$file" "$backup"
+      dsudo mv "$file" "$backup"
       success_or_fail $? "back" "up $desc version of" "$(printf "%b$file" "$hc_topic")" "\n$spacer new backup ->" "$(printf "%b$backup" "$hc_topic")"
   else
-      rm -rf "$file"
+      dsudo rm -rf "$file"
       success_or_fail $? "remove" "$desc version of" "$(printf "%b$file" "$hc_topic")" "\n$spacer existing backup ->" "$(printf "%b$backup" "$hc_topic")"
   fi
 
@@ -558,7 +558,7 @@ unlink(){
 
   if [ "$action" != "skip" ]; then
     # Remove the symlink
-    rm -rf "$link_file"
+    dsudo rm -rf "$link_file"
     success_or_none $? "remove" "$type for" "$(printf "%b$topic's $link_name" "$hc_topic" )"
   fi
 
@@ -639,7 +639,7 @@ restore_backup_file(){
   local file="$1"
   local backup="${file}.dsbak"
   if [ -f "$backup" ];then
-    mv "$backup" "$file"
+    sduo mv "$backup" "$file"
     return 0
   fi
   return 1
