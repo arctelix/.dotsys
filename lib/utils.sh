@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Returns a list directory names in a directory
 get_dir_list () {

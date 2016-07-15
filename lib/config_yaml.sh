@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Utils for reading and writing yaml
 # Author: arctelix

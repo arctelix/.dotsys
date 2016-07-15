@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # System command entry point, see lib/main.sh handler.
 #

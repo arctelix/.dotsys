@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Platform specific functions
 # Author: arctelix

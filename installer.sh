@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # TODO ROADMAP: Enable download of dotsys repo from installer script.
 

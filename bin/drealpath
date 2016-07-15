@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # We need to insure realpath is available on every platform.
 # Thanks to https://github.com/mkropat/sh-realpath, for this code.

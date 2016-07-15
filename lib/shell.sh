@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Shell functions
 # Author: arctelix

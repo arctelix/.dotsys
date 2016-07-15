@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # All functions pertaining to running scripts
 # Author: arctelix

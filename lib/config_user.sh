@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # User config functions
 # Author: arctelix

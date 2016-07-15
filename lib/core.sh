@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Core utilities
 # Author: arctelix

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Global paths
 # Author: arctelix

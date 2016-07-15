@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 install () {
 #    # When installing node on windows 'npm' may not be on path yet so lets find it

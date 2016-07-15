@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 install () {
   dprint "nmp install called : $*"

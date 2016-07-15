@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 state_dir () {
   echo "$DOTSYS_REPOSITORY/state"
