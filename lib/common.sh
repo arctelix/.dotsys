@@ -201,7 +201,7 @@ dsudo () {
     # Get sudo password if cmd fails and is required
     if ! [ $rv -eq 0 ] && ! sudo -n true >/dev/null 2>&1; then
         task "The admin password is required to alter some files"
-        sudo -v -p "$spacer Enter password : "
+        sudo -v -p "$(printf "$spacer Enter password : ")"
     fi
 
     # Try sudo if original failed
