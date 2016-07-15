@@ -237,7 +237,7 @@ OPTION 2:
 
 2) Install your posix shell of choice (Cygwin, Mysys, etc.)
 
-OPTION 1&2: 
+OPTIONS 1&2: 
 
 3) Now follow the steps for All Platforms
 
@@ -251,14 +251,14 @@ If you already have a dotfile management system it's easy to migrate!
 
 2) Install dotsys as per the instructions above
     
-3) When prompted enter the name for a new repo or an existing GitHub repo confining dotfiles:
+3) When prompted, enter a new repo or an existing repo in the format:
 
     github_user_name/repo_name
     
 4) Dotsys will ask if you want to search for existing topics and dotfiles on 
 your system and add them to the dotsys repo automagically!
 
-From now on when you make changes to your system, use dotsys to make the changes and you
+From now on, when you make changes to your system, use dotsys and you
 will never have to do it again!
 
 
