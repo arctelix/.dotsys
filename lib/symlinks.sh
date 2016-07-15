@@ -639,7 +639,7 @@ restore_backup_file(){
   local file="$1"
   local backup="${file}.dsbak"
   if [ -f "$backup" ];then
-    sduo mv "$backup" "$file"
+    dsudo mv "$backup" "$file"
     return 0
   fi
   return 1
