@@ -623,7 +623,7 @@ checkout_branch (){
 clone_remote_repo () {
     local repo="$1"
     local remote_repo="$remote_repo"
-    local repo_user="$(cap_first "${repo%/*}")"
+    local repo_user="${repo%/*}"
     local repo_user_dir="$(repo_dir "$repo_user")"
     local OWD="$PWD"
 
@@ -637,8 +637,6 @@ clone_remote_repo () {
         then repo_status="new"
     fi
     cd "$OWD"
-
-
 }
 
 
