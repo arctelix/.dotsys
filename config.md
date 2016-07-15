@@ -38,18 +38,27 @@ You will also notice we changed the symlink location for windows platforms to '$
 The details for all config file settings are explained below, so that you can implement topics that are not built in to dotsys.  
 Please submit pull requests for your topic configs!  Look at `.dotsys/builtins` for more examples of how to configure a topic.
 
+**IMPORTANT NOTE: Always omit dashes in '-' .cfg file keys, dashes are ok as values though**
+
+For example when specifying an alternate package name for apt-get use the syntax:
+    
+    aptget: google-chrome
 
 
 TOPIC CONFIG (topic/dotsys.cfg)
 -------------------------------
   
-Specify a manager if required (default: none):
-app: Use OS aplication manager
-cmd: Use system command manager
-topic_name: The name of any manager enabled topic
+Specify a system default manager if required (default: none):
+- app = Use OS application manager
+- cmd = Use system command manager
 
-    manager: <app, cmd, topic_name>
-    
+    manager: [app, cmd]
+
+Specify another topic as the manager (managing topic must have a manager.sh file):
+
+    # For example a node package will specify node as it's manager
+    manager : node
+
 Specify test to determine if topic is installed on system (default: topic directory name)
 				            
     installed_test: <topic name>

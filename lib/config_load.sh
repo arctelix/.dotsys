@@ -336,9 +336,11 @@ load_topic_config_vars () {
 
 
 # PRIMARY METHOD FOR GETTING CONFIGS
+# Returns the prevailing value for a given config
 get_topic_config_val () {
-    # Returns the prevailing value for a given config
-    local topic="$1"
+    # Dashes are removed from topic names
+    # since dashes are not valid in variable names
+    local topic="$(echo "$1" | tr '-' '')"
     shift
 
     local splat="$(specific_platform)"
