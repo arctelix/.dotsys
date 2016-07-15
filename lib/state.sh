@@ -428,9 +428,9 @@ topic_in_use () {
 # search for manager commands or managed topic installs will fail
 find_windows_cmd () {
 
-    if [ "$(generic_platform)" != windows ];then return; fi
+    if [ "$(generic_platform)" != windows ];then return 1; fi
     if ! [ "$1" ];then echo "find_windows_cmd : a command must be supplied"; exit; fi
-    if cmd_exists "$1"; then return; fi
+    if cmd_exists "$1"; then return 0; fi
 
     local find_cmd="$1"
 
