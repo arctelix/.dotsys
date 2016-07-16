@@ -156,6 +156,9 @@ func_or_func_msg () {
     local first_arg="$5"
     shift; shift; shift; shift; shift
 
+    # Do not print message for codes 20-29 (script msg)
+    if [ $state -ge 20 ] && [ $state -le 29 ]; then return;fi
+
     if [ $state -eq 0 ]; then
         if [ "$action" ]; then
             action="${action%ed}"
@@ -345,16 +348,16 @@ output_script() {
 
    # DO NOT USE "$@"  HERE (script executes params)
    (source "$script")
-
    state=$?
-   pstate=${PIPESTATUS[0]}
+
+   #pstate=${PIPESTATUS[0]}
 
    debug "   output_script state=$state pstate=${PIPESTATUS[0]}"
 
 #   unset -f read
 #   dprint "=========read_tty unset"
-
-   return ${pstate:-$state}
+#   return ${pstate:-$state}
+    return $state
 }
 
 test_read_tty () {

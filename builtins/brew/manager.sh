@@ -1,18 +1,16 @@
 #!/bin/bash
 
 install () {
-  brew install $@
-  return $?
+  brew install "$@"
 }
 
 uninstall () {
-  brew uninstall $@
-  return $?
+  brew uninstall "$@"
 }
 
 upgrade () {
-  brew upgrade $@
-  return $?
+  local r
+  brew upgrade "$@"
 }
 
 "$@"

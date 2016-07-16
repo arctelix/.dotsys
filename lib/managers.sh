@@ -67,7 +67,6 @@ run_manager_task () {
   fi
 
   # abort un-managed topics
-
   if ! [ "$manager" ] || [ "$manager" = "${topics[0]}" ]; then
     debug "   run_manager_task: ABORT $topic not managed"
     return
@@ -280,8 +279,6 @@ manage_packages () {
     # If the package has these features use a topic.sh function for the package
     if [ "$action" = "freeze" ] || [ "$action" = "update" ]; then return;fi
 
-
-
     while [[ $# > 0 ]]; do
         case "$1" in
         packages )      option="packages" ;;
@@ -292,7 +289,9 @@ manage_packages () {
         shift
     done
 
-    debug "-- manage_packages: p:$packages o:$option f:$force"
+    manager="$(get_default_manager "$manager")"
+
+    debug "-- manage_packages: $action m:$manager p:$packages o:$option f:$force"
 
     if ! [ "${packages[0]}" ]; then
         packages=$(get_package_list "$manager" "$option")

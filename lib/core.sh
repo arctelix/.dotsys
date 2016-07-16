@@ -277,11 +277,16 @@ cmd_exists() {
 # Test if script contains function
 script_func_exists() {
   script_exists "$1"
+  local rv
   $1 command -v $2 >/dev/null 2>&1
+  rv=$?
   # fix line endings
   if [ $? -eq 2 ] && command -v dos2unix >/dev/null 2>&1;then
       dos2unix "$1"
+      $1 command -v $2 >/dev/null 2>&1
+      rv=$?
   fi
+  return $rv
 }
 
 # Test if script exists

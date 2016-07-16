@@ -255,10 +255,10 @@ dotsys () {
     through dotsys insures that changes to your system are tracked by
     your repo.
 
-    - Manage a command line utilities with default manager
+    - Manage command line utilities with default manager
       $ dotsys <action> cmd vim tmux
 
-    - Manage an OS application with default manager
+    - Manage OS applications with default manager
       $ dotsys <action> app google-chrome lastpass
 
     - Manage a specific manager's packages
@@ -574,8 +574,8 @@ dotsys () {
         print_logo
     fi
 
-    debug "main final -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
-    debug "main final -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
+    debug "main final input -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
+    debug "main final input -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
 
 
     # freeze dotsys state files
@@ -583,7 +583,8 @@ dotsys () {
         freeze_states "${limits[@]}"
     fi
 
-    # LOAD CONFIG VARS Parses from_repo, Loads config file, manages repo
+    # LOAD CONFIG VARS
+    # Parses from_repo, Loads config file, manages repo
     if ! [ "$recursive" ]; then
 
         if [ "$branch" ]; then
@@ -606,16 +607,28 @@ dotsys () {
 
     # This allows dotsys to manage packages without a topic directory
     # <manager> may be 'cmd' 'app' or specific manager name
-    # for example: 'dotsys install <manager> packages <packages>'   # specified packages
-    # for example: 'dotsys install <manager> packages file'         # all packages in package file
-    # for example: 'dotsys install <manager> packages'              # all installed packages
+    # for example: 'dotsys <action> <manager> packages <packages>'   # specified packages
+    # for example: 'dotsys <action> <manager> packages file'         # all packages in package file
+    # for example: 'dotsys <action> <manager> packages'              # all installed packages
     # TODO: Consider api format 'dotsys <manager> install <package>'
-    if in_limits "packages" -r && is_manager "${topics[0]}" && [ ${#topics[@]} -gt 1 ] ; then
-      local manager="${topics[0]}"
-      topics=( "${topics[@]/${topics[0]}}" )
-      debug "main -> packages limit $action $manager ${limits[@]} ${topics[@]} $force"
-      manage_packages "$action" "$manager" packages ${topics[*]} "$force"
-      return
+
+    if in_limits "packages" -r; then
+        local manager="${topics[0]}"
+        topics=( "${topics[@]/$manager}" )
+        debug "main -> packages limit : $action $manager ${topics[*]} $force"
+        if is_manager "$manager"; then
+            manage_packages "$action" "$manager" packages ${topics[*]} "$force"
+        else
+            local usage_code="$(code "dotsys <action> <manager> packages [<packages>, <file>]")"
+            if [ "$manager" ]; then
+                error "INVALID MANGER: '$manager', package management syntax is:
+                     \r$usage_code"
+            else
+                error "MANAGER REQUIRED: package management syntax is:
+                     \r$usage_code"
+            fi
+        fi
+        return
     fi
 
     # END REPO LIMIT if repo in limits dotsys has ended

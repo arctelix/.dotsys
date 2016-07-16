@@ -3,6 +3,19 @@
 # All functions pertaining to running scripts
 # Author: arctelix
 
+# RUN SCRIPT EXIT CODES: (run_script run_script_func)
+# 0    = everything ok
+# 10   = script not found
+# 11   = missing required script
+# 12   = missing required function
+
+# EXTERNAL SCRIPT EXIT CODES
+# 20    = task complete: do not print success/fail msg
+# 21    = task incomplete: do not print success/fail msg
+
+
+# other = function executed with error
+
 
 run_topic_script () {
   local action="$1"
@@ -22,7 +35,7 @@ run_topic_script () {
 
   local state=0
 
-  # undamaged topic scripts need to check if already installed (since there likely installing software)
+  # un-managed topic scripts need to check if already installed (since there likely installing software)
   # managed topic install scripts are really post-install scripts (manager checks for prior install)
   if ! is_managed && [ ! "$force" ]; then
 
@@ -59,10 +72,7 @@ run_topic_script () {
   return $state
 }
 
-# 0     = everything ok
-# 10   = script not found
-# 11   = missing required script
-# other = function executed with error
+
 # ONLY CHECKS TOIC DIRECTORY
 run_script (){
   local topic="${1:-$topic}"
@@ -117,11 +127,6 @@ run_script (){
 }
 
 
-# 0    = everything ok
-# 10   = script not found
-# 11   = missing required script
-# 12   = missing required function
-# other = function executed with error
 run_script_func () {
   local topic="$1"
   local script_name="$2"
@@ -162,9 +167,9 @@ run_script_func () {
   local i=0
   for script in $scripts; do
       script_src="${script_sources[$i]}"
-      debug "   run_script_func test source $script_src : $script"
+      debug "   run_script_func src: $script"
+      debug "   run_script_func test for script func : $action"
       if script_func_exists "$script" "$action"; then
-
           if [ "$action" = "freeze" ]; then
               result="$($script $action ${params[@]})"
               if [ "$result" ]; then
@@ -203,6 +208,7 @@ run_script_func () {
       elif [ "$required" ]; then
           fail "$(cap_first "$script_name") $DRY_RUN for" "$topic"  "does not define the required $action function"
           state=12
+
       # Silent fail when not required
       else
          state=10

@@ -135,7 +135,7 @@ get_user_input () {
     debug "      get_user_input: confirm=$confirmed invalid=$invalid"
 
     # Allow any response if no options
-    if ! [ "$options" ] || [ "$options" = "\b" ]; then
+    if ! [ "$options" ] || [ "$options" = "\b" ] || [ "$invalid" = "omit" ]; then
         debug "      get_user_input: no options so any input ok"
         invalid=""
     fi
