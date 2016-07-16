@@ -122,7 +122,7 @@ is_installed () {
                     # not installed by dotsys so skip uninstall script
                     installed=1
                 elif ! [ "$force" ]; then
-                    warn "It appears that" "$key" "$(printf "was already installed on this system" $red)" \
+                    warn "It appears that" "$key" "$(printf "%bwas already installed on this system%b" $red $rc)" \
                     "$(printf "\n$spacer Use %bdotsys install $key --force%b to run the dotsys install script" $code $yellow)"
                     installed=0
                 fi
