@@ -123,10 +123,9 @@ Say you have a topic for gulp and run the command:
     - BSD      : install Node.js with **pkg**
     - ArchLinux: install Node.js with **pacman** 
     - Mac      : install Node.js with **brew**
-    - Windows  : install Node.js with **Scoop**
+    - cygwin   : install Node.js with **scoop**
     - Linux    : install node.js with **yum**
-    - Babun    : install Node.js with **pact**
-    - Mysys    : install Node.js with **mingw-get**
+    - Msys     : install Node.js with **mingw-get**
 
 3. Then, since we know that npm is required for gulp, install **npm** if it's not already installed.
 
@@ -198,16 +197,23 @@ WARNING!
 --------
 
 THIS IS A WORK IN PROGRESS!
-The infrastructure for all platforms exists, but they have not all been full 
-tested and will likely have minor platform specific issues that need fixing.
+The infrastructure for all platforms exists, but have not all been fully 
+tested and will likely have minor issues that need tweaking.
 
 TESTED PLATFORMS:
-- linux-mac (OSX El Capitan)
+- linux-mac (El Capitan)
+- linux-ubuntu (16.04)
 - windows-babun (windows8/windows10)
 - windows-cygwin (windows8/windows10)
 
 If you are interested in helping out that would be awesome!
-Please submit your pull requests!
+
+The most pressing open items are as follows:
+ - any topic you think is important enough to have builtin
+ - manager.sh files for : yum, pkg, pacman, & mingw-get
+ - see main.sh for the todo list & road map items
+ 
+Please submit your pull requests & issues!
 
 Installation
 ============
@@ -228,7 +234,7 @@ You can also download & extract the repository with curl & unzip:
 
 2) From your posix compatible shell of choice run the install script:
 
-`path/to/.dotsys/installer.sh`
+    path/to/.dotsys/installer.sh
 
 3) Follow the prompts in your terminal.
 
