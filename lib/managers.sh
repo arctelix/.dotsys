@@ -45,6 +45,7 @@ run_manager_task () {
   local topics=()
   local packages
   local force
+  local rv
 
   while [[ $# > 0 ]]; do
     case $1 in
@@ -123,20 +124,33 @@ run_manager_task () {
 
      # run the manager task
      run_script_func "$manager" "manager.sh" "$action" "$pkg_name" "$force" -required
+     rv=$?
 
-     # record success to state file (10 = not found, but not required)
-     if [ $? -le 10 ]; then
+     # (10 = not found, but not required)
+     if [ $rv -le 10 ]; then
+
+         # record success to state file
          debug "   run_manager_task: script exit = $?"
          if [ "$action" = "install" ]; then
            state_install "$manager" "$topic"
          elif [ "$action" = "uninstall" ]; then
            state_uninstall "$manager" "$topic"
          fi
+
+         # Update packages.yaml for non topic packages
+         if ! topic_exists "$topic" -s;then
+            local pkg_file="$(topic_dir "$manager" "user")/packages.yaml"
+            dprint "rmt $action $topic"
+            if [ "$action" = "install" ];then
+                file_add_kv "$pkg_file" "$topic"
+            elif [ "$action" = "uninstall" ];then
+                file_remove_kv "$pkg_file" "$topic"
+            fi
+         fi
      fi
   done
 
-  #run_script_func "$manager" "manager.sh" "$action" ${packages[@]} -required
-
+  return $rv
 }
 
 manage_dependencies () {

@@ -69,14 +69,32 @@ dry_run (){
     return $DRY_RUN_STATE
 }
 
+
 topic_exists () {
   local topic="$1"
-  local restrict="$2"
+  local restrict="$2" # See topic_dir for restrict usage
   local ret=0
+
+  usage="topic_exists [<option>]"
+  usage_full="
+      -r | --restrict        restrict topic directorys to serach
+  "
+
+  local restrict
+  local silent="$recursive" # Recursive calls are always silent
+
+  while [[ $# > 0 ]]; do
+      case "$1" in
+      -r | --restrict )      restrict="$1" ;;
+      -s | --silent )        silent="$1" ;;
+      *)  invalid_option ;;
+      esac
+      shift
+  done
 
   # Verify user defined directories
   if [ "$restrict" ] && ! [ -d "$(topic_dir $topic "$restrict")" ]; then
-    if ! [ "$recursive" ];then
+    if ! [ "$silent" ];then
         fail "The topic" "$(printf "%b$topic" "$hc_topic")" ",was not found in repo:
         $spacer $(topic_dir $topic "$restrict")"
     fi
@@ -84,14 +102,14 @@ topic_exists () {
 
   # Verify built in or & user defined directories
   elif ! [ -d "$(topic_dir $topic)" ]; then
-    if ! [ "$recursive" ];then
+    if ! [ "$silent" ];then
         fail "The topic" "$(printf "%b$topic" "$hc_topic")" ",was not found in dotsys builtins or repo:
         $spacer $(topic_dir $topic "active") $ACTIVE_REPO"
     fi
     ret=1
   fi
 
-  if ! [ "$recursive" ] && [ $ret -eq 1 ];then
+  if ! [ "$silent" ] && [ $ret -eq 1 ];then
     #if ! [ "$recursive" ];then
         #debug "  - topic_exists: ($topic) not found recursive bypass message"
         msg "$spacer Check the topic spelling and make sure it's in the repo."

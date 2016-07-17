@@ -32,14 +32,11 @@
 
 #GENERAL FIXES:
 #TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
-#TODO URGENT: When packages are added to manager via 'dotsys action cmd package' update manager.state & topic packages.yaml
 
 #FUTURE FEATURES
 #TODO ROADMAP: finish implementing .settings
-#TODO ROADMAP: Implement config action for topics user data rather then running update --force
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
-#TODO ROADMAP: FOR NEW Installs prompt for --force & --confirm options
 #TODO ROADMAP: Detect linux distros that give generic uname.
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
 #TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..

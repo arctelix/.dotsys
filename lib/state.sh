@@ -7,13 +7,23 @@ state_dir () {
 state_file () {
     echo "$(state_dir)/${1}.state"
 }
+
 # adds key:value if key:value does not exist (value optional)
 state_install() {
   local file="$(state_file "$1")"
+  shift
+  file_add_kv "$file" "$@"
+}
+
+file_add_kv() {
+  local file="$1"
   local key="$2"
   local val="$3"
 
-  if ! [ -f "$file" ]; then return 1;fi
+  if ! [ -f "$file" ]; then
+    touch "$file"
+    return 1
+  fi
 
   grep -q "$(grep_kv)" "$file" || echo "${key}:${val}" >> "$file"
 }
@@ -21,26 +31,31 @@ state_install() {
 # removes key:value if key and value exist (value optional)
 state_uninstall () {
   local file="$(state_file "$1")"
-  local temp="$(state_dir)/temp_$1.state"
+  shift
+  file_remove_kv "$file" "$@"
+}
+
+file_remove_kv () {
+  local file="$1"
+  local temp="$(dirname "$file")/$(basename "$file").tmp"
   local key="$2"
   local val="$3"
 
-
-
-  if ! [ -f "$file" ]; then return 1;fi
-  debug "   - state_uninstall: f:$file grep ${key}:${val}"
+  if ! [ -f "$file" ]; then
+      debug "   - state_uninstall state_file not found : $file"
+      return 1
+  fi
+  dprint "   - state_uninstall: grep ${key}:${val} -> $file"
 
   # grep -v fails on last item so we have to test then remove
   grep -q "$(grep_kv)" "$file"
   if [ $? -eq 0 ]; then
-     debug "   - state_uninstall FOUND ${key}:${value}, uninstalling"
+     dprint "   state_uninstall FOUND ${key}:${val}, uninstalling"
      grep -v "$(grep_kv)" "$file" > "$temp"
      mv -f "$temp" "$file"
   else
-     debug "   - state_uninstall NOT FOUND: f:$file grep ${key}:${val}"
+     debug "   state_uninstall NOT FOUND: f:$file grep ${key}:${val}"
   fi
-
-
 }
 
 grep_kv (){
@@ -78,8 +93,7 @@ is_installed () {
 
     local installed=1
     local system_ok
-
-    debug "-- is_installed got: $state ($key:$var) $manager"
+    local installed_test
 
     # if state is "system" then a system install is acceptable
     # so bypass warnings and just return 0
@@ -88,17 +102,19 @@ is_installed () {
         system_ok="true"
     fi
 
+    debug "-- is_installed got: $state ($key:$val) $manager"
+
     # test if in specified state file
     in_state "$state" "$key" "$val"
     installed=$?
 
-    debug "   is_installed in: $state = $installed"
-
     # Check if installed on system, not managed by dotsys
     if ! [ "$installed" -eq 0 ]; then
 
+        installed_test="$(get_topic_config_val "$key" "installed_test")"
+
         # installed on system
-        if cmd_exists "${installed_test:-$key}"; then
+        if cmd_exists "${installed_test:-$key}" || find_windows_cmd "${installed_test:-$key}"; then
 
             # System installed is ok
             if [ "$system_ok" = "true" ]; then
@@ -106,10 +122,15 @@ is_installed () {
 
             # manager warnings
             elif [ "$manager" ]; then
-                if [ "$action" = "uninstall" ]; then
+
+                if in_state "$manager" "$key"; then
+                    installed=0
+
+                elif [ "$action" = "uninstall" ]; then
                     warn "Can not uninstall" "$key's" "package" "$(printf "%bit was not installed by dotsys." $red)" \
                     "\n$spacer You will have to uninstall it by whatever means it was installed."
                     installed=1
+
                 elif ! [ "$force" ]; then
                     warn "Although" "$key's" "package is installed," "$(printf "%bit was not installed by dotsys." $red)" \
                     "$(printf "\n$spacer Use %bdotsys install $key --force%b to allow dotsys to manage it" $code $yellow)"
@@ -118,9 +139,11 @@ is_installed () {
 
             # script warnings
             elif [ "$script" ]; then
+
                 if [ "$action" = "uninstall" ]; then
                     # not installed by dotsys so skip uninstall script
                     installed=1
+
                 elif ! [ "$force" ]; then
                     warn "It appears that" "$key" "$(printf "%bwas already installed on this system%b" $red $rc)" \
                     "$(printf "\n$spacer Use %bdotsys install $key --force%b to run the dotsys install script" $code $yellow)"
@@ -131,11 +154,8 @@ is_installed () {
 
         # not installed on system
         else
-            # Topics installed on windows may not be on path yet
-            local installed_test="$(get_topic_config_val "$key" "installed_test")"
-            find_windows_cmd "${installed_test:-$key}"
-            installed=$?
-            debug "   cmd installed on system (checked windows)  -> $installed"
+            installed=1
+            debug "   cmd not installed on system -> $installed"
         fi
     fi
 
