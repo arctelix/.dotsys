@@ -388,11 +388,11 @@ manage_remote_repo (){
 
     # Make sure upstram is configured
     debug "   manage_remote_repo: git rev-parse"
-    if ! $(git rev-parse @{u} > /dev/null 2>&1); then
+    if ! git rev-parse @{u} > /dev/null 2>&1; then
         debug "   manage_remote_repo: git rev-parse failed attempting git checkout $branch"
 
         # Make sure branch is checked out (sets origin automatically)
-        result="$(git checkout $branch 2> /dev/null)"
+        result="$(git checkout $branch > /dev/null 2>&1)"
         if ! [ "$task" = "status" ]; then
             success_or_fail $? "" "$(indent_lines "$result")"
         fi

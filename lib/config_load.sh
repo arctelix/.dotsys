@@ -50,7 +50,7 @@ load_config_vars (){
     # load DEFAULT CFG (prefix with ___)
     local yaml="$(parse_yaml "$(dotsys_dir)/dotsys.cfg" "___")"
     debug "LOADED DEFAULT CFG:"
-    debug "$yaml"
+    # debug "$yaml"
     eval "$yaml" #set default config vars
 
     # validate from and set config_file
@@ -80,10 +80,11 @@ load_config_vars (){
     # MANAGE REPO Make sure repo is installed updated
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
+        debug "MANAGE REPO linits=$limits topics=$topics"
         # pre-confirm when repo is in limits
         if in_limits "repo" -r; then confirmed="--confirmed"; fi
 
-        if in_limits "repo" && ! [ "$topics" ]; then
+        if in_limits "repo" "dotsys" && ! [ "$topics" ]; then
             debug "   load_config_vars -> call manage_repo"
             manage_repo "$action" "$ACTIVE_REPO" "$force" "$confirmed"
         fi
@@ -125,6 +126,8 @@ load_config_vars (){
 
     # Show config info when more then one topic
     if verbose_mode; then print_stats; fi
+
+    debug "END LOAD CONFIG"
 }
 
 load_repo_config_vars () {
@@ -138,7 +141,7 @@ load_repo_config_vars () {
     if [ -f "$config_file" ]; then
         yaml="$(parse_yaml "$config_file" "__")"
         debug "LOADED REPO CFG:"
-        debug "$yaml"
+        # debug "$yaml"
         eval "$yaml" #set config vars
         eval "${loaded}=true"
     fi

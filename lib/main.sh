@@ -555,12 +555,15 @@ dotsys () {
                 warn "Dotsys is still in use and cannot be uninstalled until
               $spacer all topics, packages, & repos are uninstalled\n"
                 get_user_input "Would you like to uninstall everything, including dotsys, now?" --required
-                if ! [ $? -eq 0 ]; then exit; fi
+                if [ $? -eq 0 ]; then
+                    dotsys uninstall from "$(state_primary_repo)"
+                else
+                    exit
+                fi
             fi
 
         # Bin files must be linked first
         elif [ "$action" = "install" ]; then
-
             manage_topic_bin "link" "dotsys"
         fi
     fi
