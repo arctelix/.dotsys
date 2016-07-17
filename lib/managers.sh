@@ -140,7 +140,6 @@ run_manager_task () {
          # Update packages.yaml for non topic packages
          if ! topic_exists "$topic" -s;then
             local pkg_file="$(topic_dir "$manager" "user")/packages.yaml"
-            dprint "rmt $action $topic"
             if [ "$action" = "install" ];then
                 file_add_kv "$pkg_file" "$topic"
             elif [ "$action" = "uninstall" ];then

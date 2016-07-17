@@ -45,12 +45,12 @@ file_remove_kv () {
       debug "   - state_uninstall state_file not found : $file"
       return 1
   fi
-  dprint "   - state_uninstall: grep ${key}:${val} -> $file"
+  debug "   - state_uninstall: grep ${key}:${val} -> $file"
 
   # grep -v fails on last item so we have to test then remove
   grep -q "$(grep_kv)" "$file"
   if [ $? -eq 0 ]; then
-     dprint "   state_uninstall FOUND ${key}:${val}, uninstalling"
+     debug "   state_uninstall FOUND ${key}:${val}, uninstalling"
      grep -v "$(grep_kv)" "$file" > "$temp"
      mv -f "$temp" "$file"
   else
