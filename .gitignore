@@ -3,4 +3,5 @@ user/*
 .idea/*
 *.private
 *.dslog
-.DS_Store
+.DS_Store*.stub
+*.private

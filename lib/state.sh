@@ -434,9 +434,11 @@ get_installed_topics () {
 
 topic_in_use () {
     local topic="${1:-$topic}"
+    local repo="${2:-$ACTIVE_REPO}"
+
     # If the topic is a key in deps.state then it can not be
     # uninstalled until all it's dependant topics are uninstalled.
-    in_state "deps" "$topic" "$ACTIVE_REPO"
+    in_state "deps" "$topic" "$repo"
     local r=$?
     debug "   - topic_in_use: $topic = $r"
     return $r

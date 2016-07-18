@@ -127,12 +127,13 @@ run_manager_task () {
      rv=$?
 
      # (10 = not found, but not required)
+     # Install only on 0, uninstall le 10
      if [ $rv -le 10 ]; then
 
          # record success to state file
          debug "   run_manager_task: script exit = $?"
          if [ "$action" = "install" ]; then
-           state_install "$manager" "$topic"
+           [ $rv -eq 0 ] && state_install "$manager" "$topic"
          elif [ "$action" = "uninstall" ]; then
            state_uninstall "$manager" "$topic"
          fi
@@ -141,7 +142,7 @@ run_manager_task () {
          if ! topic_exists "$topic" -s;then
             local pkg_file="$(topic_dir "$manager" "user")/packages.yaml"
             if [ "$action" = "install" ];then
-                file_add_kv "$pkg_file" "$topic"
+                [ $rv -eq 0 ] && file_add_kv "$pkg_file" "$topic"
             elif [ "$action" = "uninstall" ];then
                 file_remove_kv "$pkg_file" "$topic"
             fi
