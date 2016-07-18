@@ -152,7 +152,7 @@ get_user_or_builtin_file () {
         chmod 755 "$file"
     done
 
-    dprint "$(printf '    found: %s\n' "${u_files[@]}")"
+    debug "$(printf '    found: %s\n' "${u_files[@]}")"
 
     # return line separated array
     printf '%s\n' "${u_files[@]}"

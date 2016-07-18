@@ -680,7 +680,7 @@ manage_source () {
     local output_status="$4"
     local src_file_name="$(basename "${src_file%.*}")"
 
-    dprint "--  manage_source: $*"
+    debug "--  manage_source: $*"
 
     # check if src_file_name has a .sources file
     local format_script="$(get_user_or_builtin_file "$target_topic" "*.sources")"

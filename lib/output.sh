@@ -256,7 +256,6 @@ clear_lines () {
     printf "$clear_line"
     if ! [ "$1" ];then return;fi
     local lines=$(printf "%b" "$1" | wc -l)
-    dprint "$lines"
     lines=$lines+1 #clears all lines
     local sub=${2:-0} # add (+#) or subtract (-#) lines to clear
     local c
