@@ -46,11 +46,16 @@ run_topic_script () {
 
       # check if already uninstalled (not testing for repo!)
       elif [ "$action" = "uninstall" ];then
+
+        # In use by active repo
         if ! is_installed "dotsys" "$topic" "$(get_active_repo)" --script; then
             debug "  aborted unmanaged topic script"
             return
+
+        # Catch uninstall required topic (force not permitted)
+        # Checks depts state for dotsys topic dependants
         elif topic_in_use "$topic" "dotsys/dotsys" && ! in_limits "dotsys" -r; then
-            warn " aborted unmanaged topic script (dotsys required)"
+            warn "Skipped uninstall script for required topic: $topic"
             return
         fi
       fi
@@ -144,7 +149,8 @@ run_script_func () {
 
   # Returns built in and user script
   local scripts=( $(get_topic_scripts "$topic" "$script_name") )
-  debug "   run_script_func scripts: $scripts"
+  debug "   run_script_func scripts:
+  ${scripts[@]}"
 
   # Verify required script was found
   if ! [ "$scripts" ] && [ "$required" ]; then
@@ -162,7 +168,7 @@ run_script_func () {
   local i=0
 
   # execute built in function then user script function
-  for script in $scripts[@]; do
+  for script in ${scripts[@]}; do
 
     script_src="${script_sources[$i]}"
     i=$((i+1))

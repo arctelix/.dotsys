@@ -119,8 +119,9 @@ user_stub_dir() {
 get_user_or_builtin_file () {
     local topic="$1"
     local find_file="$2"
+    local rv
 
-    debug "-- get_user_or_builtin_file $topic $find_file"
+    debug "   - get_user_or_builtin_file for $topic $find_file"
 
     local u_dir="$(topic_dir "$topic" "user")"
     local u_files=()
@@ -145,13 +146,14 @@ get_user_or_builtin_file () {
         fi
     done
 
-    # Set permissions for all files
-    for file in "${u_files[@]}";do
-        script_exists "$file"
+    if ! [ "$u_files" ]; then return 1; fi
+
+    for file in ${u_files[@]};do
+        chmod 755 "$file"
     done
+
+    dprint "$(printf '    found: %s\n' "${u_files[@]}")"
 
     # return line separated array
     printf '%s\n' "${u_files[@]}"
-
-    return $?
 }

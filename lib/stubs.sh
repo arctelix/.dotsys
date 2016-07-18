@@ -144,7 +144,8 @@ manage_topic_stubs () {
     local usage="manage_topic_stubs [<option>]"
     local usage_full="
         -f | --force        Force stub updates
-        -d | --data         Collect user data only
+        -d | --data_update  Update stub file
+        -d | --data_collect Only Collect user data
         -t | --task         Show task messages
     "
     local action="$1"
@@ -579,16 +580,16 @@ collect_topic_sources () {
     local dir
     local all_sourced_files=()
 
-    debug "-- add_topic_sources to: $topic/$stub_file_name"
+    debug "-- collect_topic_sources: $topic/$stub_file_name"
 
     # Source topic extensions from all installed topics
     for dir in $installed_topic_dirs; do
         local sourced=()
         local o
-        debug "   - checking $topic for sources: $dir"
+        debug "   - checking for sources: $topic in $dir"
         # source ordered files with topic extension
         for o in $order; do
-            src_file="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "$o.$topic" -not -name '\.*' )"
+            src_file="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "$o\.$topic" -not -name '\.*' )"
             if ! [ -f "$src_file" ]; then continue; fi
             manage_source "$action" "$topic" "$src_file"
             sourced+=("$src_file")
@@ -596,8 +597,11 @@ collect_topic_sources () {
         done
 
         # source topic extension with any name
-        local files="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "*.$topic" -not -name '\.*' )"
+        local files="$(find "$dir" -mindepth 1 -maxdepth 1 -type f -name "*\.$topic" -not -name '\.*' )"
+        debug "    found files:"
+        debug "$files"
         while IFS=$'\n' read -r src_file; do
+
             if ! [ -f "$src_file" ] || [[ ${sourced[@]} =~ $src_file ]]; then continue;fi
             manage_source "$action" "$topic" "$src_file"
             all_sourced_files+=("$src_file")
@@ -623,15 +627,18 @@ manage_topic_source_files () {
 
     debug "-- manage_topic_source_files: $action $topic"
 
+    debug "   topic_files found: $topic_files"
+
     local src_files=()
 
     # iterate all files in topic dir
     while IFS=$'\n' read -r topic_file; do
+        debug "  topic_file : $topic_file"
         # source topic is the file extension
         target_topic="${topic_file##*.}"
 
         # Skip system extensions
-        if [[ "$SYSTEM_FILE_EXTENSIONS" =~ $src_topic ]]; then continue;fi
+        if [ ! "$topic_file" ] || [[ "$SYSTEM_FILE_EXTENSIONS" =~ $target_topic ]]; then continue;fi
 
         # make sure topic is installed
         if ! in_state "dotsys" "$target_topic"; then continue;fi
@@ -640,13 +647,18 @@ manage_topic_source_files () {
         src_files+=("$topic_file")
     done <<< "$topic_files"
 
-    local prev_sourced_file="$(user_stub_dir)/sources_from_${topic}"
+    local prev_sourced_file="$(user_stub_dir)/${topic}.sources"
 
     if [ "$action" = uninstall ] || ! [ "$src_files" ] ;then
         if [ -f "$prev_sourced_file" ]; then
             rm "$prev_sourced_file"
         fi
         return
+    fi
+
+    if [ "$src_files" ]; then
+        # Add all src_files to prev_sourced_file
+        printf "%s\n" "${src_files[@]}" > "$prev_sourced_file"
     fi
 
     # Remove any deleted source files from active sources
@@ -657,12 +669,6 @@ manage_topic_source_files () {
             manage_source uninstall "$target_topic" "$topic_file" "output_status"
         fi
     done <"$prev_sourced_file"
-
-    if [ "$src_files" ]; then
-        # Add all src_files to prev_sourced_file
-        printf "%s\n" "${src_files[@]}" > "$prev_sourced_file"
-    fi
-
 }
 
 # Add/remove source from stub file
@@ -674,18 +680,20 @@ manage_source () {
     local output_status="$4"
     local src_file_name="$(basename "${src_file%.*}")"
 
+    dprint "--  manage_source: $*"
+
     # check if src_file_name has a .sources file
     local format_script="$(get_user_or_builtin_file "$target_topic" "*.sources")"
-    if ! [ $? ]; then return; fi
+    if ! [ $? ] || ! script_exists "$src_file"; then return; fi
 
-    debug "   - manage_source for: $target_topic/$src_file_name
+    debug "     manage_source for: $target_topic/$src_file_name
          \r     with script: $format_script"
 
     local write_target="$(get_user_stub_file "$target_topic" "$format_script")"
-    local formatted_source="$($format_script format_source_file "$src_file")"
+    local formatted_source="$($format_script "$src_file")"
     local modified
 
-    # Add a debug command to shell topic sources
+    # Add source function to shell topics (do not use formatted_source)
     if is_shell_topic; then
         formatted_source="load_source_file '$src_file'"
     fi

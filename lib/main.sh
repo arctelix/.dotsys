@@ -930,7 +930,7 @@ dotsys () {
     debug "main -> FINISHED"
 
     # remove dotsys bin commands from user bin
-    if [ "$action" = "uninstall" ] && in_limits "dotsys" -f && ! topic_in_use core;then
+    if [ "$action" = "uninstall" ] && in_limits "dotsys" -r && ! topic_in_use core;then
         debug "UNINSTALLING DOTSYS COMMANDS FROM USER BIN!"
         manage_topic_bin "unlink" "dotsys"
     fi

@@ -103,9 +103,15 @@ run_manager_task () {
      elif [ "$action" = "uninstall" ] && [ ! "$force" ] && ! is_installed "$manager" "$topic" --manager; then
         # Only show the message if is actually uninstalled on manager state
         if ! is_installed "$manager" "$topic"; then
-            success "The package for" "$( printf "%b$topic" "$hc_topic")," "was already ${action}ed by dotsys"
+            success "The package for" "$( printf "%b$topic" "$hc_topic")," "is not installed by dotsys"
         fi
         continue
+
+     # Catch uninstall required topic (force not permitted)
+     # Checks depts state for dotsys topic dependants
+     elif topic_in_use "$topic" "dotsys/dotsys" && ! in_limits "dotsys" -r; then
+            warn "Skipped manager uninstall script for required topic: $topic"
+            continue
      fi
 
      # only confirm packages, actual topics will be confirmed by script_manager

@@ -12,17 +12,19 @@ manage_repo (){
     local action
     local repo
     local force
-    local confirmed
+    local REPO_CONFIRMED
+    local GIT_CONFIRMED
     local cfg_mode="${cfg_mode}"
 
-    if [ "${TOPIC_CONFIRMED:-"$GLOBAL_CONFIRMED"}" ]; then
-        confirmed="--confirmed"
+    if [ "${TOPIC_CONFIRMED:-"$GLOBAL_CONFIRMED"}" ] || in_limits "repo" -r; then
+        REPO_CONFIRMED="true"
+        GIT_CONFIRMED="true"
     fi
 
     while [[ $# > 0 ]]; do
         case "$1" in
         --force )       force="$1" ;;
-        --confirmed )   confirmed="--confirmed" ;;
+        --confirmed )   REPO_CONFIRMED="true" ;;
         --cfg )         cfg_mode="$2"; shift ;;
         *)  uncaught_case "$1" "action" "repo";;
         esac
@@ -145,7 +147,7 @@ manage_repo (){
                             $spacer exists and may not be fully uninstalled from your system.
                             $spacer The best course of action is abort now and replace the missing
                             $spacer repo in your $(dotfiles_dir) and run 'dotsys install $repo'")"
-                    confirmed=""
+                    REPO_CONFIRMED=""
                 fi
             # Abort on repo in use
             elif repo_in_use "$repo"; then
@@ -157,7 +159,7 @@ manage_repo (){
             else
                repo_status="unused"
                task "Uninstall $repo_status repo:" "$(printf "%b$repo" "$hc_topic")"
-               confirmed="true"
+               REPO_CONFIRMED="true"
             fi
 
         # ALL EXCEPT UNINSTALL
@@ -904,11 +906,11 @@ copy_topics_to_repo () {
 
     # Importable found
     if [ "${found_dirs[*]}" ]; then
-        task "Import topics found in:" "$(printf "\n%b$root_dir:" "$hc_topic")"
+        task "Import topics found in directory:" "$(printf "\n$spacer %b$root_dir:" "$hc_topic")"
         msg "$(echo "${found_dirs[@]}" | indent_list)"
     # noting to import
     else
-       info "Importable topics not found in:" "$(printf "\n$spacer $root_dir:" "$hc_topic")"
+       info "Importable topics not found in directory:" "$(printf "\n$spacer $root_dir:" "$hc_topic")"
        return
     fi
 

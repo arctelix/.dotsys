@@ -81,12 +81,10 @@ load_config_vars (){
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
         debug "MANAGE REPO linits=$limits topics=$topics"
-        # pre-confirm when repo is in limits
-        if in_limits "repo" -r; then confirmed="--confirmed"; fi
 
         if in_limits "repo" "dotsys" && ! [ "$topics" ]; then
             debug "   load_config_vars -> call manage_repo"
-            manage_repo "$action" "$ACTIVE_REPO" "$force" "$confirmed"
+            manage_repo "$action" "$ACTIVE_REPO" "$force"
         fi
     fi
 
