@@ -172,10 +172,11 @@ manage_topic_stubs () {
     # check if user accepted subs
     if ! get_state_value "user" "use_stub_files"; then return; fi
 
+    debug "-- manage_topic_stubs: $action $topic $data_mode $force"
+
     # Check for topic stub files
     local stub_files="$(get_topic_stub_sources "$topic")"
     if [ "$stub_files" ];then
-        debug "-- manage_topic_stubs: $action $topic $data_mode $force"
 
         if [ "$data_mode" ]; then
             task "${data_mode}ing $topic data"
@@ -200,7 +201,7 @@ manage_topic_stubs () {
 
     # Check topic for other topic source files
     if ! [ "$data_mode" ]; then
-        manage_topic_source_files "$action" "$topic"
+        distribute_topic_sources "$action" "$topic"
     fi
 }
 
@@ -290,6 +291,8 @@ manage_user_stub () {
             prefix="load_source_file "
         fi
 
+        # not using -i option due to OSX incompatibility
+        # osx (sed -i "" -e s|...) / linux (sed -i -- s|...)
         sed -e "s|{STUB_TARGET}|$prefix'$stub_tar'|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
 
@@ -562,7 +565,7 @@ get_credential_helper () {
     echo "$helper"
 }
 
-# Check all installed topics for files with topic extension
+# Collect current topic sources from  installed topics
 # only new sources written to file & returned
 # freeze action outputs all found files
 collect_topic_sources () {
@@ -614,10 +617,10 @@ collect_topic_sources () {
     fi
 }
 
-# Check current topic for other topic sources
+# Distribute current topic source files to installed topics
 # new sources writen to file
 # removed sources removed from file
-manage_topic_source_files () {
+distribute_topic_sources () {
     local action="$1"
     local topic="$2"
     #TODO: manage_topic_source_files append builtin sources to user sources
@@ -625,15 +628,15 @@ manage_topic_source_files () {
     local topic_file
     local target_topic
 
-    debug "-- manage_topic_source_files: $action $topic"
-
-    debug "   topic_files found: $topic_files"
+    debug "-- distribute_topic_sources: $action $topic"
 
     local src_files=()
 
-    # iterate all files in topic dir
+    # collect source files from topic directory
     while IFS=$'\n' read -r topic_file; do
-        debug "  topic_file : $topic_file"
+
+        debug "   topic_file : $topic_file"
+
         # source topic is the file extension
         target_topic="${topic_file##*.}"
 
@@ -643,55 +646,58 @@ manage_topic_source_files () {
         # make sure topic is installed
         if ! in_state "dotsys" "$target_topic"; then continue;fi
 
+        # add to stub file if not there
         manage_source "$action" "$target_topic" "$topic_file" "output_status"
         src_files+=("$topic_file")
+
     done <<< "$topic_files"
 
-    local prev_sourced_file="$(user_stub_dir)/${topic}.sources"
+    local topic_sources_file="$(user_stub_dir)/${topic}.sources"
 
-    if [ "$action" = uninstall ] || ! [ "$src_files" ] ;then
-        if [ -f "$prev_sourced_file" ]; then
-            rm "$prev_sourced_file"
+    # Add / Remove source files from stub file
+    while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
+        target_topic="${topic_file##*.}"
+        if ! array_contains src_files "$topic_file";then
+            manage_source "uninstall" "$target_topic" "$topic_file" "output_status"
         fi
-        return
+    done < "$topic_sources_file"
+
+
+    # Remove sources file on topic uninstall
+    if [ "$action" = "uninstall" ] || ! [ "$src_files" ] ;then
+        debug "   remove sources file: $topic_sources_file"
+        rm "$topic_sources_file"
     fi
+
 
     if [ "$src_files" ]; then
         # Add all src_files to prev_sourced_file
-        printf "%s\n" "${src_files[@]}" > "$prev_sourced_file"
+        printf "%s\n" "${src_files[@]}" > "$topic_sources_file"
     fi
-
-    # Remove any deleted source files from active sources
-    while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
-        target_topic="${topic_file##*.}"
-        debug "   - checking array contains $target_topic $topic_file "
-        if ! array_contains src_files "$topic_file";then
-            manage_source uninstall "$target_topic" "$topic_file" "output_status"
-        fi
-    done <"$prev_sourced_file"
 }
 
 # Add/remove source from stub file
 # Checks if current shel requires resourcing
 manage_source () {
     local action="$1"
-    local target_topic="$2"
+    local topic="$2"
     local src_file="$3"
     local output_status="$4"
     local src_file_name="$(basename "${src_file%.*}")"
 
-    debug "--  manage_source: $*"
+
 
     # check if src_file_name has a .sources file
-    local format_script="$(get_user_or_builtin_file "$target_topic" "*.sources")"
-    if ! [ $? ] || ! script_exists "$src_file"; then return; fi
+    local format_script="$(get_user_or_builtin_file "$topic" "*.sources")"
+    # verify format script and script exits (for permissions)
+    if ! [ $? ]; then return; fi
 
-    debug "     manage_source for: $target_topic/$src_file_name
-         \r     with script: $format_script"
+    debug "   -- manage_sources: $*"
 
-    local write_target="$(get_user_stub_file "$target_topic" "$format_script")"
-    local formatted_source="$($format_script "$src_file")"
+    local stub_file="$(get_user_stub_file "$topic" "$format_script")"
+    local formatted_source="$($format_script format_source_file "$src_file")"
     local modified
+    local fromto
 
     # Add source function to shell topics (do not use formatted_source)
     if is_shell_topic; then
@@ -700,28 +706,31 @@ manage_source () {
 
     # REMOVE FROM FILE
     if [ "$action" = "uninstall" ];then
-        replace_file_string "$write_target" "$formatted_source" ""
-        success_or_fail $? "remove" "source $src_file \n$spacer from -> $write_target"
+        remove_file_line "$stub_file" "$formatted_source"
         modified="remove"
+        fromto="from"
 
     # output all sources to terminal
     elif [ "$action" = "freeze" ] && [ "$output_status" ];then
         freeze_msg "source" "$src_file"
 
     # WRITE TO FILE
-    elif ! grep -q "$src_file" "$write_target"; then
+    elif ! grep -q "$src_file" "$stub_file"; then
         # Add source to target file
-        echo "$formatted_source" >> $write_target
+        echo "$formatted_source" >> $stub_file
         modified="add"
+        fromto="to"
+        chmod 755 "$src_file"
     fi
 
     if [ "$modified" ]; then
 
-        debug "manage_source $target_topic -> flag reload"
-        RELOAD_SHELL="$(shell flag_reload "$target_topic" "$RELOAD_SHELL")"
+        debug "      manage_source $modified : $formatted_source"
+        debug "      manage_source -> flag reload"
+        RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
 
         if [ "$output_status" ];then
-            success_or_fail $? "$modified" "source $src_file \n$spacer to -> $write_target"
+            success_or_fail $? "$modified" "source $src_file \n$spacer $fromto -> $stub_file"
         else
             echo "$spacer ${modified}ed source : $src_file"
         fi

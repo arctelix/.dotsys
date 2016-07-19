@@ -37,9 +37,30 @@ unique_list () {
 replace_file_string () {
     local file="$1"
     local rm_str="$2"
-    local rp_str="$2"
-    sed -i -- "s|$rm_str|$rp_str|g" "$file"
+    local rp_str="$3"
+    sedi "s|$rm_str|$rp_str|g" "$file"
 }
+
+remove_file_line () {
+    local file="$1"
+    local rm_str="$2"
+    sedi "\|$rm_str|d" "$file"
+}
+
+sedi () {
+
+    sed -i 2>&1 | grep -q '\-i extension'
+
+    # OSX sed
+    if [ $? -eq 0 ]; then
+        sed -i "" "$@"
+
+    # Other sed
+    else
+        sed -i -- "$@"
+    fi
+}
+
 
 rename_all() {
     import input get_user_input
