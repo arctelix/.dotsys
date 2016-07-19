@@ -654,23 +654,26 @@ distribute_topic_sources () {
 
     local topic_sources_file="$(user_stub_dir)/${topic}.sources"
 
-    # Add / Remove source files from stub file
-    while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
-        target_topic="${topic_file##*.}"
-        if ! array_contains src_files "$topic_file";then
-            manage_source "uninstall" "$target_topic" "$topic_file" "output_status"
-        fi
-    done < "$topic_sources_file"
+    if [ -f "$topic_sources_file" ];then
 
+        # Remove missing source files from stub file
+        while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
+            target_topic="${topic_file##*.}"
+            if ! array_contains src_files "$topic_file";then
+                manage_source "uninstall" "$target_topic" "$topic_file" "output_status"
+            fi
+        done < "$topic_sources_file"
 
-    # Remove sources file on topic uninstall
-    if [ "$action" = "uninstall" ] || ! [ "$src_files" ] ;then
-        debug "   remove sources file: $topic_sources_file"
-        rm "$topic_sources_file"
     fi
 
 
-    if [ "$src_files" ]; then
+    # Remove .sources file on topic uninstall
+    if [ "$action" = "uninstall" ] || ! [ "$src_files" ] ;then
+        debug "   remove sources file: $topic_sources_file"
+        [ -f "$topic_sources_file" ] && rm "$topic_sources_file"
+
+    # Create up to date .sources file
+    elif [ "$src_files" ]; then
         # Add all src_files to prev_sourced_file
         printf "%s\n" "${src_files[@]}" > "$topic_sources_file"
     fi
