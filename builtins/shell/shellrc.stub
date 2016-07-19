@@ -35,7 +35,7 @@ alias sfl='echo $SHELL_FILES_LOADED'
 alias din='dotsys install'
 alias dun='dotsys uninstall'
 alias dug='dotsys upgrade'
-alias dud'dotsys update'
+alias dud='dotsys update'
 alias dfr='dotsys freeze'
 
 alias sr='dotsys freeze'
