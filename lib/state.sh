@@ -303,7 +303,7 @@ freeze_states() {
 }
 
 freeze_state () {
-    task "Freezing" "$(printf "%b$state state:" "$hc_topic")"
+    task "Freezing" "$(printf "%b$1 state:" "$hc_topic")"
     list_state "$1" freeze
 }
 
