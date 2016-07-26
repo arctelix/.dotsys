@@ -48,17 +48,8 @@ remove_file_line () {
 }
 
 sedi () {
-
-    sed -i 2>&1 | grep -q '\-i extension'
-
-    # OSX sed
-    if [ $? -eq 0 ]; then
-        sed -i "" "$@"
-
-    # Other sed
-    else
-        sed -i -- "$@"
-    fi
+    # BSD sed does not have a --version option and GNU sed does
+    sed --version >/dev/null 2>&1 && sed -i -- "$@" || sed -i "" "$@"
 }
 
 
