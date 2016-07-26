@@ -769,7 +769,7 @@ dotsys () {
 
 
         # ABORT: on install if already installed (override --force)
-        debug "main -> check is_installed for $topic $ACTIVE_REPO"
+        dprint "main -> check is_installed for $topic $ACTIVE_REPO"
         local action_complete=
 
         if ! [ "$force" ]; then
@@ -971,23 +971,40 @@ uninstall_inactive () {
     fi
 }
 
-# Add active shell to topic list if not already there
 add_active_shell_to_topics () {
+
+    # Add active shell to topic list if not already there
     if ! [[ "${topics[*]}" =~ $ACTIVE_SHELL ]]; then
-        get_user_input "The current shell '$ACTIVE_SHELL' is not in your repo,
-                $spacer add it now?" -r
-        if [ $? -eq 0 ]; then
-            topics=("$ACTIVE_SHELL ${topics[*]}")
-            topic_dir=
-            mkdir "$(repo_dir)/$ACTIVE_SHELL"
+
+        if [ "$action" != "uninstall" ]; then
+
+            topics=( $ACTIVE_SHELL ${topics[*]} )
+
+            if [ -f "$(repo_dir)/$ACTIVE_SHELL" ]; then return; fi
+
+            get_user_input "The current shell '$ACTIVE_SHELL' is not in your repo,
+                    $spacer do you want to add it now?" -r
+            if [ $? -eq 0 ]; then
+                mkdir "$(repo_dir)/$ACTIVE_SHELL"
+            fi
+
+        else
+            topics=( ${topics[*]} $ACTIVE_SHELL )
         fi
     fi
 }
 
 add_dotsys_shell_to_topics () {
+
     # if shell is not in the topic list and active shell is, add shell to topic list
-    if [[ "${topics[*]}" =~ $ACTIVE_SHELL ]] && ! [[ "$topics[*]" =~ shell ]]; then
-       topics=("${topics[*]/$ACTIVE_SHELL/shell $ACTIVE_SHELL}")
+    if [[ "${topics[*]}" =~ $ACTIVE_SHELL ]] && ! [[ "${topics[*]}" =~ shell ]]; then
+
+       if [ "$action" != "uninstall" ]; then
+           topics=( ${topics[*]/$ACTIVE_SHELL/shell $ACTIVE_SHELL} )
+       else
+           topics=( ${topics[*]/$ACTIVE_SHELL/$ACTIVE_SHELL shell} )
+       fi
     fi
+
 }
 

@@ -238,11 +238,11 @@ new_user_config () {
 
     printf "\n"
 
-    info "Set Your Custom System Configuration Values
-  $spacer modify values at any time with the commands:"
-    msg_help "$spacer Run this configuration again:
+    task "Set Configuration Options:"
+
+    msg_help "$spacer You can modify these values later with:
               $spacer > $(code "dotsys config\n")"
-    msg_help "$spacer Set a specific config value:
+    msg_help "$spacer Or set a specific config value with:
               $spacer > $(code "dotsys config <var> [value, --prompt]")"
 
     printf "\n"

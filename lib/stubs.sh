@@ -692,8 +692,8 @@ manage_source () {
 
     # check if src_file_name has a .sources file
     local format_script="$(get_user_or_builtin_file "$topic" "*.sources")"
-    # verify format script and script exits (for permissions)
-    if ! [ $? ]; then return; fi
+    # verify format script and stub file exits
+    if ! [ $? ] || ! script_exists "$src_file"; then return; fi
 
     debug "   -- manage_sources: $*"
 
@@ -709,7 +709,7 @@ manage_source () {
 
     # REMOVE FROM FILE
     if [ "$action" = "uninstall" ];then
-        remove_file_line "$stub_file" "$formatted_source"
+        [ -f "$stub_file" ] && remove_file_line "$stub_file" "$formatted_source"
         modified="remove"
         fromto="from"
 
@@ -723,7 +723,6 @@ manage_source () {
         echo "$formatted_source" >> $stub_file
         modified="add"
         fromto="to"
-        chmod 755 "$src_file"
     fi
 
     if [ "$modified" ]; then
