@@ -252,7 +252,7 @@ manage_user_stub () {
         elif [ -f "$stub_dst" ]; then
             rm "$stub_dst"
             success_or_fail $? "remove" "stub file:" "${topic}/$stub_name"
-            RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
+            RELOAD_SHELL="$(flag_reload "$topic" "$RELOAD_SHELL")"
             return
         fi
     fi
@@ -324,7 +324,7 @@ manage_user_stub () {
 
     # TEST IF CURRENT SHELL FILES NEED TO BE RESOURCED
     debug "manage_user_stub $topic -> flag reload"
-    RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
+    RELOAD_SHELL="$(flag_reload "$topic" "$RELOAD_SHELL")"
 
     success_or_fail $ret "$file_action" "stub file:" "${topic}/$stub_name" "$output"
 }
@@ -577,16 +577,21 @@ collect_topic_sources () {
     local topic_sources_script="$(get_user_or_builtin_file "$topic" "${stub_file_name}.sources")"
     if ! [ "$topic_sources_script" ]; then continue;fi
 
-    local installed_topic_dirs="$(get_installed_topics "dir")"
-    local order="path functions aliases"
+    local installed_topic_dirs=( $(get_installed_topics "dir") )
+    local topic_dir="$(topic_dir "$topic")"
+
+    # insert current topic as first topic in list
+    installed_topic_dirs=( "$topic_dir" ${installed_topic_dirs[@]/$topic_dir} )
+
+    local order="path functions aliases completion"
     local src_file
     local dir
     local all_sourced_files=()
 
     debug "-- collect_topic_sources: $topic/$stub_file_name"
 
-    # Source topic extensions from all installed topics
-    for dir in $installed_topic_dirs; do
+    # Source topic extensions from all installed topics & current topic
+    for dir in ${installed_topic_dirs[@]}; do
         local sourced=()
         local o
         debug "   - checking for sources: $topic in $dir"
@@ -643,7 +648,7 @@ distribute_topic_sources () {
         # Skip system extensions
         if [ ! "$topic_file" ] || [[ "$SYSTEM_FILE_EXTENSIONS" =~ $target_topic ]]; then continue;fi
 
-        # make sure topic is installed
+        # make sure target topic is installed or is current topic
         if ! in_state "dotsys" "$target_topic"; then continue;fi
 
         # add to stub file if not there
@@ -729,7 +734,7 @@ manage_source () {
 
         debug "      manage_source $modified : $formatted_source"
         debug "      manage_source -> flag reload"
-        RELOAD_SHELL="$(shell flag_reload "$topic" "$RELOAD_SHELL")"
+        RELOAD_SHELL="$(flag_reload "$topic" "$RELOAD_SHELL")"
 
         if [ "$output_status" ];then
             success_or_fail $? "$modified" "source $src_file \n$spacer $fromto -> $stub_file"

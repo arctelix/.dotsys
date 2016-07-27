@@ -85,7 +85,8 @@ fi
 . "$DOTSYS_LIBRARY/repos.sh"
 . "$DOTSYS_LIBRARY/stubs.sh"
 
-import shell
+import shell shell_reload
+import shell flag_reload
 
 DEBUG=false
 DEBUG_IMPORT=false
@@ -501,6 +502,11 @@ dotsys () {
             fi
 
             manage_stubs "update" "$topics" --data_update --force
+
+            if [[ "$topics" =~ "shell" ]]; then
+                task "Reloading $ACTIVE_SHELL"
+                shell_reload
+            fi
 
         elif [ "$error_msg" ];then
             echo "$error_msg"
@@ -939,7 +945,7 @@ dotsys () {
     debug "main -> CHECK RELOAD: flag:$RELOAD_SHELL recursive:$recursive i:$INSTALLER_RUNNING"
     if ! [ "$recursive" ] && [ "$RELOAD_SHELL" ] && ! [ "$INSTALLER_RUNNING" ];then
         task "Reloading $RELOAD_SHELL"
-        shell shell_reload
+        shell_reload
     fi
 }
 
@@ -1000,9 +1006,9 @@ add_dotsys_shell_to_topics () {
     if [[ "${topics[*]}" =~ $ACTIVE_SHELL ]] && ! [[ "${topics[*]}" =~ shell ]]; then
 
        if [ "$action" != "uninstall" ]; then
-           topics=( ${topics[*]/$ACTIVE_SHELL/shell $ACTIVE_SHELL} )
+           topics=( ${topics[@]/$ACTIVE_SHELL/shell $ACTIVE_SHELL} )
        else
-           topics=( ${topics[*]/$ACTIVE_SHELL/$ACTIVE_SHELL shell} )
+           topics=( ${topics[@]/$ACTIVE_SHELL/$ACTIVE_SHELL shell} )
        fi
     fi
 

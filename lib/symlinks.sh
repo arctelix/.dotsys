@@ -57,7 +57,7 @@ symlink_topic () {
 
   required_vars "action" "topic"
 
-  local files
+  local links
   local dst_path
 
   debug "-- symlink_topic $action $topic SYMLINK_CONFIRMED=$SYMLINK_CONFIRMED"
@@ -67,23 +67,24 @@ symlink_topic () {
   if [ "$SYMLINK_CONFIRMED" ]; then silent="--silent";fi
 
   manage_topic_bin "$action" "$topic" "$silent"
+  if [ "$topic" = "bin" ]; then return;fi
 
-  # find stubs first
-  files=( $(get_user_or_builtin_file "$topic" "*.stub") )
-  # add symlinks
-  files+=( $(get_user_or_builtin_file "$topic" "*.symlink") )
+  # find stubs first (files only)
+  links=( $(get_user_or_builtin f "$topic" "*.stub") )
+  # add symlinks (files & dirs)
+  links+=( $(get_user_or_builtin a "$topic" "*.symlink") )
 
-  debug "   symlinks  : $files"
+  debug "   symlinks  : $links"
 
   local linked=()
   local src
   local dst
   local dst_name
-  for src in "${files[@]}";do
+  for src in ${links[@]};do
 
     debug "   symlink_topic src  : $src"
 
-    # No simlinks found
+    # No symlinks found
     if [[ -z "$src" ]]; then
 #      if [ "$action" != "freeze" ]; then
 #        #success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
@@ -659,13 +660,19 @@ manage_topic_bin () {
     if [ "$topic" = "dotsys" ]; then
         src="$(dotsys_dir)"
         dst_bin="${PLATFORM_USER_BIN}"
+        src_bin="$src/bin"
+
+    elif [ "$topic" = "bin" ]; then
+        src="$(topic_dir "$topic")"
+        dst_bin="$(dotsys_user_bin)"
+        src_bin="$src"
+
     else
         # topic_dir is not guaranteed
         src="$(topic_dir "$topic")"
         dst_bin="$(dotsys_user_bin)"
+        src_bin="$src/bin"
     fi
-
-    src_bin="$src/bin"
 
     if ! [ -d "$src" ] || ! [ -d "$src_bin" ]; then
         return

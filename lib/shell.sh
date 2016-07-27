@@ -127,7 +127,7 @@ shell_init() {
         set -o igncr >/dev/null 2>&1
     fi
 
-    shell_loaded_out "INITIALIZEING $shell $login from $file"
+    shell_loaded_out "› DS INITIALIZING $shell from $file"
 
     # load global rc file
     [ "$file" != ".shellrc" ] && load_source_file "$home/.shellrc" "RCFILE"
@@ -145,9 +145,9 @@ shell_init() {
         # Load shells unique profile ie:.zsh_profile if it exists
         [ "$file" != "$profile" ] && load_source_file "$home/$profile" "PROFILE"
 
-        shell_loaded_out "> LOADING PROFILE $file"
+        shell_loaded_out "› LOADING PROFILE $file"
     else
-        shell_loaded_out "> LOADING RCFILE $file"
+        shell_loaded_out "› LOADING RCFILE $file"
     fi
 
     # Add the system logo to prompt
@@ -166,7 +166,7 @@ load_source_file(){
     if [ ! -f "$file" ]; then return;fi
 
     if [ "$init_file" ]; then
-        shell_loaded_out "> LOADING $init_file $file_name"
+        shell_loaded_out "› LOADING $init_file $file_name"
     else
         shell_loaded_out "  - loading $topic/$file_name"
     fi
@@ -257,15 +257,22 @@ shell_prompt () {
 
     local mode="$1"
     local dsprompt
+    local new_line
 
     # Only use dotsys prompt if enabled by user
     if ! [ "$mode" ] && ! config_shell_prompt; then return; fi
 
+    # move new line prefix to front of |DS|
+    if [[ "$PS1" == *$'\n'* ]];then
+        new_line=$'\n'
+        PS1="${PS1/$'\n'}"
+    fi
+
     if [ "$ACTIVE_SHELL" = "zsh" ];then
         autoload -Uz colors && colors
-        dsprompt="$fg[green]|DS|$reset_color"
+        dsprompt="${new_line}$fg[green]|DS|$reset_color"
     else
-        dsprompt="\e[0;92m|DS|\e[0m"
+        dsprompt="${new_line}\e[0;92m|DS|\e[0m"
     fi
 
     # Toggle off

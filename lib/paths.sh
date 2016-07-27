@@ -115,27 +115,40 @@ user_stub_dir() {
     echo "$(dotsys_dir)/user/stubs"
 }
 
-# returns a file from user directory or builtin directory
+
 get_user_or_builtin_file () {
-    local topic="$1"
-    local find_file="$2"
+    get_user_or_builtin f "$@"
+}
+
+# Searches user directory then builtin directory and returns unique names only
+# user directory supersedes builtins
+get_user_or_builtin () {
+    local type="$1"
+    local topic="$2"
+    local find_name="$3"
     local rv
 
-    debug "   - get_user_or_builtin_file for $topic $find_file"
+    debug "   - get_user_or_builtin_file for $topic $find_name"
 
     local u_dir="$(topic_dir "$topic" "user")"
     local u_files=()
     local b_dir="$(topic_dir "$topic" "builtin")"
     local b_files=()
 
+    if [ "$type" = "a" ]; then
+        type=""
+    elif [ "$type" ];then
+        type="-type $type"
+    fi
+
     # check user directory for file
     if [ -d "$u_dir" ]; then
-        u_files=( $(find "$u_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" -not -name '\.*') )
+        u_files=( $(find "$u_dir" -mindepth 1 -maxdepth 1 $type -name "$find_name" -not -name '\.*') )
     fi
 
     # check builtin directory for file
     if [ -d "$b_dir" ];then
-        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 -type f -name "$find_file" -not -name '\.*') )
+        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 $type -name "$find_name" -not -name '\.*') )
     fi
 
     local file
@@ -154,6 +167,6 @@ get_user_or_builtin_file () {
 
     debug "$(printf '    found: %s\n' "${u_files[@]}")"
 
-    # return line separated array
+    # return line separated list
     printf '%s\n' "${u_files[@]}"
 }
