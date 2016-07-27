@@ -412,6 +412,7 @@ For example `some_file.vim` will be sourced by vim on load.
 |path.\*       | Sourced first for a given topic extension                          |
 |funcitons.\*  | Sourced second for a given topic extension                         |
 |aliases.\*    | Sourced third for a given topic extension                          |
+|completion.\* | Sourced fourth for a given topic extension                         |
 |\*.\*         | All other files names are sourced in alphabetical order            |
 
 

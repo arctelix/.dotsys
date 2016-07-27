@@ -775,7 +775,7 @@ dotsys () {
 
 
         # ABORT: on install if already installed (override --force)
-        dprint "main -> check is_installed for $topic $ACTIVE_REPO"
+        debug "main -> check is_installed for $topic $ACTIVE_REPO"
         local action_complete=
 
         if ! [ "$force" ]; then
