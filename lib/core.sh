@@ -276,11 +276,23 @@ cmd_exists() {
 
 # Test if script contains function
 script_func_exists() {
-  script_exists "$1"
   local rv
-  $1 command -v $2 >/dev/null 2>&1
+  local script="$1"
+  local cmd="$2"
+  shift;shift
+
+  script_exists "$script"
+  if ! [ $? -eq 0 ];then return 1;fi
+
+  # Sub-shell required to make sure cmd is
+  # a local function and not some other cmd.
+  (
+  source "$script"
+  [ "$(command -v "$cmd")" = "$cmd" ]
+  )
   rv=$?
-  # fix line endings
+
+  # fix line endings for windows
   if [ $? -eq 2 ] && command -v dos2unix >/dev/null 2>&1;then
       dos2unix "$1"
       $1 command -v $2 >/dev/null 2>&1

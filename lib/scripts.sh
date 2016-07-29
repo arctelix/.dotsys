@@ -5,7 +5,7 @@
 
 # RUN SCRIPT EXIT CODES: (run_script run_script_func)
 # 0    = everything ok
-# 10   = non required script not found
+# 10   = missing non-required script
 # 11   = missing required script
 # 12   = missing required script function
 
@@ -33,7 +33,7 @@ run_topic_script () {
 
   debug "-- run_topic_script $action for $topic $required"
 
-  local state=0
+  local rv=0
 
   # un-managed topic scripts need to check if already installed (since there likely installing software)
   # managed topic install scripts are really post-install scripts (manager checks for prior install)
@@ -63,71 +63,18 @@ run_topic_script () {
   fi
 
   run_script_func "$topic" "topic.sh" "$action" $packages $required
-  state=$?
+  rv=$?
 
-  # no script required for topic
-  if [ $state -eq 10 ]; then
-     #success "$(printf "No $action script supplied $DRY_RUN for %b$topic%b" $green $rc)"
-     pass
+  # Check for legacy script
+  if [ $rv -ge 10 ] && [[ "install uninstall update upgrade" =~ $action ]]; then
+     run_script_func "$topic" "$action.sh" "$action" $packages $required --legacy
+     rv=$?
   fi
 
-  return $state
+  debug "   -> run_topic_script EXIT STATUS [ $rv ]"
+
+  return $rv
 }
-
-
-# DEPRECIATED (merged with run_script_func)
-xxrun_script (){
-  local topic="${1:-$topic}"
-  local action="${2:-$action}"
-  shift; shift
-  local script="$(topic_dir "$topic")/${action}.sh"
-  local params=()
-  local required=
-  local result
-
-  while [[ $# > 0 ]]; do
-    case "$1" in
-      -r | -required ) required="true" ;;
-      * )  params+=("$1") ;;
-    esac
-    shift
-  done
-
-  debug "-- run_script $script params: ${params[@]}"
-
-  local state=0
-
-  if script_exists "$script"; then
-
-    if [ "$action" = "freeze" ]; then
-      result="$(sh "$script" ${params[@]})"
-      if [ "$result" ]; then
-        freeze_msg "script" "$script" "$result"
-      fi
-      return
-    #run the script
-    elif ! dry_run;then
-      output_script "$script" ${params[*]}
-      state=$?
-    fi
-
-    success_or_fail $state "exicute" "script $DRY_RUN" "$(printf "%b$script" "$hc_topic" )" "on" "$(printf "%b$PLATFORM" "$hc_topic")"
-
-  # missing required
-  elif [ "$required" ]; then
-    fail "Script not found $DRY_RUN" "$(printf "%b$script" "$hc_topic" )" "on" "$(printf "%b$PLATFORM" "$hc_topic")"
-    state=11
-
-  # missing ok
-  else
-    state=10
-  fi
-
-  debug "   run_script exit status $DRY_RUN[ $state ] for $script"
-
-  return $state
-}
-
 
 run_script_func () {
   local topic="$1"
@@ -135,90 +82,95 @@ run_script_func () {
   local action="$3"
   shift; shift; shift
   local params=()
-  local required=
+  local required
+  local legacy
+  local scripts=()
+  local rv=0
 
   while [[ $# > 0 ]]; do
     case "$1" in
-      -r | -required ) required="true" ;;
+      -r | -required ) required="required" ;;
+      -l | --legacy ) legacy="(legacy)" ;;
       * )  params+=("$1") ;;
     esac
     shift
   done
 
-  debug "-- run_script_func received : t:$topic f:$script_name a:$action p:${params[@]} req:$required"
+  debug "-- run_script_func received t:$topic f:$script_name a:$action p:${params[@]} req:$required"
 
-  # Returns built in and user script
-  local scripts=( $(get_topic_scripts "$topic" "$script_name") )
-  debug "   run_script_func scripts:
-  ${scripts[@]}"
+  # Returns builtin and user script
+  local builtin_scr="$(topic_dir $topic "builtin")/${script_name}"
+  local user_scr="$(topic_dir $topic "active")/${script_name}"
+  local scripts=("${builtin_scr}")
 
-  # Verify required script was found
-  if ! [ "$scripts" ] && [ "$required" ]; then
-    fail "${script_name} is required for $topic"
-    return 11
+  # catch duplicate from topic script
+  if [ "$builtin_scr" != "$user_scr" ]; then
+    scripts+=("$user_scr")
+  else
+    scripts+=("")
   fi
 
-  local rv=0
-  local script_sources=(builtin active)
+  # No need to run through scripts if they don't exist
+  if ! [ -f "$builtin_scr" ] && ! [ -f "$user_scr" ];then
+    debug "   run_script_func scripts $legacy: NOT FOUND"
+    scripts=()
+    if ! [ "$required" ];then
+      rv=10
+    else
+      rv=11
+    fi
+  else
+    debug "   run_script_func scripts $legacy:"
+    debug "$(printf "   - %s\n" "${scripts[@]}")"
+  fi
+
+  local script_sources=(builtin user)
   local script_src
   local script
-  local prefix
-  local message
-  local result
   local i=0
+  local msg_prefix
+  local msg_executed
+  local msg_missing=()
+  local executed
 
-  # execute built in function then user script function
-  for script in ${scripts[@]}; do
+  # execute builtin then user script
+  for script in "${scripts[@]}"; do
 
     script_src="${script_sources[$i]}"
     i=$((i+1))
 
-    debug "   run_script_func src: ($script_src) $script"
+    debug "   run_script_func $script_src $legacy: $script"
 
-    legacy=""
-    if ! script_exists "$script"; then
-      # Check for legacy script
-      script="$(topic_dir "$topic" "$script_src")/${action}.sh"
-      legacy="true"
+    # At this point we know at least one script exists so skip any non-existing
+    if ! script_exists "$script";then
+      continue
 
-    elif ! script_func_exists "$script" "$action"; then
-      script=""
+    elif ! [ "$legacy" ] && ! script_func_exists "$script" "$action"; then
       rv=12
-    fi
-
-    if ! [ -f "$script" ];then
-
-      # Display error message for required scripts
-      if [ "$required" ]; then
-
-        fail "$(cap_first "$script_name") $DRY_RUN for" "$topic"  "does not define the required $action function"
-        rv=${rv:-11}
-
-      # Silent fail when not required
-      else
-       rv=10
-      fi
+      msg_missing+=("Missing $script_src $script_name $action function")
       continue
     fi
 
     # Freeze and return (one freeze is enough)
     if [ "$action" = "freeze" ]; then
-
-      if [ "$legacy" ]; then
-        result="$("$script" ${params[*]})"
-      else
-        result="$("$script" "$action" ${params[*]})"
-      fi
-
-      if [ "$result" ]; then
-        freeze_msg "script" "$script" "$result"
-      fi
+      local result
+      result="$("$script" "$action" ${params[*]})"
+      freeze_msg "script" "$script" "$result"
       return
+    fi
+
+    # Legacy warning
+    if [ "$legacy" ]; then
+        warn "$topic/$script_name is a legacy script, it's contents should
+      $spacer be added to $topic/topic.sh in a function named $action"
+        get_user_input "Are you sure you want to run $topic/$script_name?" -r -d no
+        if ! [ $? -eq 0 ]; then return;fi
     fi
 
     # run script
     if ! dry_run; then
-      debug "   running script func: $script $action ${params[*]}"
+      debug "   RUNNING SCRIPT ${legacy:-function} $script_src: $script $action ${params[*]}"
+
       if [ "$legacy" ]; then
         output_script "$script" ${params[*]}
       else
@@ -229,58 +181,48 @@ run_script_func () {
 
     # manager message
     if [ "$script_name" = "manager.sh" ]; then
-      prefix="$DRY_RUN ${params:-\b} with"
-      message="'s $script_src"
+      msg_prefix="$DRY_RUN ${params:-\b} with"
+      msg_executed="\b's $script_src"
 
     # topic message
     else
-      prefix="$DRY_RUN"
-      message="${params:-\b} with $script_src"
+      msg_prefix="$DRY_RUN"
+      msg_executed="${params:-\b} with $script_src"
     fi
 
-    # Required function success/fail
-    if [ "$required" ]; then
-      success_or_fail $rv "$action" "$prefix" "$(printf "%b$topic" "$hc_topic")" "$message" "$script_name"
-
-    # Only show success for not required
-    #elif [ $status -eq 0 ]; then
-    # On second thought, this is helpful
-    else
-      success_or_fail $rv "$action" "$prefix" "$(printf "%b$topic" "$hc_topic")" "$message" "$script_name"
-    fi
+    executed=$rv
+    success_or_fail $rv "$action" "$msg_prefix" "$(printf "%b$topic" "$hc_topic")" "$msg_executed" "$script_name" "script $legacy"
 
   done
 
-  debug "   run_script_func exit status: $DRY_RUN[ $rv ] for $script $action"
+  # Fail on missing required script
+  if [ "$required" ] && ! [ "$executed" ]; then
+    ! [ "$msg_missing" ] && msg_missing=("Required $script_name script was not found")
+    for msg in "${msg_missing[@]}";do
+      fail "$msg"
+    done
+  fi
 
-  return $rv
+  debug "   run_script_func EXIT STATUS: $DRY_RUN[ ${executed:-$rv} ] for $script_name $action"
+
+  return ${executed:-$rv}
 }
 
 get_topic_scripts () {
   local topic="$1"
   local file_name="$2"
   local exists=
-  local builtin_script="$(topic_dir $topic "builtin")/${file_name}"
-  local topic_script="$(topic_dir $topic "active")/${file_name}"
-  local scripts=("$builtin_script")
 
-  debug "  -get_topic_scripts builtin: $builtin_script"
-  debug "  -get_topic_scripts topic_script: $topic_script"
 
-  # catch duplicate from topic script
-  if [ "$builtin_script" != "$topic_script" ]; then
-    scripts+=("$topic_script")
-  fi
-
-  local path
-  for path in ${scripts[@]}; do
-      if [ -f "$path" ]; then
+  local script
+  for script in ${scripts[@]}; do
+      debug "   > checking for  $script"
+      if [ -f "$script" ]; then
         exists="true"
-        echo "$path"
+        echo "$script"
       else
         echo ""
       fi
-
   done
 
   if ! [ "$exists" ]; then return 1;fi

@@ -68,7 +68,7 @@ if ! [ $ACTIVE_SHELL ]; then
     export ACTIVE_LOGIN_SHELL="$ACTIVE_SHELL"
 fi
 
-. "$DOTSYS_LIBRARY/core.sh"
+# . "$DOTSYS_LIBRARY/core.sh"
 . "$DOTSYS_LIBRARY/common.sh"
 . "$DOTSYS_LIBRARY/utils.sh"
 . "$DOTSYS_LIBRARY/paths.sh"
