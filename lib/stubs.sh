@@ -346,7 +346,7 @@ collect_user_data () {
     debug "-- collect user data for : $topic/$stub_name"
 
     # SHELL INIT VARS
-    local init_shell_login="INIT_SHELL=\"$topic .$stub_name login\"; source \"\$(dotsys source init_shell)\" \|\| return"
+    local init_shell_login="INIT_SHELL=\"$topic .$stub_name login\"; \$(dotsys source init_shell) \|\| return"
     local init_shell="${init_shell_login/login}"
 
     local var
@@ -400,7 +400,7 @@ collect_user_data () {
             debug "   collect_user_data: values_script = $values_script"
             if script_func_exists "$values_script" "$gen_state_key"; then
 
-                script_val="$($values_script $gen_state_key)"
+                script_val="$(execute_script_func "$values_script" "$gen_state_key")"
 
                 # value was obtained and no user confirm required
                 if [ $? -eq 0 ]; then
@@ -412,7 +412,7 @@ collect_user_data () {
                     var_type="user"
                 fi
 
-                debug "   collect_user_data: $var_type script val = $script_val"
+                debug "   collect_user_data ($var_type var) ${stub_name}.vars $gen_state_key = $script_val"
             else
                 debug "   collect_user_data: values_script func exit code($?)"
             fi

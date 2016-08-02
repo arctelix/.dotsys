@@ -80,7 +80,7 @@ load_config_vars (){
     # MANAGE REPO Make sure repo is installed updated
     # Skip on uninstall, unless "repo" is in limits.
     if [ "$action" != "uninstall" ] || in_limits "repo" -r; then
-        debug "MANAGE REPO linits=$limits topics=$topics"
+        debug "MANAGE REPO limits=$limits topics=$topics"
 
         if in_limits "repo" "dotsys" && ! [ "$topics" ]; then
             debug "   load_config_vars -> call manage_repo"

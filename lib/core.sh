@@ -284,21 +284,36 @@ script_func_exists() {
   script_exists "$script"
   if ! [ $? -eq 0 ];then return 1;fi
 
-  # Sub-shell required to make sure cmd is
-  # a local function and not some other cmd.
+  # Check for function definition in file
+  # Not perfect, but may be faster then sourcing?
+  #grep -q "$cmd *()" "$script"
+  #return $?
+
+  # Make sure the cmd is local function and not some other cmd.
+  # Since were sourcing external scripts we'll test the same way
+  # to avoid missing function errors
   (
-  source "$script"
+  source "$script" >/dev/null 2>&1
   [ "$(command -v "$cmd")" = "$cmd" ]
   )
   rv=$?
 
-  # fix line endings for windows
-  if [ $? -eq 2 ] && command -v dos2unix >/dev/null 2>&1;then
-      dos2unix "$1"
-      $1 command -v $2 >/dev/null 2>&1
-      rv=$?
-  fi
   return $rv
+
+}
+
+# Source external script with internal "$@"
+# This func required to insure intended params are executed
+execute_script_func () {
+
+  # Sourcing a file and executing in a subshell is now standard
+  # rather then running commands in external script "$script" "@$"
+  # This provides access to dotsys functions from external scripts
+
+  local script="$1"
+  shift
+
+  ( source "$script" )
 }
 
 # Test if script exists

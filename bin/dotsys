@@ -138,7 +138,7 @@ elif [ "$init" = "repository" ]; then
 # Return path for sourcing
 elif [ "$init" = "source" ]; then
   shift
-  echo "$DOTSYS_LIBRARY/${1}.sh"
+  echo source "$DOTSYS_LIBRARY/${1}.sh"
 
 # execute script function
 elif [ -f "$DOTSYS_LIBRARY/${init}.sh"  ]; then

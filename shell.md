@@ -24,7 +24,7 @@ Shell startup flow
 The first config file to be called by the current active shell will kick of the load process
 with the following line.
 
-    INIT_SHELL="shell_name .file_name "; source "$(dotsys source init_shell)" || return
+    INIT_SHELL="shell_name .file_name "; $(dotsys source init_shell) || return
 
 All code after this line (including your symlinks) will have access to the contents of `core.sh`
 & `shell.sh`.  The primary functions responsible for shell loading are:

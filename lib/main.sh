@@ -356,10 +356,14 @@ dotsys () {
                     config_var="$2"
                     config_val="$3"
                     shift; shift;;
+        source)     action="source";;
         * )  error "Invalid action: $1"
            show_usage ;;
     esac
     shift
+
+    # If we get a source call here, its already done
+    if [ "$action" = "source" ]; then return;fi
 
     local topics=()
     local limits=()

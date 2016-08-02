@@ -162,7 +162,14 @@ run_script_func () {
     # Legacy warning
     if [ "$legacy" ]; then
         warn "$topic/$script_name is a legacy script, it's contents should
-      $spacer be added to $topic/topic.sh in a function named $action"
+        $spacer be added to $topic/topic.sh in a function named $action"
+
+        if is_managed "$topic";then
+          warn "Since $topic is managed by $(get_topic_manager "$topic"), the topic.sh install
+        $spacer function should only contain post-install instructions
+        $spacer since $topic will already be installed when it's called."
+        fi
+
         get_user_input "Are you sure you want to run $topic/$script_name?" -r -d no
         if ! [ $? -eq 0 ]; then return;fi
     fi

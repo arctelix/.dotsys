@@ -16,7 +16,7 @@ manage_repo (){
     local GIT_CONFIRMED
     local cfg_mode="${cfg_mode}"
 
-    if [ "${TOPIC_CONFIRMED:-"$GLOBAL_CONFIRMED"}" ] || in_limits "repo" -r; then
+    if [ "$GLOBAL_CONFIRMED" ] || in_limits "repo" -r; then
         REPO_CONFIRMED="true"
         GIT_CONFIRMED="true"
     fi
@@ -718,7 +718,7 @@ setup_git_config () {
                     msg "$spacer global author name = $global_authorname"
                     msg "$spacer global author email = $global_authoremail"
                 fi
-                get_user_input "Use the global author settings for your repo?" --confvar "GIT_CONFIRMED"
+                get_user_input "Use the global author settings for your repo?" -r
                 if [ $? -eq 0 ]; then continue; fi
             fi
         fi
