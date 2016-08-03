@@ -76,7 +76,7 @@ config_user_var () {
 
         # Set from value
         else
-            debug "   config_user_var: set:$set"
+            dprint "   config_user_var: set:$set"
             val="$set"
         fi
     fi
@@ -121,13 +121,11 @@ config_primary_repo () {
 
     if [ "$val" = "--prompt" ]; then
         prompt_config_or_repo "set as your primary repo"
-        val="$user_input"
     elif [ "$val" ];then
         validate_config_or_repo "$val"
-        val="$user_input"
     fi
 
-    config_user_var "primary_repo" "$val"
+    config_user_var "primary_repo" "${user_input:-$val}"
 }
 
 config_show_logo () {

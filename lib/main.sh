@@ -465,7 +465,7 @@ dotsys () {
 
         # get / set <value> or --prompt for user input
 
-        debug "config: $config_var $config_val"
+        debug "config: $config_var = $config_val"
 
         local config_func="config_$config_var"
         local state
