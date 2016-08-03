@@ -4,7 +4,7 @@
 " All customizations should be made in your topic vimrc.symlink.
 
 " => Source user vimrc file
-let s:user_file = "{STUB_TARGET}"
+let s:user_file = {STUB_TARGET}
 if filereadable(s:user_file)
     execute 'source ' . s:user_file
 endif
