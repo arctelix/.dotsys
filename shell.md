@@ -35,18 +35,42 @@ All code after this line (including your symlinks) will have access to the conte
 shellrc.stub
 ------------
   
-Provides useful variables and aliases that will be available to all dotsys files such as topic.sh
-and manager.sh files.
+Provides useful variables and aliases for all shell environment (bash, zsh, ksh, etc).
 
-$PLATFORM_SPE    :  Active platform (specific) such as mac, freebsd, cygwin
-$PLATFORM_GNE    :  Active platform (generic) such as linux or windows
-$ACTIVE_SHELL    :  The currently active shell name
+#### VARIABLES: 
 
-dfd              :  cd to your .dotfiles directory
-sfl              :  list all the currently sourced files in the shell environment
+These variables should be usedin your dotfiles rather then hard coding them. 
+
+$PLATFORM : Active platform (full) ie: linux-mac, windows-cygwin<BR>
+$PLATFORM_S : Active platform (specific) ie: mac, freebsd, cygwin<BR>
+$PLATFORM_G : Active platform (generic) ie: linux, windows<BR>
+ACTIVE_SHELL : The currently active shell<BR>
+$DOTFILE_DIR: Your .dotfiles directory<BR>
+$DOTSYS_USER_BIN : Where all your bin/* files are symlinked to<BR>
+$PLATFORM_USER_HOME : The platform specific user home directory<BR>
+$PLATFORM_USER_BIN : The platform specific user bin directory<BR>
+
+#### ALIASES
+
+dfd : cd to your Dotfiles Directory (.dotfiles)<br>
+sfl : Sourced Files List (all currently sourced files in shell env)<br>
+din : dotsys install<br>
+dun : dotsys uninstall<br>
+dug : dotsys upgrade<br>
+dud : dotsys update<br>
+dfr : dotsys freeze<br>
 
 see ~/.shellrc for more
 
+#### YOUR SHELL CUSTOMIZATIONS
+
+Place your customizations that are NOT TOPIC or SHELL specific in `user/repo/shell/shellrc.symlink`.
+and topic related items that are not shell specific in `user/repo/topic_name_/file_name.shell`.
+
+#### POSIX ONLY
+
+Please use only POSIX compliant commands for the generic shell environment and use
+shell specific rc files for shell specific customizations, such as bashrc & zshrc.
 
 core.sh
 -------
@@ -83,7 +107,7 @@ shell_prompt <state> : Turn dotsys prompt prefix on or off
 shell_debug          : Toggle shell debug mode
 
 NOTE: When the shell system is active you will not be able to re-source system config files
-from the command line ie: `source .bashrc`.  Use `shell_reload` to reload all required files.
+from the command line with `source .bashrc`.  Use `shell_reload` to reload all required files.
 
 see .dotsys/lib/shell.sh for more
 

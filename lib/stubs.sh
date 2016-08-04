@@ -381,9 +381,9 @@ collect_user_data () {
             DOTSYS_USER_BIN )           val="$(dotsys_user_bin)";;
             DOTFILES_DIR )              val="$(dotfiles_dir)";;
 
-            DOTSYS_PLATFORM )           val="$(get_platform)";;
-            DOTSYS_PLATFORM_SPE )       val="$(specific_platform "$(get_platform)")";;
-            DOTSYS_PLATFORM_GEN )       val="$(generic_platform "$(get_platform)")";;
+            PLATFORM )                  val="$(get_platform)";;
+            PLATFORM_S )                val="$(specific_platform "$(get_platform)")";;
+            PLATFORM_G )                val="$(generic_platform "$(get_platform)")";;
 
             PLATFORM_USER_HOME )        val="$(platform_user_home)";;
             PLATFORM_USER_BIN )         val="$(platform_user_bin)";;
@@ -479,7 +479,7 @@ get_topic_stub_target(){
     local verify="$3"
     local user_topic_dir="$(topic_dir "$topic" "user")"
     local stub_src_name="$(basename "$stub_src")"
-    local taget_file_name="${stub_src_name%%.*}.symlink"
+    local taget_file_name="${stub_src_name%.*}.symlink"
 
     # Path to user repo file.symlink
     local stub_target="$user_topic_dir/$taget_file_name"
@@ -524,7 +524,7 @@ get_topic_stub_target(){
     echo "$stub_target"
 }
 
-# returns the symlink target for a user tub file
+# returns the symlink target for a user stub file
 # See get_topic_stub_target for options
 get_user_stub_target(){
     local verify="$2"
@@ -541,11 +541,11 @@ update_user_stub_target () {
 
 # split user stub name file.topic.stub
 split_user_stub_name () {
-    local stub_name="$(basename "$1")"
-    # split parts [0]stub_file [1]stub_topic [2]stub_ext
-    local parts=( ${stub_name//./ } )
+    local stub_name="$(basename "${1%.stub}")"
+    local stub_topic="${stub_name##*.}"
+    local stub_file="${stub_name#.$stub_topic}"
     # return "topic file_name"
-    echo "${parts[1]} ${parts[0]}"
+    echo "$stub_topic $stub_file"
 }
 
 # Convert a stub file to user stub file name
