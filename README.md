@@ -240,7 +240,7 @@ Or download & extract with curl & tar:
     curl -Lk https://github.com/arctelix/.dotsys/archive/master.tar.gz -o .dotsys.tar.gz
     tar -xvzf .dotsys.tar.gz
     mv .dotsys-master .dotsys
-    rm .dotsys.zip  
+    rm .dotsys.tar.gz
 
 ## All platforms (except windows without native bash)
 
