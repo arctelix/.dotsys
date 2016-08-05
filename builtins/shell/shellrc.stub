@@ -48,11 +48,11 @@ export PATH="$PLATFORM_USER_BIN:$PATH"
 # dotsys-installed superceeds all
 export PATH="$DOTSYS_USER_BIN:$PATH"
 
-# PLATFORM SPECIFIC CONFIG
+# FLAGS
 
-if [ "$PLATFORM_S" = mac ] || [ "$PLATFORM_G" = windows ] ; then
-    export ARCHFLAGS="-arch x86_64"
-fi
+# compiler flags
+export ARCHFLAGS="-arch $(uname -m)"
+
 
 # LOAD SHELL FILES
 

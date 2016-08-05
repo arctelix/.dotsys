@@ -210,8 +210,13 @@ If you are interested in helping out that would be awesome!
 
 The most pressing open items are as follows:
  - any topic you think is important enough to have builtin
- - manager.sh files for : yum, pkg, pacman, & mingw-get
+ - manager.sh files for : pkg & mingw-get
  - see main.sh for the todo list & road map items
+ 
+Builtin topic criteria:
+ - Must be a commonly installed topic
+ - Must do something to benefit all users 
+ - Must be compatible with all versions
  
 Please submit your pull requests & issues!
 
@@ -230,7 +235,7 @@ You can also download & extract the repository with curl & unzip:
     mv .dotsys-master .dotsys
     rm .dotsys.zip
 
-## All platforms (except pre windows 10 w/Bash)
+## All platforms (except windows without native bash)
 
 2) From your posix compatible shell of choice run the install script:
 
@@ -238,7 +243,7 @@ You can also download & extract the repository with curl & unzip:
 
 3) Follow the prompts in your terminal.
 
-## Windows without native bash integration
+## Windows without native bash
 
 OPTION 1: To use babun as your base system
 

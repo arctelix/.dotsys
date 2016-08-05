@@ -3,6 +3,8 @@
 # Platform specific functions
 # Author: arctelix
 
+# https://en.wikipedia.org/wiki/Comparison_of_Linux_distributions
+
 PLATFORMS="linux windows mac freebsd openbsd ubuntu debian archlinux cygwin msys babun"
 
 get_platform () {
@@ -13,28 +15,89 @@ get_platform () {
   fi
 
   local platform
+  local platform_version
+
+  platform_version="$(uname -r)"
 
   if [ "$(uname)" = "Darwin" ]; then
     platform="linux-mac"
+
   elif [ "$(uname -s)" = "FreeBSD" ]; then
     platform="linux-freebsd"
+
   elif [ "$(uname -s)" = "OpenBSD" ]; then
     platform="linux-openbsd"
+
   elif [ "$(uname -s)" = "Linux" ]; then
-    platform="linux"
-    uname -v | grep -q 'Ubuntu' && platform="linux-ubuntu"
+
+    # Modern linux distros
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+
+        if ! platform_supported "$ID" ; then
+            platform="$ID_LIKE"
+            warn "Platform, $ID, is not supported. Tying similar platform $ID_LIKE."
+        else
+            platform="$ID"
+        fi
+
+    # Some modern linux distros
+    elif [ -f /etc/lsb-release ]; then
+        . /etc/lsb-release
+        platform="linux-$DISTRIB_ID"
+
+    # debain based fall back
+    elif [ -f /etc/debian_version ]; then
+        platform="linux-debian"
+        grep -q 'Ubuntu' '/etc/debian_version' && platform="linux-ubuntu"
+
+    # redhat based fall back
+    elif [ -f /etc/redhat-release ]; then
+        platform="linux-redhat"
+        grep -q 'CentOS' '/etc/debian_version' && platform="linux-centos"
+
+    # Other linux distros
+    else
+        platform="linux-unknown"
+    fi
+
   elif [ "$(uname -o)" = "Cygwin" ]; then
     platform="windows-cygwin"
     [ "$BABUN_HOME" ] && platform="windows-babun"
+
   elif [ "$(uname -o)" = "Msys" ]; then
     platform="windows-msys"
+
   else
-    platform="unknown"
+    platform="unknown-unknown"
   fi
 
-  echo "$platform"
+  if ! platform_supported "$platform" ; then
+    error "$platform, is not currently supported. Please submit this issue"
+    exit
+  fi
+
+  echo "$platform" | tr '[:upper:]' '[:lower:]'
 }
 
+platform_supported () {
+
+    case "$1" in
+    *mac )       platform="$1";;
+    *cygwin )    platform="$1";;
+    *msys )      platform="$1";;
+    *centos )    platform="$1";;
+    *redhat )    platform="$1";;
+    *archlinux ) platform="$1";;
+    *ubuntu )    platform="$1";;
+    *debian )    platform="$1";;
+    *freebsd )   platform="$1";;
+    *openbsd )   platform="$1";;
+    *openbsd )   platform="$1";;
+    esac
+
+    [ "$platform" ]
+}
 
 platform_user_bin () {
 
