@@ -13,6 +13,7 @@ dotsys_installer () {
 
     chmod -R 755 "$DOTSYS_REPOSITORY"
 
+    source "$DOTSYS_LIBRARY/core.sh"
     source "$DOTSYS_LIBRARY/main.sh"
 
     local usage="dotsys_installer <action>"
