@@ -228,12 +228,19 @@ of your choosing (your home directory or .dotfiles directory are good choices).
 
 NOTE: The dotsys root directory must be named ".dotsys" witht the "."
 
-You can also download & extract the repository with curl & unzip:
+Or download & extract with curl & zip:
 
     curl -Lk https://github.com/arctelix/.dotsys/archive/master.zip -o .dotsys.zip
     unzip .dotsys.zip
     mv .dotsys-master .dotsys
     rm .dotsys.zip
+    
+Or download & extract with curl & tar:
+
+    curl -Lk https://github.com/arctelix/.dotsys/archive/master.tar.gz -o .dotsys.tar.gz
+    tar -xvzf .dotsys.tar.gz
+    mv .dotsys-master .dotsys
+    rm .dotsys.zip  
 
 ## All platforms (except windows without native bash)
 
