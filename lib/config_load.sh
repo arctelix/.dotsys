@@ -29,8 +29,23 @@ get_config_val () {
      cfg+="_$part"
   done
   cfg="$cfg[@]"
-  echo "${!cfg}"
+  local c
+  for c in "${!cfg}"; do
+    echo "$c"
+  done
+
 }
+
+load_default_config_vars () {
+    debug "   load_config_vars: loading default config"
+
+    # load DEFAULT CFG (prefix with ___)
+    local yaml="$(parse_yaml "$(dotsys_dir)/dotsys.cfg" "___")"
+    debug "LOADED DEFAULT CFG:"
+    # debug "$yaml"
+    eval "$yaml" #set default config vars
+}
+
 
 load_config_vars (){
     # Defaults to state_reop config file or specify repo or path to config file
@@ -45,13 +60,7 @@ load_config_vars (){
 
     debug "-- load_config_vars: $action from: $repo"
 
-    debug "   load_config_vars: loading default config"
-
-    # load DEFAULT CFG (prefix with ___)
-    local yaml="$(parse_yaml "$(dotsys_dir)/dotsys.cfg" "___")"
-    debug "LOADED DEFAULT CFG:"
-    # debug "$yaml"
-    eval "$yaml" #set default config vars
+    load_default_config_vars
 
     # validate from and set config_file
     if [ "$repo" ] && [ "$repo" != "none" ] ; then
@@ -338,6 +347,9 @@ load_topic_config_vars () {
 
 # PRIMARY METHOD FOR GETTING CONFIGS
 # Returns the prevailing value for a given config
+# default mode returns first found variable from topic to generic
+# mode "+" : Combine all unique values from topic to generic
+# mode "+" : Combine all unique values from generic to topic
 get_topic_config_val () {
     # Dashes are removed from topic names
     # since dashes are not valid in variable names
@@ -348,7 +360,19 @@ get_topic_config_val () {
     local gplat="$(generic_platform)"
     local cfg_vars=()
     local val
+    local vala
     local var
+    local rv=1
+
+    local mode
+
+    if [ "$1" = "+" ]; then
+        shift
+        mode=add
+    elif [ "$1" = "-" ]; then
+        shift
+        mode=rev
+    fi
 
     # configs are sourced from specific to general
     # repo configs supered topic configs
@@ -378,14 +402,35 @@ get_topic_config_val () {
     cfg_vars+=("__$gplat $@")
     cfg_vars+=("__ $@")
 
+
+    if [ "$mode" = "rev" ];then
+        reverse_array cfg_vars
+    fi
+
+    local values=()
     for var in "${cfg_vars[@]}";do
-        val="$(get_config_val $var)"
-        if [ "$val" ];then
-            echo "$val"
-            return 0
-        fi
+
+        while IFS=$'\n' read -r val;do
+
+            if ! [ "$val" ];then continue;fi
+
+            # Default returns first found variable value only
+            if ! [ "$mode" ];then
+                echo "$val"
+                return 0
+
+            # Add all unique values
+            elif ! [[ "${values[@]}" =~ $val ]];then
+
+                echo "$val"
+                values+=("$val")
+                rv=0
+
+            fi
+        done <<< "$(get_config_val $var)"
     done
-    return 1
+
+    return $rv
 }
 
 

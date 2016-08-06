@@ -391,7 +391,6 @@ get_topic_list () {
         if in_limits "dotsys" -r; then
             echo "core"
             # TODO: platform_required_topics install/uninstall not tested
-            # platform_required_topics
 
         # all other installs take topic directory
         else

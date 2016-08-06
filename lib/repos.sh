@@ -58,7 +58,8 @@ manage_repo (){
 
     # make sure git is installed
     if ! cmd_exists git;then
-        dotsys install cmd git --recursive
+        error "Git was not found on your system, run $(code "dotsys install dotsys" )"
+        exit
     fi
 
     local installed=
@@ -219,7 +220,6 @@ manage_repo (){
 
         # GIT CONFIG (after remote: need existing configs)
         setup_git_config "$repo" "local"
-
 
         # make sure repo is git!
         if ! is_git; then
@@ -718,7 +718,7 @@ setup_git_config () {
                     msg "$spacer global author name = $global_authorname"
                     msg "$spacer global author email = $global_authoremail"
                 fi
-                get_user_input "Use the global author settings for your repo?" -r
+                get_user_input "Use the global author settings for your repo?" --confvar "GIT_CONFIRMED"
                 if [ $? -eq 0 ]; then continue; fi
             fi
         fi

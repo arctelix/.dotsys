@@ -162,9 +162,6 @@ run_manager_task () {
 manage_dependencies () {
   local action="$1"
   local topic="$2"
-  local deps="$(get_topic_config_val $topic "deps")"
-
-  debug "-- manage_dependencies: $action $topic deps: $deps"
 
   # check if topic is in use by other topics
   if [ "$action" = "uninstall" ]; then
@@ -179,10 +176,20 @@ manage_dependencies () {
         ACTIVE_TOPICS=(${ACTIVE_TOPICS[@]/$topic/})
     fi
 
-  # Deps only need install / uninstall
-  elif [ "$action" != "install" ]; then
+  elif [ "$action" = "install" ]; then
+
+    # prevent core deps from running twice on install
+    if [ "$topic" = "core" ]; then
+        return
+    elif [ "$topic" = "--core" ];then
+        topic="core"
+    fi
+
+  else
     return 0
   fi
+
+  local deps="$(get_topic_config_val $topic "+" "deps")"
 
   # abort here if topic has no deps
   if ! [ "$deps" ]; then
@@ -190,7 +197,7 @@ manage_dependencies () {
     return 0
   fi
 
-  debug "   manage_dependencies: $action $topic has deps: $deps"
+  debug "-- manage_dependencies: $action $topic has deps: \n$deps"
 
   local done=()
   local dep

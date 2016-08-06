@@ -558,23 +558,37 @@ dotsys () {
 
         debug "main -> DOTSYS IN LIMITS"
         from_repo="dotsys/dotsys"
+        ACTIVE_REPO="dotsys/dotsys"
+        ACTIVE_REPO_DIR="$(repo_dir)"
 
         if [ "$action" = "uninstall" ] && ! [ "$topics" ]; then
+
             # PREVENT DOTSYS UNINSTALL UNTIL EVERYTHING ELSE IS UNINSTALLED!
             if user_topics_installed; then
+
                 warn "Dotsys is still in use and cannot be uninstalled until
               $spacer all topics, packages, & repos are uninstalled\n"
                 get_user_input "Would you like to uninstall everything, including dotsys, now?" --required
+
                 if [ $? -eq 0 ]; then
+                    INSTALLER_RUNNING=true
                     dotsys uninstall from "$(state_primary_repo)"
                 else
                     exit
                 fi
             fi
 
-        # Bin files must be linked first
         elif [ "$action" = "install" ]; then
+
+            load_default_config_vars
+            set_default_managers
+            print_stats
+
+            task "Installing dotsys command"
             manage_topic_bin "link" "dotsys"
+
+            load_topic_config_vars "core"
+            manage_dependencies "$action" "--core"
         fi
     fi
 
@@ -943,6 +957,7 @@ dotsys () {
     if [ "$action" = "uninstall" ] && in_limits "dotsys" -r && ! topic_in_use core;then
         debug "UNINSTALLING DOTSYS COMMANDS FROM USER BIN!"
         manage_topic_bin "unlink" "dotsys"
+        INSTALLER_RUNNING=""
     fi
 
     # RELOAD_SHELL WHEN REQUIRED
