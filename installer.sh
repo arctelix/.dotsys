@@ -51,6 +51,8 @@ dotsys_installer () {
 
     print_logo --force
 
+    echo "DR=$DOTSYS_REPOSITORY"
+
     debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
     debug "ACTIVE_SHELL: $ACTIVE_SHELL"
     debug "dotfiles_dir: $(dotfiles_dir)"
@@ -68,18 +70,6 @@ dotsys_installer () {
     get_user_input "Would you like to install dotsys?" --confvar ""
     if ! [ $? -eq 0 ]; then  exit; fi
 
-    # make sure PLATFORM_USER_BIN is on path
-    PLATFORM_USER_BIN="$(platform_user_bin)"
-
-    if [ $? -eq 1 ]; then
-        read -p "PRESS ANY KEY TO ABORT"
-        exit 1
-    fi
-
-    if [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
-        export PATH="$PLATFORM_USER_BIN:$PATH"
-        task "added $PLATFORM_USER_BIN to path: $PATH"
-    fi
 
     # create required files and directories
     if [ "$action" = "install" ]; then
@@ -100,17 +90,22 @@ dotsys_installer () {
         new_user_config
     fi
 
+    # make sure PLATFORM_USER_BIN is on path
+    PLATFORM_USER_BIN="$(platform_user_bin)"
+    if [ $? -eq 1 ]; then
+        read -p "PLATFORM NOT FOUND PRESS ANY KEY TO ABORT"
+        exit 1
+    elif [ "${PATH#*$PLATFORM_USER_BIN}" == "$PATH" ]; then
+        export PATH="$PLATFORM_USER_BIN:$PATH"
+        task "added $PLATFORM_USER_BIN to path: $PATH"
+    fi
+
     # install dotsys deps
     dotsys $action dotsys --confirm default "$force"
 
     echo
     success_or_error $? "$action" "the dotsys core system"
     echo
-#    msg "Run the command $(code "dotsys install")"
-#    msg "to install your repo and it's topics\n"
-#    # Reload the shell to get dotsys changes
-#     task "Reloading $ACTIVE_SHELL"
-#     sudo exec -l $ACTIVE_SHELL $DOTSYS_LIBRARY/install.sh
 
     INSTALLER_RUNNING=""
     if [ "$action" = "install" ]; then
@@ -119,4 +114,4 @@ dotsys_installer () {
     fi
 }
 
-dotsys_installer $@
+dotsys_installer "$@"
