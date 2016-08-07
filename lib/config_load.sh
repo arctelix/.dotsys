@@ -421,7 +421,6 @@ get_topic_config_val () {
 
             # Add all unique values
             elif ! [[ "${values[@]}" =~ $val ]];then
-
                 echo "$val"
                 values+=("$val")
                 rv=0

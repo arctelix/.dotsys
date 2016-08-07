@@ -1,20 +1,20 @@
 #!/bin/bash
 
 install () {
-  yum install "$@" -y
+  dsudo yum install "$@" -y
 }
 
 uninstall () {
-  yum remove "$@" -y
+  dsudo yum remove "$@" -y
 }
 
 upgrade () {
 
-  yum update "$@" -y
+  dsudo yum update "$@" -y
 }
 
 search () {
-  yum search "$@" -y
+  dsudo yum search "$@" -y
 }
 
 "$@"

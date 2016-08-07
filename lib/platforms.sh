@@ -35,10 +35,10 @@ get_platform () {
         . /etc/os-release
 
         if ! platform_supported "$ID" ; then
-            platform="$ID_LIKE"
+            platform="linux-$ID_LIKE"
             warn "Platform, $ID, is not supported. Tying similar platform $ID_LIKE."
         else
-            platform="$ID"
+            platform="linux-$ID"
         fi
 
     # Some modern linux distros
@@ -218,6 +218,7 @@ platform_required_topics () {
     esac
 
 }
+
 topic_excluded () {
   local topic=$1
   local platform="${1:-$(get_platform)}"
@@ -238,9 +239,9 @@ topic_excluded () {
 
   # topic specific platform val
   if ! [ "$val" ]; then val="$(get_topic_config_val "$topic" "$specific")"; fi
+
   # topic generic platform val
   if ! [ "$val" ]; then val="$(get_topic_config_val "$topic" "$generic")"; fi
-
 
   if [[ "$val" =~ (x| x|no| no) ]]; then return 0;fi
 
