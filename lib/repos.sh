@@ -412,11 +412,11 @@ manage_remote_repo (){
     cd "$local_repo"
     # Determine git status
     debug "   manage_remote_repo: check status local"
-    local LOCAL=$(git rev-parse @)
+    local LOCAL=$(git rev-parse HEAD)
     debug "   manage_remote_repo: check status remote"
     local REMOTE=$(git rev-parse @{u})
     debug "   manage_remote_repo: check status base"
-    local BASE=$(git merge-base @ @{u})
+    local BASE=$(git merge-base HEAD @{u})
     debug "   manage_remote_repo: determine status"
     if [ $LOCAL = $REMOTE ]; then
         state="up-to-date"
