@@ -439,12 +439,12 @@ manage_remote_repo (){
     # check action and status
     if [ "$state" = "diverged" ];then
        error "Remote repo has diverged from your local version,
-                $spacer you will have to resolve the conflicts manually."
+      $spacer you will have to resolve the conflicts manually."
        ret_val=1
        task="diverged"
 
     elif [ "$state" = "up-to-date" ];then
-       success "Local repo is" "$(printf "%bup to date" "$hc_topic" )" "with remote:" "$remote_repo"
+       success "Local repo is" "up to date" "with remote:" "\n$remote_repo"
        # check for uncommitted changes (aborted by user)
        state="$(git status --porcelain | indent_lines)"
        if [ -n "$state" ]; then
