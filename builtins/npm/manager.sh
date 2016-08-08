@@ -1,16 +1,15 @@
 #!/bin/bash
 
 install () {
-  dprint "nmp install called : $*"
-  npm install -g $@
+  dsudo npm install -g "$@"
 }
 
 uninstall () {
-  npm uninstall -g $@
+  dsudo npm uninstall -g "$@"
 }
 
 upgrade () {
-  npm update -g $@
+  dsudo npm update -g "$@"
 }
 
-"$@" # Required for function execution
+"$@"
