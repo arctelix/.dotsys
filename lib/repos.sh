@@ -366,7 +366,7 @@ manage_remote_repo (){
 
     # Update from remote
     debug "   manage_remote_repo: git remote update"
-    result="$(git remote update 2>&1)"
+    result="$(git remote update 2>&1 | indent_lines )"
     if ! [ $? -eq 0 ] || ! [ "$result" ]; then
         if ! [ "$task" = "status" ]; then
             debug "   manage_remote_repo: git remote update failed"
@@ -376,8 +376,8 @@ manage_remote_repo (){
             init_local_repo "$repo"
 
             # Update from remote again
-            result="$(git remote update 2>&1)"
-            info "$(indent_lines "${result}")";
+            result="$(git remote update 2>&1 | indent_lines)"
+            info "${result}"
 
         else
             error "git remote update failed"
@@ -385,7 +385,7 @@ manage_remote_repo (){
         fi
 
     elif ! [ "$task" = "status" ]; then
-        info "$(indent_lines "${result}")";
+        info "${result}"
     fi
 
     # Make sure upstram is configured
@@ -394,14 +394,15 @@ manage_remote_repo (){
         debug "   manage_remote_repo: git rev-parse failed attempting git checkout $branch"
 
         # Make sure branch is checked out (sets origin automatically)
-        result="$(git checkout $branch > /dev/null 2>&1)"
+        result="$(git checkout $branch > /dev/null 2>&1 | indent_lines)"
+        ret_val=$?
         if ! [ "$task" = "status" ]; then
-            success_or_fail $? "" "$(indent_lines "$result")"
+            success_or_fail $ret_val "" "$result"
         fi
 
         # unknown error
-        if ! [ $? -eq 0 ]; then
-            debug "   manage_remote_repo: git checkout $branch failed"
+        if ! [ $ret_val -eq 0 ]; then
+            debug "   manage_remote_repo: git checkout $branch failed : $result"
             error "Could not resolve issues with your repo, please fix it manually"
         fi
     fi
@@ -467,8 +468,8 @@ manage_remote_repo (){
         confirm_task "$task" "" "$remote_repo" "$confirmed" --confvar "GIT_CONFIRMED"
         if ! [ $? -eq 0 ]; then return 1; fi
 
-        result="$(git "$task" origin "$branch" 2>&1)"
-        success_or_fail $? "$task" "$(indent_lines "$result")"
+        result="$(git "$task" origin "$branch" 2>&1 | indent_lines)"
+        success_or_fail $? "$task" "$result"
         ret_val=$?
     fi
 
