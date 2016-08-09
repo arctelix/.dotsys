@@ -33,6 +33,10 @@ manage_repo (){
 
     required_vars "action" "repo"
 
+    if [ "$action" = "update" ];then
+        return
+    fi
+
     # separate repo & branch from repo:branch
     local branch="master"
     _split_repo_branch
@@ -275,9 +279,6 @@ manage_repo (){
 
         state_install "$state_file" "$state_key" "$repo"
         action_status=$?
-
-    elif [ "$action" = "update" ];then
-        pass
 
     elif [ "$action" = "upgrade" ]; then
         git_commit "$repo"
@@ -668,6 +669,8 @@ install_required_repo_files () {
 }
 
 setup_git_config () {
+
+    # looks for
     local repo="$1"
     local options
     options=(global local)
@@ -694,7 +697,7 @@ setup_git_config () {
         # state prifx for cfg
         if [ "$cfg" = "local" ]; then
             state_prefix="$(echo "git_${repo%/*}_${repo##*/}" | tr '-' '_')"
-            repo_gitconfig="${repo_dir}/git/gitconfig.local.symlink"
+            repo_gitconfig="${repo_dir}/git/gitconfig.local"
 
         else
             state_prefix="git_global"
@@ -705,6 +708,7 @@ setup_git_config () {
         if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
             git config "--$cfg" include.path "$repo_gitconfig"
             success "git $cfg include set to:" "%b$repo_gitconfig"
+            include="--includes"
         elif [ "$repo_gitconfig" ];then
             include="--includes"
         fi
@@ -733,8 +737,6 @@ setup_git_config () {
 
             msg "$spacer global author name = $global_authorname"
             msg "$spacer global author email = $global_authoremail"
-
-            echo "local user name $(git config --local user.name)"
 
             get_user_input "Use the global author settings for $repo?"
             if [ $? -eq 0 ]; then
@@ -773,12 +775,12 @@ setup_git_config () {
 
         # Set author name
         set_state_value "user" "${state_prefix}_author_name" "$authorname"
-        git config "--$cfg" user.name "$authorname"
+        git config "--$cfg" $include user.name "$authorname"
         success "git $cfg author set to:" "$authorname"
 
         # Set author email
         set_state_value "user" "${state_prefix}_author_email" "$authoremail"
-        git config "--$cfg" user.email "$authoremail"
+        git config "--$cfg" $include user.email "$authoremail"
         success "git $cfg email set to:" "$authoremail"
 
         if [ "$cfg" = "local" ]; then
