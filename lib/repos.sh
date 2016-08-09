@@ -277,10 +277,10 @@ manage_repo (){
         action_status=$?
 
     elif [ "$action" = "update" ];then
-        git_commit "$repo"
-        action_status=$?
+        pass
 
     elif [ "$action" = "upgrade" ]; then
+        git_commit "$repo"
         manage_remote_repo "$repo" auto --confirmed
         action_status=$?
 
@@ -670,10 +670,11 @@ install_required_repo_files () {
 setup_git_config () {
     local repo="$1"
     local options
-    options=("${2:-global local}")
+    options=(global local)
     local template="$(builtin_topic_dir "git")/gitconfig.template"
     local repo_dir="$(repo_dir "$repo")"
     local OWD="$PWD"
+    local repo_gitconfig
 
     if [ "$options" = local ]; then
         confirm_task "configure" "git for" "$repo" --confvar "GIT_CONFIRMED"
@@ -683,99 +684,102 @@ setup_git_config () {
     cd "$repo_dir"
 
     local cfg
-    local global_prefix="git"
-    local local_prefix="git_${repo%/*}_${repo##*/}"
+    local global_prefix=
+    local local_prefix=
     local state_prefix
+    local include
 
     for cfg in "${options[@]}"; do
 
         # state prifx for cfg
         if [ "$cfg" = "local" ]; then
-            state_prefix="$local_prefix"
+            state_prefix="$(echo "git_${repo%/*}_${repo##*/}" | tr '-' '_')"
+            repo_gitconfig="${repo_dir}/git/gitconfig.local.symlink"
+
         else
-            state_prefix="$global_prefix"
+            state_prefix="git_global"
+            repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
         fi
 
-        if in_state "user" "$state_prefix"; then
-            continue
+        # source users existing repo gitconfig.symlink or gitconfig.local.symlink
+        if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
+            git config "--$cfg" include.path "$repo_gitconfig"
+            success "git $cfg include set to:" "%b$repo_gitconfig"
+        elif [ "$repo_gitconfig" ];then
+            include="--includes"
         fi
 
         # check for global as local default
-        local global_authorname="$(git config --global user.name || echo "none")"
-        local global_authoremail="$(git config --global user.email || echo "none")"
+        local global_authorname="$(git config --global $include user.name)"
+        local global_authoremail="$(git config --global $include user.email)"
+
+         # state values
+        local state_authorname="$(get_state_value "user" "${state_prefix}_author_name")"
+        local state_authoremail="$(get_state_value "user" "${state_prefix}_author_email")"
+
+        if [ "$cfg" = "global" ] && [ "$global_authorname" ] && [ "$state_authorname" ]; then continue;fi
+        debug "$cfg / $global_authorname / $state_authorname"
 
         # check live config & state for value
-        local authorname="$(git config --$cfg user.name || get_state_value "user" "${state_prefix}_user_name" )"
-        local authoremail="$(git config --$cfg user.email || get_state_value "user" "${state_prefix}_user_email" )"
+        local authorname="$(git config --$cfg $include user.name || echo "$state_authorname" )"
+        local authoremail="$(git config --$cfg $include user.email ||  echo "$state_authoremail" )"
 
         # set default
         local default_user="${authorname:-$global_authorname}"
         local default_email="${authoremail:-$global_authoremail}"
 
-
-        if [ "$cfg" = "local" ]; then
-            if ! [ "$authorname" ] || ! [ "$authoremail" ]; then
-                if [ "$options" = local ]; then
-                    msg "$spacer global author name = $global_authorname"
-                    msg "$spacer global author email = $global_authoremail"
-                fi
-                get_user_input "Use the global author settings for your repo?" --confvar "GIT_CONFIRMED"
-                if [ $? -eq 0 ]; then continue; fi
-            fi
-        fi
-
-        if [ "$cfg" != "none" ]; then
-            if ! [ "$authorname" ]; then
-                user "- What is your $cfg github author name? [$default_user] : "
-                read -e authorname
-            fi
-
-            if ! [ "$authoremail" ]; then
-                user "- What is your $cfg github author email? [$default_email] : "
-                read -e authoremail
-            fi
-        fi
-
-        authorname="${authorname:-$global_authorname}"
-        authoremail="${authoremail:-$global_authoremail}"
-
-        local repo_gitconfig
-        # global config & create stub
-        if [ "$cfg" = "global" ]; then
-            repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
-            local cred="$(get_credentialc_helper)"
-            git config "--$cfg" credential.helper "$cred"
-            success "git $cfg credential set to:" "$(printf "%b$cred" "$hc_topic")"
-
         # local config
-        elif [ "$cfg" = "local" ]; then
-            repo_gitconfig="${repo_dir}/git/gitconfig.local.symlink"
-            local repo_git_dir="$(repo_dir "$repo")/.git"
-            mkdir -p "$repo_git_dir"
-            touch "${repo_git_dir}/config"
+        if [ "$cfg" = "local" ]; then
+
+            msg "$spacer global author name = $global_authorname"
+            msg "$spacer global author email = $global_authoremail"
+
+            echo "local user name $(git config --local user.name)"
+
+            get_user_input "Use the global author settings for $repo?"
+            if [ $? -eq 0 ]; then
+                authorname="$global_authorname"
+                authoremail="$global_authoremail"
+            else
+                local repo_git_dir="$(repo_dir "$repo")/.git"
+                mkdir -p "$repo_git_dir"
+                touch "${repo_git_dir}/config"
+                authorname=""
+                authoremail=""
+            fi
+
+        elif [ "$cfg" = "global" ]; then
+            local values_script="$(get_user_or_builtin_file "git" "gitconfig.vars")"
+            local cred="$(execute_script_func "$values_script" "credential_helper")"
+            git config "--$cfg" credential.helper "$cred"
+            success "git $cfg credential set to:" "$cred"
         fi
+
+        if ! [ "$authorname" ]; then
+            user "- What is your $cfg github author name? [$default_user] : "
+            read -e authorname
+        fi
+
+        if ! [ "$authoremail" ]; then
+            user "- What is your $cfg github author email? [$default_email] : "
+            read -e authoremail
+        fi
+
+        authorname="${authorname:-$default_user}"
+        authoremail="${authoremail:-$default_email}"
 
         # local/global configs
-        if [ "$cfg" != "none" ]; then
-            # set vars for immediate use & record to user state for stubs
+        # set vars for immediate use & record to user state for stubs
 
-            set_state_value "user" "${state_prefix}_user_name" "$authorname"
-            git config "--$cfg" user.name "$authorname"
-            success "git $cfg author set to:" "$(printf "%b$authorname" "$hc_topic" )"
+        # Set author name
+        set_state_value "user" "${state_prefix}_author_name" "$authorname"
+        git config "--$cfg" user.name "$authorname"
+        success "git $cfg author set to:" "$authorname"
 
-            set_state_value "user" "${state_prefix}_user_email" "$authoremail"
-            git config "--$cfg" user.email "$authoremail"
-            success "git $cfg email set to:" "$(printf "%b$authoremail" "$hc_topic" )"
-
-            # source users existing repo gitconfig.symlink or gitconfig.local.symlink
-            git config "--$cfg" include.path "$repo_gitconfig"
-            success "git $cfg include set to:" "$(printf "%b$repo_gitconfig" "$hc_topic")"
-
-            # create stub file
-            if [ "$cfg" = "global" ]; then
-                create_user_stub "git" "gitconfig"
-            fi
-        fi
+        # Set author email
+        set_state_value "user" "${state_prefix}_author_email" "$authoremail"
+        git config "--$cfg" user.email "$authoremail"
+        success "git $cfg email set to:" "$authoremail"
 
         if [ "$cfg" = "local" ]; then
             success "A local .gitconfig has been created for $repo"

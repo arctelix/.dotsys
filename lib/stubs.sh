@@ -89,7 +89,8 @@ manage_stubs () {
     local usage="manage_stubs [<option>]"
     local usage_full="
         -f | --force        Force stub updates
-        -d | --data         Collect user data only
+        -u | --data_update  Update stub file
+        -c | --data_collect Only Collect user data
         -t | --task         Show task messages
     "
 
@@ -106,8 +107,8 @@ manage_stubs () {
         case "$1" in
         -f | --force )        force="$1" ;;
         -t | --task )         task="task" ;;
-        -d | --data_update )  data="$1"; data_mode="update" ;;
-        -d | --data_collect ) data="$1"; data_mode="collect" ;;
+        -u | --data_update )  data="$1"; data_mode="update" ;;
+        -c | --data_collect ) data="$1"; data_mode="collect" ;;
         *)  invalid_option "$1";;
         esac
         shift
@@ -144,8 +145,8 @@ manage_topic_stubs () {
     local usage="manage_topic_stubs [<option>]"
     local usage_full="
         -f | --force        Force stub updates
-        -d | --data_update  Update stub file
-        -d | --data_collect Only Collect user data
+        -u | --data_update  Update stub file
+        -c | --data_collect Only Collect user data
         -t | --task         Show task messages
     "
     local action="$1"
@@ -162,8 +163,8 @@ manage_topic_stubs () {
         case "$1" in
         -f | --force )        force="$1" ;;
         -t | --task )         task="task" ;;
-        -d | --data_update )  data_mode="update" ;;
-        -d | --data_collect ) data_mode="collect" ;;
+        -u | --data_update )  data_mode="update" ;;
+        -c | --data_collect ) data_mode="collect" ;;
         *)  invalid_option "$1";;
         esac
         shift
