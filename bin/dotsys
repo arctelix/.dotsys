@@ -78,8 +78,7 @@ if [ "$init" = "test" ]; then
   echo
   msg_warn "You are in dotsys test mode!"
   echo
-  #eval "$1"
-  "$@"
+  eval "$1"
 
 # Reset dotsys files (for testing purposes! YOU COULD MESS YOUR SHIT UP WITH THIS!)
 elif [ "$init" = "reset_files" ]; then

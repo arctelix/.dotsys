@@ -367,7 +367,9 @@ manage_remote_repo (){
 
     # Update from remote
     debug "   manage_remote_repo: git remote update"
-    result="$(git remote update 2>&1 | indent_lines )"
+    result="$(git remote update 2>&1 | indent_lines -f)"
+    echo "test1 : $(indent_lines -f "this is input from a param")"
+    echo "test2 : $(indent_lines -f "")"
     if ! [ $? -eq 0 ] || ! [ "$result" ]; then
         if ! [ "$task" = "status" ]; then
             debug "   manage_remote_repo: git remote update failed"
@@ -386,7 +388,7 @@ manage_remote_repo (){
         fi
 
     elif ! [ "$task" = "status" ]; then
-        info "${result}"
+        info "$result"
     fi
 
     # Make sure upstram is configured
@@ -395,7 +397,7 @@ manage_remote_repo (){
         debug "   manage_remote_repo: git rev-parse failed attempting git checkout $branch"
 
         # Make sure branch is checked out (sets origin automatically)
-        result="$(git checkout $branch > /dev/null 2>&1 | indent_lines)"
+        result="$(git checkout $branch > /dev/null 2>&1 | indent_lines -f)"
         ret_val=$?
         if ! [ "$task" = "status" ]; then
             success_or_fail $ret_val "" "$result"
@@ -446,9 +448,9 @@ manage_remote_repo (){
        task="diverged"
 
     elif [ "$state" = "up-to-date" ];then
-       success "Local repo is" "up to date" "with remote:" "\n$remote_repo"
+       success "Local repo is" "up to date" "with remote:" "\n$spacer $remote_repo"
        # check for uncommitted changes (aborted by user)
-       state="$(git status --porcelain | indent_lines)"
+       state="$(git status --porcelain | indent_lines -f)"
        if [ -n "$state" ]; then
           warn "There are uncommitted local changes in your repo\n" "$(printf "%b$state" $red )"
        fi

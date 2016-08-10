@@ -181,38 +181,55 @@ func_or_func_msg () {
 # adds indent to all but first line
 indent_lines () {
   local first
+  local first_line
   local line
   local prefix
+  local input
 
-  if [ "$1" == "--prefix" ]; then
-    prefix="$2"
-    shift
-    shift
-  fi
+  usage="indent_lines [<option>]"
+  usage_full="
+      -p | --prefix     Prefix each line
+      -f | --first      Leave first line as is
+  "
 
-  local input="$1"
+  while [[ $# > 0 ]]; do
+      case "$1" in
+      -p | --prefix )      prefix="$2"; shift;;
+      -f | --first )       first="$1" ;;
+      *) input="${1:- }"
+      esac
+      shift
+  done
+
 
   # Take input from pipe
   if ! [ "$input" ]; then
-      debug "$indent indent lines from pipe"
-      #sed "s/^/$indent/g"
-      while IFS= read -r line || [[ -n "$line" ]]; do
+    dprint "read lines from stdin"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        _indent_line "$line"
+    done < "/dev/stdin"
+
+  # Take input from variable
+  else
+    dprint "read lines from input"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        _indent_line "$line"
+    done <<< "$input"
+  fi
+
+  #sed "s/^/$indent/g"
+
+}
+
+_indent_line (){
+    local line="$1"
+    if [ "$first" ] && [ ! "$first_line" ];then
+        first_line="true"
+        echo "$line"
+    else
         # remove \r and replace with \r$indent
         echo "$indent $prefix$(echo "$line" | sed "s/$indent$(printf '\r')/$(printf '\r')$indent /g")"
-      done
-
-  # input from variable
-  else
-      debug "$indent indent lines from input"
-      while read -r line || [[ -n "$line" ]]; do
-        if ! [ "$first" ];then
-            first="true"
-            printf "%b\n" "$line"
-        else
-            printf "$indent $prefix%b\n" "$line"
-        fi
-      done <<< $input
-  fi
+    fi
 }
 
 abs_to_rel_path () {
