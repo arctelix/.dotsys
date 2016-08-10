@@ -627,14 +627,14 @@ checkout_branch (){
 clone_remote_repo () {
     local repo="$1"
     local remote_repo="$remote_repo"
-    local repo_user="${repo%/*}"
-    local repo_user_dir="$(repo_dir "$repo_user")"
+    local repo_dir="$(repo_dir "$repo")"
+    local repo_parent_dir="${repo_dir%/*}"
     local OWD="$PWD"
 
-    # make user directory (clone makes repo directory)
-    mkdir -p "$repo_user_dir"
+    # make parrent directory (clone makes repo directory)
+    mkdir -p "$repo_parent_dir"
 
-    cd "$repo_user_dir"
+    cd "$repo_parent_dir"
     git clone "$remote_repo" --progress 2>&1 | indent_lines
     success_or_fail $? "download" "remote repo: $remote_repo"
     if ! [ $? -eq 0 ];
@@ -705,12 +705,14 @@ setup_git_config () {
         fi
 
         # source users existing repo gitconfig.symlink or gitconfig.local.symlink
-        if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
-            git config "--$cfg" include.path "$repo_gitconfig"
-            success "git $cfg include set to:" "$repo_gitconfig"
-            include="--includes"
-        elif [ "$repo_gitconfig" ];then
-            include="--includes"
+        if [ -f "$repo_gitconfig" ];then
+            if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
+                git config "--$cfg" include.path "$repo_gitconfig"
+                success "git $cfg include set to:" "$repo_gitconfig"
+                include="--includes"
+            else
+                include="--includes"
+            fi
         fi
 
         # check for global as local default
@@ -721,7 +723,8 @@ setup_git_config () {
         local state_authorname="$(get_state_value "user" "${state_prefix}_author_name")"
         local state_authoremail="$(get_state_value "user" "${state_prefix}_author_email")"
 
-        if [ "$cfg" = "global" ] && [ "$global_authorname" ] && [ "$state_authorname" ]; then continue;fi
+        # Abort global config if global already done
+        if [ "$cfg" = "global" ] && [ "$global_authorname" ] && [ "$state_authoremail" ]; then continue;fi
         debug "$cfg / $global_authorname / $state_authorname"
 
         # check live config & state for value
