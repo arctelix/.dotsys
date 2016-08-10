@@ -707,7 +707,7 @@ setup_git_config () {
         # source users existing repo gitconfig.symlink or gitconfig.local.symlink
         if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
             git config "--$cfg" include.path "$repo_gitconfig"
-            success "git $cfg include set to:" "%b$repo_gitconfig"
+            success "git $cfg include set to:" "$repo_gitconfig"
             include="--includes"
         elif [ "$repo_gitconfig" ];then
             include="--includes"
