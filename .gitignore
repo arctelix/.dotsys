@@ -1,8 +1,8 @@
+.DS_Store
+.idea/*
 state/*
 user/*
 logs/*
-.idea/*
 *.private
 *.dslog
-.DS_Store
 *.stub

@@ -122,7 +122,7 @@ log () {
 debug_log () {
     local state="$1"
     local item="$2"
-    printf "%s : %s" "$state" "$item" >> "$DOTSYS_REPOSITORY/logs/debug.dslog"
+    printf "%s : %s" "$state" "$item" >> "$DOTSYS_REPOSITORY/debug.dslog"
     log "$state" "$item"
 }
 

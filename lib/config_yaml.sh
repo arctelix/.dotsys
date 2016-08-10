@@ -76,7 +76,7 @@ create_config_yaml() {
         fi
 
         # init file and root config
-        local yaml_file="${repo_d}/.dotsys-${cfg_mode}.cfg"
+        local yaml_file="${repo_d}/.dotsys-${cfg_mode}.cfg.dslog"
 
         # root level config
         echo "$cfg_mode date:$(date '+%d/%m/%Y %H:%M:%S')" > $yaml_file

@@ -287,7 +287,9 @@ manage_repo (){
 
     elif [ "$action" = "freeze" ]; then
         # list installed repos
-        create_config_yaml "$repo" | indent_lines
+        if ! is_dotsys_repo;then
+            create_config_yaml "$repo" | indent_lines
+        fi
         return
     elif [ "$action" = "uninstall" ]; then
         if repo_in_use "$repo" && ! [ "$force" ]; then

@@ -80,7 +80,6 @@ dotsys_installer () {
         mkdir -p "$DOTSYS_REPOSITORY/user/bin"
         mkdir -p "$DOTSYS_REPOSITORY/user/stubs"
         mkdir -p "$DOTSYS_REPOSITORY/state"
-        mkdir -p "$DOTSYS_REPOSITORY/logs"
         touch "$DOTSYS_REPOSITORY/state/dotsys.state"
         touch "$DOTSYS_REPOSITORY/state/user.state"
         touch "$DOTSYS_REPOSITORY/state/repos.state"
