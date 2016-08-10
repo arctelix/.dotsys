@@ -229,7 +229,7 @@ manage_repo (){
         if ! is_git; then
             init_local_repo "$repo"
             if ! [ $? -eq 0 ]; then
-                msg "Dotsys requires git to function properly"; exit
+                error "Git is required for dotsys to function properly."; exit
             fi
         fi
 
@@ -281,7 +281,6 @@ manage_repo (){
         action_status=$?
 
     elif [ "$action" = "upgrade" ]; then
-        git_commit "$repo"
         manage_remote_repo "$repo" auto --confirmed
         action_status=$?
 
@@ -659,12 +658,16 @@ install_required_repo_files () {
         echo "repo:${repo}" >> "dotsys.cfg"
     fi
 
-    # gitignore *.stub files
-    if ! grep -q '\*\.stub' ".gitignore" >/dev/null 2>&1; then
-        debug "adding *.stub to gitignore"
+    if ! [ -f ".gitignore" ];then
         touch .gitignore
-        echo "*.stub" >> ".gitignore"
+    fi
+
+    if ! grep -q '\*\.private' ".gitignore" >/dev/null 2>&1; then
         echo "*.private" >> ".gitignore"
+    fi
+
+    if ! grep -q '\*\.dslog' ".gitignore" >/dev/null 2>&1; then
+        echo "*.dslog" >> ".gitignore"
     fi
 
     cd "$OWD"
