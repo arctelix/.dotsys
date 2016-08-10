@@ -371,13 +371,13 @@ manage_remote_repo (){
     if ! [ $? -eq 0 ] || ! [ "$result" ]; then
         if ! [ "$task" = "status" ]; then
             debug "   manage_remote_repo: git remote update failed"
-            fail "$(indent_lines "${result:-"No remote configured for repo"}")"
+            fail "${result:-"No remote configured for repo"}"
 
             # Make sure repo is initialized
             init_local_repo "$repo"
 
             # Update from remote again
-            result="$(git remote update 2>&1 | indent_lines)"
+            result="$(git remote update 2>&1 | indent_lines -f)"
             info "${result}"
 
         else
@@ -469,7 +469,7 @@ manage_remote_repo (){
         confirm_task "$task" "" "$remote_repo" "$confirmed" --confvar "GIT_CONFIRMED"
         if ! [ $? -eq 0 ]; then return 1; fi
 
-        result="$(git "$task" origin "$branch" 2>&1 | indent_lines)"
+        result="$(git "$task" origin "$branch" 2>&1 | indent_lines -f)"
         success_or_fail $? "$task" "$result"
         ret_val=$?
     fi
@@ -490,11 +490,11 @@ init_local_repo (){
 
     cd "$local_repo"
 
-    result="$(git init 2>&1)"
-    success_or_error $? "" "$(indent_lines "$result")"
+    result="$(git init 2>&1 | indent_lines -f)"
+    success_or_error $? "" "$result"
 
-    result="$(git remote add origin "${remote_repo}.git" 2>&1)"
-    success_or_fail $? "add" "$(indent_lines "${result:-"remote origin: ${remote_repo}.git"}")"
+    result="$(git remote add origin "${remote_repo}.git" 2>&1 | indent_lines -f)"
+    success_or_fail $? "add" "${result:-"remote origin: ${remote_repo}.git"}"
 
     install_required_repo_files "$repo"
     git_commit "$repo" "initialized by dotsys"
@@ -533,7 +533,7 @@ git_commit () {
     git add .
 
     # Abort if nothing to commit
-    state="$(git status --porcelain | indent_lines)"
+    state="$(git status --porcelain | indent_lines -f)"
     if ! [ -n "$state" ]; then cd "$OWD";return;fi
 
     info "$(printf "Git Status:\n%b$state%b" $yellow $rc)"
@@ -615,8 +615,8 @@ checkout_branch (){
 
         # change branch if branch != current branch
         if [ "${branch:-$current}" != "$current" ]; then
-            local result="$(git checkout "$branch")"
-            success_or_error $? "check" "out $(indent_lines "$result")"
+            local result="$(git checkout "$branch" | indent_lines -f)"
+            success_or_error $? "check" "out $result"
         fi
         cd "$OWD"
     else
