@@ -368,8 +368,6 @@ manage_remote_repo (){
     # Update from remote
     debug "   manage_remote_repo: git remote update"
     result="$(git remote update 2>&1 | indent_lines -f)"
-    echo "test1 : $(indent_lines -f "this is input from a param")"
-    echo "test2 : $(indent_lines -f "")"
     if ! [ $? -eq 0 ] || ! [ "$result" ]; then
         if ! [ "$task" = "status" ]; then
             debug "   manage_remote_repo: git remote update failed"

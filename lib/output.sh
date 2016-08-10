@@ -204,14 +204,14 @@ indent_lines () {
 
   # Take input from pipe
   if ! [ "$input" ]; then
-    dprint "read lines from stdin"
+    debug "read lines from stdin"
     while IFS= read -r line || [[ -n "$line" ]]; do
         _indent_line "$line"
     done < "/dev/stdin"
 
   # Take input from variable
   else
-    dprint "read lines from input"
+    debug "read lines from input"
     while IFS= read -r line || [[ -n "$line" ]]; do
         _indent_line "$line"
     done <<< "$input"
