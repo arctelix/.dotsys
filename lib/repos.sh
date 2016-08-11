@@ -433,7 +433,9 @@ manage_remote_repo (){
        info "Auto determined git status:" "$(printf "%b$state" "$hc_topic" )"
        task="$state"
     elif [ "$task" != "$state" ];then
-        warn "A $task was requested, but a" "$(printf "%b$state" "$hc_topic" )" "is required, please resolve the conflict"
+        warn "A $task was requested, but a" "$state" "is required,
+        \n$spacer to update your repo run $(code "dotsys upgrade $repo")"
+        task="abort"
     fi
 
 
