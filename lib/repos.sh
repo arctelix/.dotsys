@@ -250,7 +250,17 @@ manage_repo (){
         if ! is_dotsys_repo && [ "$(state_primary_repo)" != "$repo" ]; then
 
             # preview repo and confirm install
-            [ "$repo_status" != "new" ] && preview_repo
+            if [ "$repo_status" != "new" ];then
+
+                confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg" --confvar ""
+                if ! [ $? -eq 0 ]; then return; fi
+
+                create_config_yaml "$repo" | indent_lines
+                get_user_input "Would you like to install this repo?" -r
+                if ! [ $? -eq 0 ]; then
+                    msg "Repo installation aborted by user"; exit
+                fi
+            fi
 
             confirm_make_primary_repo "$repo"
         fi
@@ -353,7 +363,7 @@ manage_remote_repo (){
 
     # Update from remote
     debug "   manage_remote_repo: git remote update"
-    result="$(git remote update 2>&1 | indent_lines -f)"
+    result="$(git remote update 2>&1)"
     ret_val=$?
 
     # Make sure upstream is configured
@@ -365,7 +375,7 @@ manage_remote_repo (){
         init_required="could not determine head status"
 
     elif ! [ "$task" = "status" ];then
-        info "$result"
+        info "$(indent_lines -f "$result")"
     fi
 
     # Attempt to reinitialize local repo to fix problems
@@ -377,13 +387,16 @@ manage_remote_repo (){
             ret_val=$?
         else
             error "$init_required
-            \r $result"
+            \r $(indent_lines "$result")"
             exit
         fi
     fi
 
     # make sure everything is committed or we'll get a false reading
     git_commit "$repo" "$message"
+    if ! [ $? -eq 0 ];then
+        return 0
+    fi
 
     cd "$local_repo"
     # Determine git status
@@ -422,7 +435,7 @@ manage_remote_repo (){
     elif [ "$state" = "up-to-date" ];then
        success "Local repo is" "up to date" "with remote:" "\n$spacer $remote_repo"
        # check for uncommitted changes (aborted by user)
-       state="$(git status --porcelain | indent_lines -f)"
+       state="$(git status --porcelain | indent_lines)"
        if [ -n "$state" ]; then
           warn "There are uncommitted local changes in your repo\n" "$(printf "%b$state" $red )"
        fi
@@ -445,8 +458,8 @@ manage_remote_repo (){
         confirm_task "$task" "" "$remote_repo" "$confirmed" --confvar "GIT_CONFIRMED"
         if ! [ $? -eq 0 ]; then return 1; fi
 
-        result="$(git "$task" origin "$branch" 2>&1 | indent_lines -f)"
-        success_or_fail $? "$task" "$result"
+        result="$(git "$task" origin "$branch" 2>&1)"
+        success_or_fail $? "$task" "$(indent_lines -f "$result")"
         ret_val=$?
     fi
 
@@ -461,26 +474,30 @@ init_local_repo (){
     local local_repo="$local_repo"
     local remote_repo="$remote_repo"
     local result
+    local rv
 
     confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo" --confvar "GIT_CONFIRMED"
     if ! [ $? -eq 0 ]; then exit; fi
 
     cd "$local_repo"
 
-    result="$(git init 2>&1 | indent_lines -f)"
+    result="$(git init 2>&1)"
     success_or_error $? "" "$result"
 
-    result="$(git remote add origin "${remote_repo}.git" 2>&1 | indent_lines -f)"
-    success_or_fail $? "add" "${result:-"remote origin: ${remote_repo}.git"}"
+    # Check existing origin = remote
+    if [ "$(git remote get-url origin 2>/dev/null)" != "${remote_repo}.git" ];then
+        git remote remove origin >/dev/null 2>&1
+        result="$(git remote add origin "${remote_repo}.git" 2>/dev/null)"
+        success_or_fail $? "" "$(indent_lines -f "${result:-Add remote origin: ${remote_repo}.git}")"
+    fi
 
     # Sync local with remote
     if [ "$has_remote" ];then
         git add .
-        git remote update 2>&1 | indent_lines
-        success_or_fail $? "sync" "origin with local repo"
-
-        result="$(git checkout "$branch" 2>&1 | indent_lines -f)"
-        success_or_fail $? "" "$result <<<"
+        result="$(git remote update 2>&1)"
+        success_or_fail $? "" "$(indent_lines -f "$result")"
+        result="$(git checkout "$branch" 2>&1)"
+        success_or_fail $? "" "$(indent_lines -f "$result")"
 
     # Make inital commit
     else
@@ -488,8 +505,8 @@ init_local_repo (){
     fi
 
     # make sure everything is ok
-    git rev-parse HEAD >/dev/null 2>&1
-    success_or_error $? "initialize" "git for $local_repo"
+    #git rev-parse HEAD >/dev/null 2>&1
+    #success_or_error $? "initialize" "git for $local_repo"
 
     cd "$OWD"
 }
@@ -526,7 +543,7 @@ git_commit () {
 
     # Abort if nothing to commit
     git_status="$(git status --porcelain | indent_lines )"
-    if ! [ -n "$git_status" ]; then cd "$OWD";return;fi
+    if ! [ -n "$git_status" ]; then cd "$OWD";return 0;fi
 
     info "$(printf "Git Status:\n%b$git_status%b" $yellow $rc)"
 
@@ -554,7 +571,6 @@ git_commit () {
 
     #script -q /dev/null git commit -a -m "$message" 2>&1 | indent_lines
     git commit -a -m "$message" 2>&1 | indent_lines
-
     if ! [ "$silent" ]; then success_or_fail $? "commit" "changes : $message";fi
     cd "$OWD"
 }
@@ -606,8 +622,8 @@ checkout_branch (){
 
         # change branch if branch != current branch
         if [ "${branch:-$current}" != "$current" ]; then
-            local result="$(git checkout "$branch" | indent_lines -f)"
-            success_or_error $? "check" "out $result"
+            local result="$(git checkout "$branch" )"
+            success_or_error $? "check" "out $(indent_lines -f "$result")"
         fi
         cd "$OWD"
     fi
@@ -715,10 +731,9 @@ setup_git_config () {
 
             if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
                 git config "--$cfg" include.path "$repo_gitconfig"
-                success "git $cfg include set to:" "$repo_gitconfig"
+                success "$cfg git config include set:" "$repo_gitconfig"
             fi
             include="--includes"
-            debug "    git include found: repo_gitconfig"
         fi
 
          # state values
@@ -729,57 +744,38 @@ setup_git_config () {
         local authorname="$(git config --$cfg $include user.name || echo "$state_authorname" )"
         local authoremail="$(git config --$cfg $include user.email ||  echo "$state_authoremail" )"
 
-        local global_authorname
-        local global_authoremail
+        local global_authorname="$(git config --global $include user.name)"
+        local global_authoremail="$(git config --global $include user.email)"
         local update
-
-        # Abort config if values are already in state
-        if [ "$state_authoremail" ] && [ "$state_authorname" ]; then
-            if [ "$cfg" = "global" ];then continue;fi
-
-            msg "$spacer $cfg author name = $authorname"
-            msg "$spacer $cfg author email = $authoremail"
-            get_user_input "Keep the existing $cfg git settings?" -r
-            if [ $? -eq 0 ]; then
-                continue
-            else
-                update=true
-            fi
-        fi
-
-        # local config
-        if [ "$cfg" = "local" ]; then
-
-            # check for global as local default
-            global_authorname="$(git config --global $include user.name)"
-            global_authoremail="$(git config --global $include user.email)"
-
-            msg "$spacer global author name = $global_authorname"
-            msg "$spacer global author email = $global_authoremail"
-            msg "$spacer local author name = $authorname"
-            msg "$spacer local author email = $authoremail"
-            if [ "$authorname" ] && [ "$authoremail" ]; then
-                get_user_input "Use the global author settings for $repo?"
-                if [ $? -eq 0 ]; then
-                    authorname="$global_authorname"
-                    authoremail="$global_authoremail"
-                    update=''
-                else
-                    update=true
-                fi
-            fi
-
-        # Set credential helper for global only
-        elif [ "$cfg" = "global" ]; then
-            local values_script="$(get_user_or_builtin_file "git" "gitconfig.vars")"
-            local cred="$(execute_script_func "$values_script" "credential_helper")"
-            git config "--$cfg" credential.helper "$cred"
-            success "git $cfg credential set to:" "$cred"
-        fi
 
         local default_user="${authorname:-$global_authorname}"
         local default_email="${authoremail:-$global_authoremail}"
 
+        msg "$spacer $cfg author name = $authorname"
+        msg "$spacer $cfg author email = $authoremail"
+
+        # Confirm git settings
+
+        if [ "$authoremail" ] && [ "$authorname" ]; then
+            get_user_input "Use the above $cfg git settings?" -r
+            if ! [ $? -eq 0 ]; then
+                update=true
+            fi
+        fi
+
+        if [ "$cfg" = "local" ] && [ "$update" ] && [[ "$global_authorname" && "$global_authoremail" ]]; then
+
+            msg "$spacer global author name = $global_authorname"
+            msg "$spacer global author email = $global_authoremail"
+            get_user_input "Use the global author settings for $repo?" -r
+            if [ $? -eq 0 ]; then
+                authorname="$global_authorname"
+                authoremail="$global_authoremail"
+                update=''
+            fi
+        fi
+
+        # Set new values
 
         if ! [ "$authorname" ] || [ "$update" ]; then
             user "- What is your $cfg github author name? [$default_user] : "
@@ -794,24 +790,26 @@ setup_git_config () {
         authorname="${authorname:-$default_user}"
         authoremail="${authoremail:-$default_email}"
 
-        # local/global configs
-        # set vars for immediate use & record to user state for stubs
-
-        # Set author name
-        set_state_value "user" "${state_prefix}_author_name" "$authorname"
-        git config "--$cfg" $include user.name "$authorname"
-        success "git $cfg author set to:" "$authorname"
-
-        # Set author email
-        set_state_value "user" "${state_prefix}_author_email" "$authoremail"
-        git config "--$cfg" $include user.email "$authoremail"
-        success "git $cfg email set to:" "$authoremail"
-
-        if [ "$cfg" = "local" ]; then
-            success "Local git settings for $repo saved"
-        else
-            success "Global git settings for $authorname saved"
+        # Set credential helper for global only
+        if [ "$cfg" = "global" ]; then
+            local values_script="$(get_user_or_builtin_file "git" "gitconfig.vars")"
+            local cred="$(execute_script_func "$values_script" "credential_helper")"
+            git config "--$cfg" credential.helper "$cred"
+            success "git $cfg credential set to:" "$cred"
         fi
+
+        if [ "$authorname" != "$state_authorname" ];then
+            set_state_value "user" "${state_prefix}_author_name" "$authorname"
+            git config "--$cfg" $include user.name "$authorname"
+            success "git $cfg author set to:" "$authorname"
+        fi
+
+        if [ "$authoremail" != "$state_authoremail" ];then
+            set_state_value "user" "${state_prefix}_author_email" "$authoremail"
+            git config "--$cfg" $include user.email "$authoremail"
+            success "git $cfg email set to:" "$authoremail"
+        fi
+
     done
 
     cd "$OWD"
@@ -1012,16 +1010,4 @@ state_primary_repo(){
   else
     echo "$(get_state_value "user" "$key")"
   fi
-}
-
-preview_repo () {
-    confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg" --confvar ""
-    if ! [ "$?" -eq 0 ]; then return; fi
-    create_config_yaml "$repo" | indent_lines
-    if [ $? -eq 0 ]; then
-        get_user_input "Would you like to install this repo?" -r
-        if ! [ $? -eq 0 ]; then
-            msg "Repo installation aborted by user"; exit
-        fi
-    fi
 }
