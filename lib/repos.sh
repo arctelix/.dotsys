@@ -716,7 +716,7 @@ setup_git_config () {
                 success "git $cfg include set to:" "$repo_gitconfig"
             fi
             include="--includes"
-            dprint "git include found"
+            debug "    git include found: repo_gitconfig"
         fi
 
          # state values
@@ -727,43 +727,42 @@ setup_git_config () {
         local authorname="$(git config --$cfg $include user.name || echo "$state_authorname" )"
         local authoremail="$(git config --$cfg $include user.email ||  echo "$state_authoremail" )"
 
-        # Abort global config if global already done
+        local global_authorname
+        local global_authoremail
+        local update
+
+        # Abort config if values are already in state
         if [ "$state_authoremail" ] && [ "$state_authorname" ]; then
             msg "$spacer $cfg author name = $authorname"
             msg "$spacer $cfg author email = $authoremail"
-            get_user_input "Do you want keep the existing $cfg git settings?" -r
+            get_user_input "Keep the existing $cfg git settings?" -r
             if [ $? -eq 0 ]; then
                 continue
+            else
+                update=true
             fi
         fi
-
-        # set default (must be above local reset)
-        local default_user="${authorname}"
-        local default_email="${authoremail}"
-        local update_name
-        local update_email
 
         # local config
         if [ "$cfg" = "local" ]; then
 
             # check for global as local default
-            local global_authorname="$(git config --global $include user.name)"
-            local global_authoremail="$(git config --global $include user.email)"
+            global_authorname="$(git config --global $include user.name)"
+            global_authoremail="$(git config --global $include user.email)"
 
             msg "$spacer global author name = $global_authorname"
             msg "$spacer global author email = $global_authoremail"
-            msg "$spacer local author name = $authorname"
-            msg "$spacer local author email = $authoremail"
 
             get_user_input "Use the global author settings for $repo?"
             if [ $? -eq 0 ]; then
                 authorname="$global_authorname"
                 authoremail="$global_authoremail"
+                update=''
             else
-                update_name=true
-                update_email=true
+                update=true
             fi
 
+        # Set credential helper for global only
         elif [ "$cfg" = "global" ]; then
             local values_script="$(get_user_or_builtin_file "git" "gitconfig.vars")"
             local cred="$(execute_script_func "$values_script" "credential_helper")"
@@ -771,13 +770,16 @@ setup_git_config () {
             success "git $cfg credential set to:" "$cred"
         fi
 
+        local default_user="${authorname:-global_authorname}"
+        local default_email="${authoremail:-global_authoremail}"
 
-        if ! [ "$authorname" ] || [ "$update_name" ]; then
+
+        if ! [ "$authorname" ] || [ "$update" ]; then
             user "- What is your $cfg github author name? [$default_user] : "
             read -e authorname
         fi
 
-        if ! [ "$authoremail" ] || [ "$update_email" ]; then
+        if ! [ "$authoremail" ] || [ "$update" ]; then
             user "- What is your $cfg github author email? [$default_email] : "
             read -e authoremail
         fi
