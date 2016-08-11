@@ -37,7 +37,6 @@
 #TODO ROADMAP: finish implementing .settings
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
-#TODO ROADMAP: Detect linux distros that give generic uname.
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
 #TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..
 
@@ -49,13 +48,12 @@
 # - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
 # - Currently if a repo is deleted the data is gone, the change would protect topics in use.
 
-
-
-# Fail on errors.
-# set -e
-
 # Show executed commands
 #set -x
+
+# If a command in pipe line fails use that exit status.
+set -o pipefail
+
 
 # Determine dotsys repo if this file is called directly
 if ! [ "$DOTSYS_REPOSITORY" ];then
