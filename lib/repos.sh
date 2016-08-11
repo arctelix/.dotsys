@@ -716,6 +716,7 @@ setup_git_config () {
                 success "git $cfg include set to:" "$repo_gitconfig"
             fi
             include="--includes"
+            dprint "git include found"
         fi
 
          # state values
@@ -731,6 +732,10 @@ setup_git_config () {
             debug "Abort $cfg gitconfig n:$authorname e:$authoremail"
             continue
         fi
+
+        # set default (must be above local reset)
+        local default_user="${authorname:-$global_authorname}"
+        local default_email="${authoremail:-$global_authoremail}"
 
         # local config
         if [ "$cfg" = "local" ]; then
@@ -757,10 +762,6 @@ setup_git_config () {
             git config "--$cfg" credential.helper "$cred"
             success "git $cfg credential set to:" "$cred"
         fi
-
-        # set default
-        local default_user="${authorname:-$global_authorname}"
-        local default_email="${authoremail:-$global_authoremail}"
 
         if ! [ "$authorname" ]; then
             user "- What is your $cfg github author name? [$default_user] : "
