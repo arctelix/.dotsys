@@ -51,8 +51,6 @@ dotsys_installer () {
 
     print_logo --force
 
-    echo "DR=$DOTSYS_REPOSITORY"
-
     debug "DOTSYS_REPOSITORY: $DOTSYS_REPOSITORY"
     debug "ACTIVE_SHELL: $ACTIVE_SHELL"
     debug "dotfiles_dir: $(dotfiles_dir)"
