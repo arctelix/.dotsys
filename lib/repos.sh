@@ -737,6 +737,9 @@ setup_git_config () {
         local default_user="${authorname:-$global_authorname}"
         local default_email="${authoremail:-$global_authoremail}"
 
+        local update_name
+        local update_email
+
         # local config
         if [ "$cfg" = "local" ]; then
 
@@ -752,8 +755,8 @@ setup_git_config () {
                 authorname="$global_authorname"
                 authoremail="$global_authoremail"
             else
-                authorname=""
-                authoremail=""
+                update_name=true
+                update_email=true
             fi
 
         elif [ "$cfg" = "global" ]; then
@@ -763,12 +766,12 @@ setup_git_config () {
             success "git $cfg credential set to:" "$cred"
         fi
 
-        if ! [ "$authorname" ]; then
+        if ! [ "$authorname" ] || [ "$update_name" ]; then
             user "- What is your $cfg github author name? [$default_user] : "
             read -e authorname
         fi
 
-        if ! [ "$authoremail" ]; then
+        if ! [ "$authoremail" ] || [ "$update_email" ]; then
             user "- What is your $cfg github author email? [$default_email] : "
             read -e authoremail
         fi
@@ -790,9 +793,9 @@ setup_git_config () {
         success "git $cfg email set to:" "$authoremail"
 
         if [ "$cfg" = "local" ]; then
-            success "A local .gitconfig has been created for $repo"
+            success "Local git settings for $repo saved"
         else
-            success "A global .gitconfig has been created for $authorname"
+            success "Global git settings for $authorname saved"
         fi
     done
 
