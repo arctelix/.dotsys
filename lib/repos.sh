@@ -728,15 +728,18 @@ setup_git_config () {
         local authoremail="$(git config --$cfg $include user.email ||  echo "$state_authoremail" )"
 
         # Abort global config if global already done
-        if [ "$cfg" = "global" ] && [ "$state_authoremail" ] && [ "$state_authorname" ]; then
-            debug "Abort $cfg gitconfig n:$authorname e:$authoremail"
-            continue
+        if [ "$state_authoremail" ] && [ "$state_authorname" ]; then
+            msg "$spacer $cfg author name = $authorname"
+            msg "$spacer $cfg author email = $authoremail"
+            get_user_input "Do you want keep the existing $cfg git settings?" -r
+            if [ $? -eq 0 ]; then
+                continue
+            fi
         fi
 
         # set default (must be above local reset)
-        local default_user="${authorname:-$global_authorname}"
-        local default_email="${authoremail:-$global_authoremail}"
-
+        local default_user="${authorname}"
+        local default_email="${authoremail}"
         local update_name
         local update_email
 
@@ -749,6 +752,8 @@ setup_git_config () {
 
             msg "$spacer global author name = $global_authorname"
             msg "$spacer global author email = $global_authoremail"
+            msg "$spacer local author name = $authorname"
+            msg "$spacer local author email = $authoremail"
 
             get_user_input "Use the global author settings for $repo?"
             if [ $? -eq 0 ]; then
@@ -765,6 +770,7 @@ setup_git_config () {
             git config "--$cfg" credential.helper "$cred"
             success "git $cfg credential set to:" "$cred"
         fi
+
 
         if ! [ "$authorname" ] || [ "$update_name" ]; then
             user "- What is your $cfg github author name? [$default_user] : "
