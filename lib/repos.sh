@@ -770,8 +770,8 @@ setup_git_config () {
             success "git $cfg credential set to:" "$cred"
         fi
 
-        local default_user="${authorname:-global_authorname}"
-        local default_email="${authoremail:-global_authoremail}"
+        local default_user="${authorname:-$global_authorname}"
+        local default_email="${authoremail:-$global_authoremail}"
 
 
         if ! [ "$authorname" ] || [ "$update" ]; then
