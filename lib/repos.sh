@@ -714,11 +714,8 @@ setup_git_config () {
             if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
                 git config "--$cfg" include.path "$repo_gitconfig"
                 success "git $cfg include set to:" "$repo_gitconfig"
-                include="--includes"
-
-            else
-                include="--includes"
             fi
+            include="--includes"
         fi
 
          # state values
@@ -730,7 +727,7 @@ setup_git_config () {
         local authoremail="$(git config --$cfg $include user.email ||  echo "$state_authoremail" )"
 
         # Abort global config if global already done
-        if [ "$cfg" = "global" ] && [ "$authorname" ] && [ "$authoremail" ]; then
+        if [ "$cfg" = "global" ] && [ "$state_authoremail" ] && [ "$state_authorname" ]; then
             debug "Abort $cfg gitconfig n:$authorname e:$authoremail"
             continue
         fi
