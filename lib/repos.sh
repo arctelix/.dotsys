@@ -733,6 +733,8 @@ setup_git_config () {
 
         # Abort config if values are already in state
         if [ "$state_authoremail" ] && [ "$state_authorname" ]; then
+            if [ "$cfg" = "global" ];then continue;fi
+
             msg "$spacer $cfg author name = $authorname"
             msg "$spacer $cfg author email = $authoremail"
             get_user_input "Keep the existing $cfg git settings?" -r
@@ -752,14 +754,17 @@ setup_git_config () {
 
             msg "$spacer global author name = $global_authorname"
             msg "$spacer global author email = $global_authoremail"
-
-            get_user_input "Use the global author settings for $repo?"
-            if [ $? -eq 0 ]; then
-                authorname="$global_authorname"
-                authoremail="$global_authoremail"
-                update=''
-            else
-                update=true
+            msg "$spacer local author name = $authorname"
+            msg "$spacer local author email = $authoremail"
+            if [ "$authorname" ] && [ "$authoremail" ]; then
+                get_user_input "Use the global author settings for $repo?"
+                if [ $? -eq 0 ]; then
+                    authorname="$global_authorname"
+                    authoremail="$global_authoremail"
+                    update=''
+                else
+                    update=true
+                fi
             fi
 
         # Set credential helper for global only
