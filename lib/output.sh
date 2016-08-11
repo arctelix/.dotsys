@@ -171,7 +171,7 @@ func_or_func_msg () {
         if [ "$action" ]; then
             $other_func "Failed to $action $first_arg" "$@"
         else
-            $other_func "Failed to $first_arg" "$@"
+            $other_func "$first_arg" "$@"
         fi
     fi
     return $state
@@ -180,6 +180,7 @@ func_or_func_msg () {
 
 # adds indent to all but first line
 indent_lines () {
+
   local first
   local first_line
   local line
@@ -189,7 +190,7 @@ indent_lines () {
   usage="indent_lines [<option>]"
   usage_full="
       -p | --prefix     Prefix each line
-      -f | --first      Leave first line as is
+      -f | --first      Leave first line
   "
 
   while [[ $# > 0 ]]; do
@@ -218,7 +219,6 @@ indent_lines () {
   fi
 
   #sed "s/^/$indent/g"
-
 }
 
 _indent_line (){
