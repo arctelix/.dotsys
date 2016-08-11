@@ -66,8 +66,11 @@ manage_repo (){
         exit
     fi
 
-    local installed=
-    local repo_status=
+    local installed
+    local repo_status
+    local has_remote
+
+    if get_remote_status;then has_remote=true ;fi
 
     # determine repo status
     if is_installed "$state_file" "$state_key" "$repo"; then
@@ -88,7 +91,7 @@ manage_repo (){
         info "Checking for remote:
       $spacer $remote_repo"
         # remote repo found
-        if has_remote_repo "$repo"; then
+        if [ "$has_remote" ]; then
             info "Found remote repo: $remote_repo"
             repo_status="remote"
         # no remote repo or directory
@@ -208,19 +211,17 @@ manage_repo (){
     # ACTION INSTALL
     if [ "$action" = "install" ]; then
 
-        if [ "$repo_status" = "missing" ] && has_remote_repo; then
+        if [ "$repo_status" = "missing" ] && [ "$has_remote" ]; then
             repo_status="remote"
         fi
 
         # REMOTE: Clone existing repo
         if [ "$repo_status" = "remote" ];then
             clone_remote_repo "$repo"
-
-        # create full repo directory (after remote: or clone will fail)
-        elif [ "$repo_status" != "local" ];then
-            mkdir -p "$local_repo"
-            if ! [ $? -eq 0 ]; then error "Local repo $local_repo could not be created"; exit; fi
         fi
+
+        # Confirm dir and required files exist (after remote or clone will fail!)
+        install_required_repo_files "$repo"
 
         # GIT CONFIG (after remote: need existing configs)
         setup_git_config "$repo" "local"
@@ -229,50 +230,27 @@ manage_repo (){
         if ! is_git; then
             init_local_repo "$repo"
             if ! [ $? -eq 0 ]; then
-                error "Git is required for dotsys to function properly."; exit
+                error "Could not initialize local repo."; exit
             fi
         fi
 
-        # Check EXISTING/INSTALLED status
-        if ! is_dotsys_repo && [ "$repo_status" != "remote" ] && [ "$repo_status" != "new" ];then
-            debug "   local directory/installed check for remote"
-            if has_remote_repo "$repo"; then
-                manage_remote_repo "$repo" auto
-            else
-                repo_status="new"
-            fi
-        fi
-
-        # Make sure all repos have required files!
-        install_required_repo_files "$repo"
+        # Make sure repo is up to date
+        if [ "$has_remote" ]; then
+            manage_remote_repo "$repo" auto
 
         # NEW: initialize remote repo
-        if [ "$repo_status" = "new" ];then
+        else
             init_remote_repo "$repo"
             msg "$spacer Don't forget to add topics to your new repo..."
         fi
 
-        # Moved to main
-        #create_all_req_stubs
-
         # MAKE PRIMARY if not offer some options
-        debug "checi if: state primary repo = current repo"
-        debug "$(state_primary_repo) = $repo"
+        debug "check primary repo: $(state_primary_repo) != current $repo"
+
         if ! is_dotsys_repo && [ "$(state_primary_repo)" != "$repo" ]; then
 
             # preview repo and confirm install
-            if [ "$repo_status" != "new" ]; then
-                confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg" --confvar ""
-                if [ "$?" -eq 0 ]; then
-                    create_config_yaml "$repo" | indent_lines
-                    if [ $? -eq 0 ]; then
-                        get_user_input "Would you like to install this repo?" -r
-                        if ! [ $? -eq 0 ]; then
-                            msg "Repo installation aborted"; exit
-                        fi
-                    fi
-                fi
-            fi
+            [ "$repo_status" != "new" ] && preview_repo
 
             confirm_make_primary_repo "$repo"
         fi
@@ -303,7 +281,7 @@ manage_repo (){
         action_status=$?
 
         # confirm delete if repo exists
-        if [ -d "$local_repo" ] && has_remote_repo "$repo"; then
+        if [ -d "$local_repo" ] && [ "$has_remote" ]; then
             manage_remote_repo "$repo" push
             # delete local repo (only if remote is pushed)
             if [ $? -eq 0 ]; then
@@ -354,58 +332,53 @@ manage_remote_repo (){
 
     local local_repo="$local_repo"
     local remote_repo="$remote_repo"
+    local init_required
     local result
+
+    if ! [ "$has_remote" ] && ! get_remote_status; then
+        warn "There is no remote for $repo;
+        $spacer to add a remote use the command:
+        $spacer $(code "dotsys install $repo")"
+        return
+    fi
 
     debug "-- manage_remote_repo: $task b:$branch"
     debug "-- manage_remote_repo local_repo: $local_repo"
     debug "-- manage_remote_repo remote_repo: $remote_repo"
 
+    cd "$local_repo"
 
     # http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
     # must run 'git fetch' or 'git remote update' first
 
-    cd "$local_repo"
-
     # Update from remote
     debug "   manage_remote_repo: git remote update"
     result="$(git remote update 2>&1 | indent_lines -f)"
-    if ! [ $? -eq 0 ] || ! [ "$result" ]; then
-        if ! [ "$task" = "status" ]; then
-            debug "   manage_remote_repo: git remote update failed"
-            fail "${result:-"No remote configured for repo"}"
+    ret_val=$?
 
-            # Make sure repo is initialized
-            init_local_repo "$repo"
+    # Make sure upstream is configured
+    if ! [ $ret_val -eq 0 ] || ! [ "$result" ]; then
+        init_required="remote improperly configured"
 
-            # Update from remote again
-            result="$(git remote update 2>&1 | indent_lines -f)"
-            info "${result}"
+    # Make sure we can resolve remote branch
+    elif ! git rev-parse HEAD > /dev/null 2>&1; then
+        init_required="could not determine head status"
 
-        else
-            error "git remote update failed"
-            exit
-        fi
-
-    elif ! [ "$task" = "status" ]; then
+    elif ! [ "$task" = "status" ];then
         info "$result"
     fi
 
-    # Make sure upstram is configured
-    debug "   manage_remote_repo: git rev-parse"
-    if ! git rev-parse @{u} > /dev/null 2>&1; then
-        debug "   manage_remote_repo: git rev-parse failed attempting git checkout $branch"
-
-        # Make sure branch is checked out (sets origin automatically)
-        result="$(git checkout $branch > /dev/null 2>&1 | indent_lines -f)"
-        ret_val=$?
-        if ! [ "$task" = "status" ]; then
-            success_or_fail $ret_val "" "$result"
-        fi
-
-        # unknown error
-        if ! [ $ret_val -eq 0 ]; then
-            debug "   manage_remote_repo: git checkout $branch failed : $result"
-            error "Could not resolve issues with your repo, please fix it manually"
+    # Attempt to reinitialize local repo to fix problems
+    if [ "$init_required" ];then
+        if ! [ "$task" = "status" ];then
+            warn "$init_required
+          $spacer Re-initializing the local repo could fix the problem"
+            init_local_repo "$repo"
+            ret_val=$?
+        else
+            error "$init_required
+            \r $result"
+            exit
         fi
     fi
 
@@ -485,6 +458,7 @@ init_local_repo (){
     local repo="$1"
     local local_repo="$local_repo"
     local remote_repo="$remote_repo"
+    local result
 
     confirm_task "initialize" "git for" "$repo_status repo:" "$local_repo" --confvar "GIT_CONFIRMED"
     if ! [ $? -eq 0 ]; then exit; fi
@@ -497,8 +471,23 @@ init_local_repo (){
     result="$(git remote add origin "${remote_repo}.git" 2>&1 | indent_lines -f)"
     success_or_fail $? "add" "${result:-"remote origin: ${remote_repo}.git"}"
 
-    install_required_repo_files "$repo"
-    git_commit "$repo" "initialized by dotsys"
+    # Sync local with remote
+    if [ "$has_remote" ];then
+        git add .
+        git remote update 2>&1 | indent_lines
+        success_or_fail $? "sync" "origin with local repo"
+
+        result="$(git checkout "$branch" 2>&1 | indent_lines -f)"
+        success_or_fail $? "" "$result <<<"
+
+    # Make inital commit
+    else
+        git_commit "$repo" "initialized by dotsys"
+    fi
+
+    # make sure everything is ok
+    git rev-parse HEAD >/dev/null 2>&1
+    success_or_error $? "initialize" "git for $local_repo"
 
     cd "$OWD"
 }
@@ -514,7 +503,7 @@ git_commit () {
     local result
     local user_input
     local default
-    local state
+    local git_status
 
     local usage="git_commit [<option>]"
     local usage_full="
@@ -534,10 +523,10 @@ git_commit () {
     git add .
 
     # Abort if nothing to commit
-    state="$(git status --porcelain | indent_lines -f)"
-    if ! [ -n "$state" ]; then cd "$OWD";return;fi
+    git_status="$(git status --porcelain | indent_lines )"
+    if ! [ -n "$git_status" ]; then cd "$OWD";return;fi
 
-    info "$(printf "Git Status:\n%b$state%b" $yellow $rc)"
+    info "$(printf "Git Status:\n%b$git_status%b" $yellow $rc)"
 
     # default message
     default="${message:-dotsys $action}"
@@ -546,23 +535,25 @@ git_commit () {
 
 
     # custom commit message
-    if [ ! "$message" ] && ! [ "$silent" ]; then
+    if [ ! "$message" ] && [ ! "$silent" ]; then
         get_user_input "There are local changes in your repo.
                 $spacer Would you like to commit the changes?" \
                 --invalid omit --default "$default" --true omit --hint "or enter a commit message\n$spacer" -r
         if ! [ $? -eq 0 ];then
-            msg "$spacer commit aborted by user"
+            info "commit aborted by user"
             cd "$OWD"
             return 1
         fi
     fi
+
+    info "Committing changes : $message"
 
     message="${user_input:-$default}"
 
     #script -q /dev/null git commit -a -m "$message" 2>&1 | indent_lines
     git commit -a -m "$message" 2>&1 | indent_lines
 
-    if ! [ "$silent" ]; then success_or_fail $? "commit" ": $message";fi
+    if ! [ "$silent" ]; then success_or_fail $? "commit" "changes : $message";fi
     cd "$OWD"
 }
 
@@ -576,25 +567,22 @@ init_remote_repo () {
     confirm_task "initialize" "remote" "repo:" "$remote_repo" --confvar "GIT_CONFIRMED"
     if ! [ $? -eq 0 ]; then return; fi
 
-
-
     git_commit "$repo" "initialize remote"
 
-    # Git hub will prompt for the user password
+    # Create remote repo (Git hub will prompt for the user password)
     curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}" > /dev/null
-    success_or_fail $? "create" "$(printf "%b$repo_status" "$hc_topic")" "remote repo" "$(printf "%b$remote_repo" "$hc_topic" )"
+    success_or_fail $? "create" "$repo_status" "remote repo" "$remote_repo"
+
+    # Create remote error
     if ! [ $? -eq 0 ]; then
         "$(msg "$spacer However, The local repo is ready for topics...")"
 
-    # Push to remote
+    # Push local to remote
     else
         cd "$local_repo"
         git push -u origin "$branch" 2>&1 | indent_lines
-        success_or_fail $? "push" "$(printf "%b$repo_status" "$hc_topic")" "repo" "$(printf "%b$remote_repo@$branch" "$hc_topic")"
+        success_or_fail $? "push" "$repo_status" "repo" "$remote_repo@$branch"
     fi
-
-
-
 
     cd "$OWD"
 }
@@ -620,8 +608,6 @@ checkout_branch (){
             success_or_error $? "check" "out $result"
         fi
         cd "$OWD"
-    else
-        branch="${branch:-master}"
     fi
 }
 
@@ -650,6 +636,13 @@ install_required_repo_files () {
     local local_repo="$local_repo"
     local OWD="$PWD"
 
+    # make sure local repo directory exists
+    mkdir -p "$local_repo"
+    if ! [ $? -eq 0 ]; then
+        error "Local repo $local_repo could not be created"
+        exit
+    fi
+
     cd "$local_repo"
 
     # add a dotsys.cfg
@@ -658,10 +651,12 @@ install_required_repo_files () {
         echo "repo:${repo}" >> "dotsys.cfg"
     fi
 
+    # Add .git ignore
     if ! [ -f ".gitignore" ];then
         touch .gitignore
     fi
 
+    # Add ignore patterns
     if ! grep -q '\*\.private' ".gitignore" >/dev/null 2>&1; then
         echo "*.private" >> ".gitignore"
     fi
@@ -704,44 +699,48 @@ setup_git_config () {
             state_prefix="$(echo "git_${repo%/*}_${repo##*/}" | tr '-' '_')"
             repo_gitconfig="${repo_dir}/git/gitconfig.local"
 
+            # Create local config file if not there
+            mkdir -p "${repo_dir}/.git"
+            touch "${repo_dir}/.git/config"
+
         else
             state_prefix="git_global"
             repo_gitconfig="${repo_dir}/git/gitconfig.symlink"
         fi
 
-        # source users existing repo gitconfig.symlink or gitconfig.local.symlink
+        # source repo gitconfig.symlink or gitconfig.local
         if [ -f "$repo_gitconfig" ];then
+
             if [ "$repo_gitconfig" != "$(git config "--$cfg" include.path)" ];then
                 git config "--$cfg" include.path "$repo_gitconfig"
                 success "git $cfg include set to:" "$repo_gitconfig"
                 include="--includes"
+
             else
                 include="--includes"
             fi
         fi
 
-        # check for global as local default
-        local global_authorname="$(git config --global $include user.name)"
-        local global_authoremail="$(git config --global $include user.email)"
-
          # state values
         local state_authorname="$(get_state_value "user" "${state_prefix}_author_name")"
         local state_authoremail="$(get_state_value "user" "${state_prefix}_author_email")"
 
-        # Abort global config if global already done
-        if [ "$cfg" = "global" ] && [ "$global_authorname" ] && [ "$state_authoremail" ]; then continue;fi
-        debug "$cfg / $global_authorname / $state_authorname"
-
-        # check live config & state for value
+        # check current config & state for value
         local authorname="$(git config --$cfg $include user.name || echo "$state_authorname" )"
         local authoremail="$(git config --$cfg $include user.email ||  echo "$state_authoremail" )"
 
-        # set default
-        local default_user="${authorname:-$global_authorname}"
-        local default_email="${authoremail:-$global_authoremail}"
+        # Abort global config if global already done
+        if [ "$cfg" = "global" ] && [ "$authorname" ] && [ "$authoremail" ]; then
+            debug "Abort $cfg gitconfig n:$authorname e:$authoremail"
+            continue
+        fi
 
         # local config
         if [ "$cfg" = "local" ]; then
+
+            # check for global as local default
+            local global_authorname="$(git config --global $include user.name)"
+            local global_authoremail="$(git config --global $include user.email)"
 
             msg "$spacer global author name = $global_authorname"
             msg "$spacer global author email = $global_authoremail"
@@ -751,9 +750,6 @@ setup_git_config () {
                 authorname="$global_authorname"
                 authoremail="$global_authoremail"
             else
-                local repo_git_dir="$(repo_dir "$repo")/.git"
-                mkdir -p "$repo_git_dir"
-                touch "${repo_git_dir}/config"
                 authorname=""
                 authoremail=""
             fi
@@ -764,6 +760,10 @@ setup_git_config () {
             git config "--$cfg" credential.helper "$cred"
             success "git $cfg credential set to:" "$cred"
         fi
+
+        # set default
+        local default_user="${authorname:-$global_authorname}"
+        local default_email="${authoremail:-$global_authoremail}"
 
         if ! [ "$authorname" ]; then
             user "- What is your $cfg github author name? [$default_user] : "
@@ -801,9 +801,9 @@ setup_git_config () {
     cd "$OWD"
 }
 
-has_remote_repo (){
-    local repo="${1:-$repo}"
-    local remote_repo="$remote_repo"
+get_remote_status (){
+
+    local remote_repo="${1:-$remote_repo}"
     local silent="$2"
     local state
 
@@ -996,4 +996,16 @@ state_primary_repo(){
   else
     echo "$(get_state_value "user" "$key")"
   fi
+}
+
+preview_repo () {
+    confirm_task "preview" "repo" "config ${repo}" "-> ${repo}/.dotsys-default.cfg" --confvar ""
+    if ! [ "$?" -eq 0 ]; then return; fi
+    create_config_yaml "$repo" | indent_lines
+    if [ $? -eq 0 ]; then
+        get_user_input "Would you like to install this repo?" -r
+        if ! [ $? -eq 0 ]; then
+            msg "Repo installation aborted by user"; exit
+        fi
+    fi
 }
