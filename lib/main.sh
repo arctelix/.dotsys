@@ -550,6 +550,15 @@ dotsys () {
         echo "date: $(date '+%d/%m/%Y %H:%M:%S')" > LOG_FILE
     fi
 
+    verbose_mode
+
+    if ! [ "$recursive" ]; then
+        print_logo
+    fi
+
+    debug "main final input -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
+    debug "main final input -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
+
     # HANDLE DOTSYS LIMIT
 
     if in_limits "dotsys" -r; then
@@ -589,15 +598,6 @@ dotsys () {
             manage_dependencies "$action" "--core"
         fi
     fi
-
-    verbose_mode
-
-    if ! [ "$recursive" ]; then
-        print_logo
-    fi
-
-    debug "main final input -> a:$action t:${topics[@]} l:$limits force:$force r:$recursive from:$from_repo"
-    debug "main final input -> GC:$GLOBAL_CONFIRMED TC=$TOPIC_CONFIRMED verbose:$VERBOSE_MODE"
 
 
     # freeze dotsys state files
