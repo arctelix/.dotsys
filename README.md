@@ -84,7 +84,7 @@ Why another dotfile management system ?
 Most people have developed dotfile systems that integrate system settings and software instalation 
 which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to 
 really share and fork dotfiles.  Dotsys separates these functions so dotfies can be easily managed 
-,shared shared with everyone, and forked in a more usefull way.
+,shared with everyone, and forked in a more usefull way.
 
 Why do i need dotsys if i don't manage my dotfiles as topics ?
 --------------------------------------------------------------
@@ -287,31 +287,36 @@ From now on, when you make changes to your system, use dotsys and you
 will never have to do it again!
 
 
-What the hell is a topic?
+What the hell is a TOPIC?
 -------------------------
 
-A topic is how dotsys organizes your custom settings. If you currently use vim and had 
-dotsys search for exiting dotfiles this is probably done already, but we'll walk through
-the process so you can create topics that are not part of dotsys already.
+A topic is simply a directory in your repo to store all the topic related custom files.  Here we'll walk through
+creating a topic with vim as an example.
 
 First create a directory in your local repo manually or with the following command:
 
     # HINT: Topic names should corispond to it's shell command when possible!
     mkdir ~/.dotfiles/<github_user_name>/<repo_name>/vim
 
-Add any required dotfiles, but remove the "." prefix and add a ".symlink" extension:
+Add dotfiles (symlinks): Just remove the "." prefix and add a ".symlink" extension:
 
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/vimrc.symlink
 
-Add some aliases for the shell:
+Add shell environment items : Any file with ".shell" extension will be available to all shells
+or use a specific shell extention ".bash", ".zsh", ".csh", ".ksh", etc
 
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/aliases.shell
     
-Optionally create a dotsys.cfg file in the topic directory
-See Anatomy of a dotsys.cfg file for dotsys.cfg options:
+Add a dotsys.cfg file: Simply a basic yaml formatted file using TWO spcaes for indents.
 
-    # Cfg files use a basic yaml format using TWO spcaes for indents
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/dotsys.cfg
+
+Since vim is a built-in topic a dotsys.cfg file is not required, but a typical topic will need
+one simple line in it's cfg file:
+
+    manager: cmd
+
+See Anatomy of a dotsys.cfg file for all dotsys.cfg options (link at bottom of this file)
     
 NOTE: In order for git to save a directory it must contain at least one file.  A great
 way to insure that a topic directory is preserved in your remote repo is to add a 
@@ -439,13 +444,55 @@ For example `some_file.vim` will be sourced by vim on load.
     .exclude-platforms is replaced by dotsys.cfg files.
 
 
-Anatomy of a dotsys.cfg file
+CFG File basics (dotsys.cfg)
 ----------------------------
+  
+Specify a system default manager if required (default: none):
+- app = Use OS application manager
+- cmd = Use system command manager
 
+    manager: [app, cmd]
+
+Specify another topic as the manager (managing topic must have a manager.sh file):
+
+    # For example a node package will specify node as it's manager
+    manager : node
+
+Specify test to determine if topic is installed on system (default: topic directory name)
+				            
+    installed_test: <test command>
+    
+Specify package name for all managers (default: topic directory name):
+
+    package_name: <package name>
+     				           
+Specify the package name for specific manager:
+
+    brew: <package name>
+    	
+Add topic dependencies (use topic directory names):
+
+    deps:
+      - <topic name>
+   
+Install the topic from a different repo:
+
+    repo: user/repo_name
+    
+Overide symlink destination (default: $HOME):
+src_name: The repo source file name (no "." prefix or .symlink extension)
+dst_name: The exact destination file name with prefix and extension
+
+    symlinks:
+      - src_name->$HOME/subdir/_dst_name
+    
+FOR MORE DETAILS SEE:
 https://github.com/arctelix/.dotsys/blob/master/config.md
+
 
 Shell System
 ------------
+
 https://github.com/arctelix/.dotsys/blob/master/shell.md
 
 

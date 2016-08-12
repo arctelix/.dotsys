@@ -1,154 +1,182 @@
-dotsys.cfg
-==========
+Anotomy of a dotsys.cfg file
+============================
 
-Nearly all of the dotsys defaults can be superseded with a repo level and topic level dotsys.cfg file.  
+Nearly all of the dotsys defaults can be superseded with a dotsys.cfg file at the repo level and or topic level.  
 A dotsys.cfg file located in a topic directory tells dotsys how to treat a topic and a repo config file 
-allows you to easily supersede topic settings.
+allows you to easily supersede topic settings.  
 
-Topics should be named after the system command when possible, as dotsys will 
-test for the topic name as an existing commend. For example:
+#### CFG FILE FORMATTING RULES
 
-> To crate a topic named for vim, you would crate a directory called 'vim', dotsys will test for the command 'vim' and if 
-> it already exits will skip the package installation.  
+Cfg files use a simplified YAML format and must comply with the following rules:
 
-This is actually very important.  It allows dotsys to respect previously installed versions of packages on your system.  
-If you have a version of vim on your current system we will not overwrite it unless you explicitly use the --force
-option.
+- INDENTS MUST BE TWO SPACES!
+- Settings are comprised of `key: value` pairs
+- Some settings allow lists of items, prefixed with a dash '-'
+- Indented settings only pertain to the parent setting.
+- A key may not contain a dash '-' character, but values and topics can.
+ 
+If you need to refer to a topic containing dashes such as  "apt-get" use the syntax:
     
-However, on the mac platform you likely want to install 'macvim'.  Don't create another topic called 'macvim' 
-just modify the dotsys.cfg for the 'vim' topic telling dotsys to use 'macvim' for brew.
+    aptget: google-chrome
+    
+    
+BUILT-IN TOPICS & VIM CFG EXAMPLE
+---------------------------------
+
+The configuration for vim happens to be a dotsys built-in topic, so your repo version of 'vim' would not require a cfg file,
+just add your `vimrc.symlink` to the 'vim' directory and that's it!
+
+This is what the Built-in vim/dotsys.cfg looks like
 
     manager: cmd
     brew: macvim
       installed_test: mvim
     windows:
       symlinks:
-        - vimrc.symlink->$HOME/_vimrc
+        - vimrc->$HOME/_vimrc
         
-The configuration for vim happens to be built in to dotsys, so all you need to do is create a folder called 'vim' and 
-add your `vimrc.symlink` file and your done!  
+You will learn more about these settings below, but in summary what we did above was the following.
 
-Now if for some reason you wanted to override and use 'vim' on the mac platform instaed of 'macvim'.  Create add the 
-following to your 'vim' topic's dotsys.cfg.
+- Use the command line manger `cmd`
+- When brew is the manger use the package `macvim` instaed of `vim`
+- Brew must use the installed test `mvim` to determine if it is installed
+- For the windows platform use an alternate symlink destination for the `vimrc` file
 
-    brew: vim
-      installed_test: vim
 
-You will also notice we changed the symlink location for windows platforms to '$HOME/_vimrc_' rather then '$HOME/.vimrc'.  
-The details for all config file settings are explained below, so that you can implement topics that are not built in to dotsys.  
-Please submit pull requests for your topic configs!  Look at `.dotsys/builtins` for more examples of how to configure a topic.
+TOPIC CFG SETTINGS (Topic/dotsys.cfg)
+-------------------------------------
 
-**IMPORTANT NOTE: Always omit dashes in '-' .cfg file keys, dashes are ok as values though**
+#### TOPIC NAMES
 
-For example when specifying an alternate package name for apt-get use the syntax:
+First lets recall that a topic is merely a directory in your repo which contains related files.  How you name your topic 
+directories is important.  Topics should always be named after the system command when possible!  The topic name is used as 
+the default `package_name` and `installed_test`.  Both of these settings can be modified when necessary in the topic/dotsys.cfg file.
+
+
+#### INSTALLED TESTS
+
+The `installed_test` is very important.  Dotsys will check if the specified isntalled test exists on your system. This allows 
+dotsys to respect existing versions on your system. For example: If you have a version of vim installed on your system, dotsys 
+will test for the command `vim` and if found will not re-install it unless you explicitly use the --force option.  
+If necessary you could override the installed test and package name for a topic using the following lines in a cfg file:
+
+    installed_test: some POSIX comaptable command to exicute
+
+
+#### PACKAGE NAMES
+
+The `package_name` is used by a topic's designated manager to install the correct package. You can override the 
+default package name for all managers with the following line :
+
+    package_name: valid-package-name
     
-    aptget: google-chrome
-
-
-TOPIC CONFIG (topic/dotsys.cfg)
--------------------------------
-  
-Specify a system default manager if required (default: none):
-- app = Use OS application manager
-- cmd = Use system command manager
-
-    manager: [app, cmd]
-
-Specify another topic as the manager (managing topic must have a manager.sh file):
-
-    # For example a node package will specify node as it's manager
-    manager : node
-
-Specify test to determine if topic is installed on system (default: topic directory name)
-				            
-    installed_test: <topic name>
     
-Specify package name for all managers (default: topic directory name):
+In some cases the package name will vary from manager to manager.  You can address this by specifying a package name
+for any manager that uses a package name that differs from the default:
 
-    package_name: <package name>
-     				           
-Specify the package name for specific manager:
-
-    brew: <package name>
-    	
-Add topic dependencies (use topic directory names):
-
-    deps:
-      - <topic name>
-
-Overide symlink destination (default: $HOME):
-src_name: The repo source file name (no prefix or .symlink extension)
-dst_name: The exact destination file name with prefix and extension
-
-    symlinks:
-      - src_name->$HOME/subdir/_dst_name
-      
-Install topic from a different repo:
-
-    repo: user/repo_name
-
-
-MANAGER CONFIG OPTIONS
-----------------------
-Install with apps manager ie: cask, chocolaty, yum
+    brew: node
+    scoop: nodejs
+    yum: nodejs npm
     
-    manager: app 
+Notice yum has two package names! Since most nodejs packages include npm we do this to level the playing field. When 
+dotsys installs the node topic with yum the executed command is `sudo yum install nodejs npm`, which is completely valid 
+since all managers will accept multiple package names.
+
+    
+#### DEFAULT MANAGERS
+
+If your topic name satisfies the requirements for `package_name` and `installed_test` then most topics will only need to specify a
+default manager.  Most systems have a command line manager `manger: cmd` and an application manger `manager: app`.  Dotsys will
+choose the apropriate default manger based on the detected platform.  See .dotsys/dotsys.cfg for defaults.
+
+Some platform managers such as Yum, handle both cmd and app packages in which case either would work fine.  However, the goal of 
+dotsys is to be cross platform so always be mindful of this and choose the appropriate manger.  The general rule is If the package is 
+available on the command line it should use cmd, otherwise app. 
+
+It's also worth noting that any topic can be a manager such as npm `manger: npm'.  
 
 Install with command line manager ie: brew, apt-get
 			        
     manager: cmd 
+    
+Install with apps manager ie: cask, chocolaty, yum
+    
+    manager: app 
 
-Install with a specific manager
+Install with a specific manager (any topic with a manager.sh file)
 
     manager: npm
+    
+    
+#### DEPENDENCIES
+
+Some topics may require other topics.  This is easily accomplished with a cfg file.  For example gulp requires the following dependencies.
+Always specify all dependencies as required, even though npm is typically included with node we still list it!
+
+    deps:
+      - node
+      - npm
+      
+#### SYMLINKS
+
+By default any file with a ".symlink" extention is linked to your $HOME directory and given a "." prefix.  In some cases
+this destination location and or file name need to be customised
+
+    symlinks:
+      - src_name->$HOME/subdir/_dst_name
+
+src_name: The repo source file name (no "." prefix or .symlink extension)
+dst_name: The exact destination file name with prefix and extension
+  
 
 
-PLATFORM CONFIG OPTIONS
------------------------
+PLATFORM SETTINGS
+-----------------
 
-full platform names (do not use in config files)
+Full platform names contain a gneric-specific combination:
 
     linux-mac:
+    linux-centos:
     windows-cygwin:
+    windows-babun:
     
-specific platform name (only linux-mac, windows-cygwin)
+Generic platforms apply to all specific platforms sharing the generic prefix.
+
+    windows:
+    linux:
+    
+Specific platform names apply only to that one specific platform.
 
     mac:
     cygwin: 
 
-generic platform name (all windows-*, all linux-*)
 
-    windows:
-    linux:
+Platforms may contain an include or exclude value (use 'x' to exclude and 'i' to include), this is
+how dotsys knows which packages get installed on specific platforms.
 
-Include/exclude for platform (use 'x' to exclude and 'i' to include)
-any platform not excluded generically or specifically will be installed
-when a generic platform is excluded you must explicitly include any specific platforms you want to use
+Any platform not excluded generically or specifically will be included by default. When a generic 
+platform is excluded you must then include any specific platforms you want to include.
 
-exclude all linux platforms
+Exclude all platforms except for mac:
 
+    windows: x
     linux: x
-    
-override include linux-mac
-
-    mac: i                                        
+    mac: i
 
 
-TOPIC CONFIG: PLATFORM SPECIFIC (windoes/mac/linux/freebsd/mysys)
------------------------------------------------------------------
-All base config settings are applicable as platform children and will supersede the base config
+#### PLATFORM SPECIFIC OVERIDES
+
+All base config settings are applicable as platform children and will supersede the base config.
+In the below example the settings will only apply to windows platforms.
 
     windows: i
-      manager: app 
-      repo: user/repo_name
+      manager: app
       symlinks:
-        - file.symlink->$HOME/subdir/_file 
-    
-    linux: x
+        - file->$HOME/subdir/_file 
 
 
-REPO CONFIG (user/repo/dotsys.cfg)
-----------------------------------
+REPO CFG SETTINGS (user/repo/dotsys.cfg)
+----------------------------------------
 
 default repo for all topics (branch is optional, defaults to master)
 
@@ -167,8 +195,8 @@ platform manger overrides for mac (defaults shown)
       cmd_manager: brew
 
 
-REPO CONFIG TOPIC OVERRIDES
----------------------------
+#### REPO CONFIG TOPIC OVERRIDES
+
 all topic child settings apply
 
 override topic1 repo and exclude on windows
@@ -179,31 +207,51 @@ override topic1 repo and exclude on windows
 
 Exclude topic2
 
-    topic2: x  					          
-
-
+    topic2: x 
+    
+     					          
 INCLUDE / EXCLUDE RULES
 -----------------------
-Include all files
 
-    package: i              
+As we discussed you can include / exclude a topic for a platform.  
+You can also include / exclude files and directories from topics.
+                                        
+Include all files for a topic
+
+    topic: i              
       file1:                # include
       file2: x              # include
       file3: i              # include
 
-Exclude all files
+Exclude all files for a topic
 
-    package: x              
+    topic: x              
       file1:                # exclude
       file2: x              # exclude
       file3: i              # exclude
 
 Check each file individually
 
-    package:                
+    topic:                
       file1:                # include
       file2: x              # exclude
       file3: i              # include
+      
+exclude a file for a platform in a topic cfg
+
+    platform:
+      file1: x
+      file2: i
+        
+exclude a directory for a platform in a repo cfg
+
+    
+    topic:
+      platform:
+        dir1:
+          file1: x
+          file2: i
+        dir2:x
 
 
 TOPIC TASKS (alternate to topic.sh functions or task.sh scripts)
