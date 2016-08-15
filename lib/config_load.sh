@@ -14,6 +14,8 @@ get_config_val () {
   # default config file (root)   ___$cfg         get_config_val "__$cfg"
   # default config file (topic)  ___$topic_$cfg  get_config_val "__$topic" "$cfg"
 
+  # Dashes are removed from parts since dashes are not valid in variable names
+
   if [ $# -eq 0 ]; then return;fi
 
   local cfg=""
@@ -21,12 +23,12 @@ get_config_val () {
 
   # Allow dashes as first param to prevent extra dash on blank param
   if [ "$1" = "_" ] || [ "$1" = "__" ]; then
-       cfg="$1"
+       cfg="${1//-}"
        shift
   fi
   for part in $@; do
      if ! [ "part" ]; then continue;fi
-     cfg+="_$part"
+     cfg+="_${part//-}"
   done
   cfg="$cfg[@]"
   local c
@@ -349,11 +351,11 @@ load_topic_config_vars () {
 # Returns the prevailing value for a given config
 # default mode returns first found variable from topic to generic
 # mode "+" : Combine all unique values from topic to generic
-# mode "+" : Combine all unique values from generic to topic
+# mode "-" : Combine all unique values from generic to topic
 get_topic_config_val () {
     # Dashes are removed from topic names
     # since dashes are not valid in variable names
-    local topic="${1/-}"
+    local topic="${1//-}"
     shift
 
     local splat="$(specific_platform)"
