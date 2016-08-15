@@ -37,20 +37,10 @@ chdir() {
   cd "$@" >/dev/null
 }
 
-dotsys_file () {
-    local DOTSYS_FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
-    local DOTSYS_DOTSYS_FILE="$DOTSYS_FILE_DIRECTORY/${0##*/}"
-    echo "$DOTSYS_DOTSYS_FILE"
-}
-
 dotsys_repository () {
 
-    if [ "$DOTSYS_REPOSITORY" ]; then
-        echo "$DOTSYS_REPOSITORY"
-        return
-    fi
-
-    local DOTSYS_DOTSYS_FILE="$(dotsys_file)"
+    local DOTSYS_FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
+    local DOTSYS_DOTSYS_FILE="$DOTSYS_FILE_DIRECTORY/${0##*/}"
 
     if [[ -L "$DOTSYS_DOTSYS_FILE" ]]; then
         local DOTSYS_SYMLINK="$(drealpath "$DOTSYS_DOTSYS_FILE")"
