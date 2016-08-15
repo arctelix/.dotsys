@@ -821,10 +821,10 @@ get_remote_status (){
     local silent="$2"
     local state
 
-    state="$(curl -Ls --head --silent "${remote_repo}" | head -n 1)"
+    state="$(curl -Ls --head "${remote_repo}" | head -n 1)"
     #wget -q "${remote}.git" --no-check-certificate -O - > /dev/null
 
-    debug "curl result=$state"
+    debug "get_remote_status curl result=$state"
 
     local ret=1
     if echo "$state" | grep "[23].." > /dev/null 2>&1; then
@@ -836,13 +836,13 @@ get_remote_status (){
     elif echo "$state" | grep "[4].." > /dev/null 2>&1; then
         ret=1
         if [ "$silent" ];then  return $ret;fi
-        success "remote not found: $state
+        success "remote does not exist: $state
          $spacer -> $remote_repo"
 
-    elif echo "$state" | grep "[5].." > /dev/null 2>&1; then
+    else
         ret=2
         if [ "$silent" ];then  return $ret;fi
-        error "connection failed: $state
+        error "connection failed: ${state:-Check your internet connection}
        $spacer -> $remote_repo"
     fi
 
