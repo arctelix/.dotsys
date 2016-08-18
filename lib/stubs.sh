@@ -3,6 +3,9 @@
 # Stub functions
 # Author: arctelix
 
+import shell is_shell_topic
+
+
 # Checks user's system for existing configs and move to repo
 # Make sure this only happens for new user install process
 # or those configs will not get loaded

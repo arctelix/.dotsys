@@ -200,11 +200,6 @@ is_required_stub () {
     return $r
 }
 
-is_shell_topic () {
-    local topic="${1:-$topic}"
-    [[ "shell bash zsh ksh" =~ $topic ]]
-}
-
 # Executes commands as sudo only when necessary
 dsudo () {
 

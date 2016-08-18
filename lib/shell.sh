@@ -246,7 +246,7 @@ shell_from_string() {
 
 is_shell_topic () {
     local topic="${1:-$topic}"
-    shell_from_string "$topic"
+    [ "$(shell_from_string "$topic")" ]
 }
 
 
