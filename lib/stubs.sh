@@ -665,12 +665,31 @@ distribute_topic_sources () {
 
     if [ -f "$topic_sources_file" ];then
 
-        # Remove missing source files from stub file
+        local tsf_date="$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$topic_sources_file")"
+        local local topic_file_date
+
+        # Iterate existing sources in topic_sources_file
         while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
+
             target_topic="${topic_file##*.}"
+            topic_file_date=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$topic_file")
+
+            debug "   - checking file : $topic_file"
+            debug "     $topic_file_date > $tsf_date"
+
+            # Flag shell reload if topic_file is newer then topic_sources_file
+            if [ "$topic_file" -nt "$topic_sources_file" ];then
+                if [ "$action" = "update" ]; then
+                    success "Updated $target_topic with changes from $topic/${topic_file#*$topic/}"
+                fi
+                RELOAD_SHELL="$(flag_reload "$target_topic" "$RELOAD_SHELL")"
+            fi
+
+            # Remove any missing source files from stub
             if ! array_contains src_files "$topic_file";then
                 manage_source "uninstall" "$target_topic" "$topic_file" "output_status"
             fi
+
         done < "$topic_sources_file"
 
     fi
@@ -681,9 +700,8 @@ distribute_topic_sources () {
         debug "   remove sources file: $topic_sources_file"
         [ -f "$topic_sources_file" ] && rm "$topic_sources_file"
 
-    # Create up to date .sources file
+    # Create up to date topic_sources_file file
     elif [ "$src_files" ]; then
-        # Add all src_files to prev_sourced_file
         printf "%s\n" "${src_files[@]}" > "$topic_sources_file"
     fi
 }
