@@ -143,12 +143,12 @@ get_user_or_builtin () {
 
     # check user directory for file
     if [ -d "$u_dir" ]; then
-        u_files=( $(find "$u_dir" -mindepth 1 -maxdepth 1 $type -name "$find_name" -not -name '\.*') )
+        u_files=( $(find "$u_dir" -mindepth 1 $type -name "$find_name" -not -name '\.*') )
     fi
 
     # check builtin directory for file
     if [ -d "$b_dir" ];then
-        b_files=( $(find "$b_dir" -mindepth 1 -maxdepth 1 $type -name "$find_name" -not -name '\.*') )
+        b_files=( $(find "$b_dir" -mindepth 1 $type -name "$find_name" -not -name '\.*') )
     fi
 
     local file

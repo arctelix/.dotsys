@@ -29,7 +29,7 @@ symlink_topic () {
   local action=
   local topic=
 
-
+  # Capture action
   case "$1" in
     -i | install )    action="link" ;;
     -x | uninstall )  action="unlink" ;;
@@ -58,7 +58,6 @@ symlink_topic () {
   required_vars "action" "topic"
 
   local links
-  local dst_path
 
   debug "-- symlink_topic $action $topic SYMLINK_CONFIRMED=$SYMLINK_CONFIRMED"
 
@@ -93,18 +92,21 @@ symlink_topic () {
       continue
     fi
 
-    # check for alternate dst in config  *.symlink -> path/name
-    dst="$(get_symlink_dst "$src" "$dst_path")"
+
+
+    # All destination changes must be made in get_symlink_dst
+    # so that stubs get same destination
+    dst="$(get_symlink_dst "$src" )"
     dst_name="$(basename "$dst")"
 
-    # Convert stub src path to dotsys/user/stubs
+    # Convert src path to dotsys/user/stubs for stub files
     if is_stub_file "$src";then
         src="$(get_user_stub_file "$topic" "$src")"
     fi
 
     # Check if stub was already linked
     if [[ "${linked[@]}" =~ "$dst_name" ]]; then
-        debug "   symlink_topic ABORT stub already ${action#e}ed"
+        debug "   symlink_topic ABORT stub already ${action#e}ed for $dst_name"
         continue
     fi
     linked+=("$dst_name")
@@ -599,39 +601,77 @@ unlink(){
 # converts symlink src path to symlink target path
 get_symlink_dst () {
     local src_file="$1"
-    local dst_path="$2"
-    local symlink_cfg="$(get_topic_config_val "$topic" "symlinks")"
+    local dst_dir
+    local repo_dir
+    local symlinks_list="$(get_topic_config_val "$topic" "symlinks")"
+    local symlink_root="$(get_topic_config_val "$topic" "symlink_root")"
+    local symlink_prefix="$(get_topic_config_val "$topic" "symlink_prefix")"
     local cfg_name
-    local src_name="$(basename "$src_file")"
+    local src_name_o="$(basename "$src_file")"
+    local src_name="$src_name_o"
     src_name="${src_name%.symlink}"
     src_name="${src_name%.${topic}.stub}"
     src_name="${src_name%.stub}"
     src_name="${src_name%.vars}"
     src_name="${src_name%.sources}"
 
-    if ! [ "$dst_path" ]; then
-        dst_path="$(platform_user_home)"
+    debug "-- get_symlink_dst src: $src"
+
+    # Remove topic directory and src_name from src_file path
+    # repo_dir preserves repo directory structure
+    if [ "$src_name_o" != "${src_name_o%.symlink}" ]; then
+        repo_dir="${src_file#$(topic_dir "$topic")/}"
+        repo_dir="${repo_dir%/$src_name_o}"
+        repo_dir="${repo_dir%$src_name_o}"
+        debug "   get_symlink_dst repo_dir = $repo_dir"
     fi
 
-    # create dst path+file name
-    dst_file="$dst_path/.$src_name"
 
-    #debug "-- get_symlink_dst: $src_file -> $dst_file"
+    # symlink_dir overrides default
+    if [ "$symlink_root" ]; then
+        dst_dir="$symlink_root"
 
-    # check topic config for symlink paths
-    for cfg in $symlink_cfg; do
+    # Default root is user home
+    else
+        dst_dir="$(platform_user_home)"
+    fi
+
+    # Default prefix is "." use none for ""
+    if [ "$symlink_prefix" = "none" ]; then
+        symlink_prefix=''
+    elif ! [ "$symlink_prefix" ]; then
+        symlink_prefix='.'
+    fi
+
+    # Prefix repo dir
+    if [ "$repo_dir" ];then
+        dst_dir="$dst_dir/${symlink_prefix}${repo_dir}"
+        dst_file="${dst_dir}/${src_name}"
+
+    # Prefix file
+    else
+        dst_file="${dst_dir}/${symlink_prefix}${src_name}"
+    fi
+
+    # symlinks_list files override all
+    for cfg in $symlinks_list; do
       cfg_name="${cfg%-\>*}"
-      #debug "(${src_name}=${cfg_src})"
+
       # return config path if found
       if [ "$src_name" = "$cfg_name" ]; then
          dst_file="${cfg#*-\>}"
-         #debug "  CONFIG DEST: ($dst_file)"
-         mkdir -p "$(dirname "$dst_file")"
+         dst_dir="$(dirname "$dst_file")"
+         debug "  CONFIG DEST: ($dst_file)"
          break
       fi
     done
 
-    # return original or new
+    if ! [ -d "$$dst_dir" ]; then
+        mkdir -p "$dst_dir"
+    fi
+
+    debug "   dest = $dst_file"
+
     echo "$dst_file"
 }
 

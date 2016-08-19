@@ -329,8 +329,7 @@ System file names and extensions
 ### topic/\*.symlink
 
 Files or directories with a ".symlink" extension will be linked to the home directory and given a "." prefix
-unless a custom path/name is specified in the dotsys.cfg
-
+unless a custom destination is specified in the dotsys.cfg
 
 ### topic/topic.sh
     
@@ -479,12 +478,52 @@ Install the topic from a different repo:
 
     repo: user/repo_name
     
-Overide symlink destination (default: $HOME):
-src_name: The repo source file name (no "." prefix or .symlink extension)
-dst_name: The exact destination file name with prefix and extension
+Override the prefix for all .symlinks (default: '.'):
+
+    # Use 'none' for no prefix or specify a prefix such as '_'
+    symlink_prefix: none
+
+Override the destination for all .symlinks (default: $HOME):
+
+    symlink_root: $HOME/root_directory
+
+Override the destination for individual .symlinks (default: $HOME):
+    
+    src_filee: The repo source file name (no "." prefix or ".symlink" extension)
+    dst_file: The exact path to destination file with any desired prefix or extention
 
     symlinks:
-      - src_name->$HOME/subdir/_dst_name
+      - src_file->$HOME/subdir/_dst_file
+
+
+Symlinks and directories
+------------------------
+
+You can use a directory structure to modify the target path for symlinks.
+
+For example, pycharm uses a directory called PyCharm40 to store it's config files. Symlinking the entire 
+directly to your repo is a bad idea since there are many files you do not want in your repo such as your
+licence file.  Instead we just want to symlink the desired files to the PyCharm40 directory.
+
+    
+    .dotfiles
+    ├──user
+    │  ├──repo
+    |     ├──PyCharm40
+    |        ├──keymaps.symlink
+    
+Now keymaps.symlink in PyCharm40 will be linked to the correct location : ~/.PyCharm40/keymaps
+You will notice that the symlink prefix '.' does not apply to Nested symlinks such as keymaps.
+However, because PyCharm40 is at the root level it was prefixed.
+
+Combine this with some cfg file settings to adjust the destination on the mac platform.
+
+    mac:
+      symlink_prefix: none
+      symlink_root: $HOME/Library/Preferences
+      
+Now we get the correct destination on a mac : $HOME/Library/Preferences/PyCharm40/keymaps
+
     
 FOR MORE DETAILS SEE:
 https://github.com/arctelix/.dotsys/blob/master/config.md
