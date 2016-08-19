@@ -203,22 +203,36 @@ tested and will likely have minor issues that need tweaking.
 TESTED PLATFORMS:
 - linux-mac (El Capitan)
 - linux-ubuntu (16.04)
+- linux-centos (7-1511)
 - windows-babun (windows8/windows10)
 - windows-cygwin (windows8/windows10)
+
+Any platform using the following platforms should work perfectly:
+- apt-get
+- yum
+- pacman
+- brew/cask
+- scoop/chocolaty
+- pact/chocolaty
+
+
+CONTRIBUTE
+----------
 
 If you are interested in helping out that would be awesome!
 
 The most pressing open items are as follows:
- - any topic you think is important enough to have builtin
  - manager.sh files for : pkg & mingw-get
  - see main.sh for the todo list & road map items
+ - any topic you think is important enough to have builtin
  
 Builtin topic criteria:
  - Must be a commonly installed topic
  - Must do something to benefit all users 
- - Must be compatible with all versions
+ - Tasks must be compatible with all versions of the topic package
  
 Please submit your pull requests & issues!
+
 
 Installation
 ============
