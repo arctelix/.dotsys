@@ -9,8 +9,8 @@ PLATFORMS="linux windows mac freebsd openbsd ubuntu debian archlinux cygwin msys
 
 get_platform () {
 
-  if [ "$PLATFORM" ]; then
-    printf "$PLATFORM"
+  if [ "$_cache_platform" ]; then
+    printf "$_cache_platform"
     return
   fi
 
@@ -77,7 +77,11 @@ get_platform () {
     exit
   fi
 
-  echo "$platform" | tr '[:upper:]' '[:lower:]'
+  platform="$(echo "$platform" | tr '[:upper:]' '[:lower:]')"
+
+  _cache_platform="$platform"
+
+  echo "$platform"
 }
 
 platform_supported () {
@@ -101,11 +105,6 @@ platform_supported () {
 
 platform_user_bin () {
 
-#  if [ ! "$1" ] && [ -n "$PLATFORM_USER_BIN" ]; then
-#    echo "$PLATFORM_USER_BIN"
-#    return
-#  fi
-
   local bin_path="/usr/local/bin"
   local missing_var
   local example
@@ -113,7 +112,7 @@ platform_user_bin () {
 
   debug "-- platform_user_bin: $platform"
 
-  if [ -d $bin_path ];then
+  if [ -d "$bin_path" ] || [ -d "$_cache_bin_path" ];then
     debug "   user bin path ok: $bin_path"
     echo "$bin_path"
     return 0
@@ -138,8 +137,7 @@ platform_user_bin () {
               missing_var="CYGWIN_HOME"
               example="/cygdrive/c/cygwin"
           else
-              echo "$(printf "%s" "$(cygpath --unix "$bin_path")")"
-              return
+              bin_path="$(printf "%s" "$(cygpath --unix "$bin_path")")"
           fi
       ;;
       *msys )
@@ -155,14 +153,18 @@ platform_user_bin () {
           if ! [ -d "$bin_path" ]; then
               missing_var="MSYS_HOME"
               example="/c/msys/1.0"
-
-          else
-              echo "$bin_path"
-              return
           fi
 
       ;;
   esac
+
+  if [ -d $bin_path ];then
+    debug "   user bin path ok: $bin_path"
+    _cache_bin_path="$bin_path"
+    echo "$bin_path"
+    return 0
+  fi
+
 
   error "The platform_user_bin directory" "$bin_path" "does not exist for" "$platform"
 
@@ -179,11 +181,6 @@ platform_user_bin () {
 
 # Gets full path to users home directory based on platform
 platform_user_home () {
-
-  if [ ! "$1" ] && [ "$PLATFORM_USER_HOME" ]; then
-      echo "$PLATFORM_USER_HOME"
-      return
-  fi
 
   if [ "$HOME" ]; then
       echo "$HOME"
