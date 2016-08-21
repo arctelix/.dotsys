@@ -52,13 +52,20 @@ $PLATFORM_USER_BIN : The platform specific user bin directory<BR>
 
 #### ALIASES
 
-dfd : cd to your Dotfiles Directory (.dotfiles)<br>
-sfl : Sourced Files List (all currently sourced files in shell env)<br>
+dfd : your Dot Files Directory <br>
+dpr : your Dotsys Primary Repo <br>
+
+d : dotsys<br>
 din : dotsys install<br>
 dun : dotsys uninstall<br>
 dug : dotsys upgrade<br>
 dud : dotsys update<br>
 dfr : dotsys freeze<br>
+
+sr : shell_reload (reload the shell env)<br>
+sd : shell_debug (toggle debug output)<br>
+sfl : Sourced Files List (Print all sourced files)<br>
+
 
 see ~/.shellrc for more
 

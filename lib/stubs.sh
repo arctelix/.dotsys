@@ -354,28 +354,47 @@ collect_user_data () {
     local init_shell="${init_shell_login/login}"
 
     local var
-    local variables=($(sed -n 's|[^\$]*{\([A-Z_]*\)}.*|\1|gp' "$stub_in"))
+    local variables=()
+    # Gets {} variables at start of line
+    variables+=( $(sed -n 's|^{\([A-Z_]*\)}.*|\1|gp' "$stub_in") )
+    # Gets variables excluding ${}
+    variables+=( $(sed -n 's|.*[^$]{\([_A-Z]*\)}.*|\1|gp' "$stub_in") )
+    debug "vars = ${variables[*]}"
+
     for var in ${variables[@]}; do
-        local val
+        local val=""
         local user_input
         local var_type="system"
         local default_val
         local script_val
         local values_script
         local output
-        # generic key allows for default values from state ie: user_name vs topic_user_name
-        local gen_state_key="$(echo "$var" | tr '[:upper:]' '[:lower:]')"
-        gen_state_key="${gen_state_key#topic_}"
-        gen_state_key="${gen_state_key#$topic_}"
-        # topic specific key
-        local t_state_key="${topic}_${gen_state_key}"
+        local t_state_key
+        local g_state_key
+        local lower_var="$(echo "$var" | tr '[:upper:]' '[:lower:]')"
+
+        # Set generic state key (system vars and default values for topics vars)
+        # Allows topic_user_name to use user_name as default value
+        g_state_key="${lower_var#topic_}"
+        g_state_key="${g_state_key#$topic_}"
+
+        # Set topic state key (topic specific vars)
+        if [[ "$lower_var" =~ ${topic}_.* ]] || [[ "$lower_var" =~ topic_.* ]]; then
+            t_state_key="${topic}_${g_state_key}"
+        else
+            t_state_key="${g_state_key}"
+        fi
+
+        debug "   - collect user data lower_var = $var -> $lower_var"
+        debug "     collect user data g/t key = $g_state_key/$t_state_key"
+
         # always use generic key as text
-        local var_text="$(echo "$gen_state_key" | tr '_' ' ')"
+        local var_text="$(echo "$g_state_key" | tr '_' ' ')"
 
         case "$var" in
             SOURCE_FILES )              continue ;;
             STUB_TARGET )               continue;;
-
+            
             INIT_SHELL )                val="$init_shell"
                                         var_type="hidden" ;;
             INIT_SHELL_LOGIN )          val="$init_shell_login"
@@ -383,7 +402,7 @@ collect_user_data () {
 
             DOTSYS_DIR )                val="$(dotsys_dir)";;
             DOTSYS_USER_BIN )           val="$(dotsys_user_bin)";;
-            DOTFILES_DIR )              val="$(dotfiles_dir)";;
+            DOTFILES_DIR )              val="$(dotfiles_dir)"; debug "dfd $(dotfiles_dir)";;
 
             PLATFORM )                  val="$(get_platform)";;
             PLATFORM_S )                val="$(specific_platform "$(get_platform)")";;
@@ -393,18 +412,19 @@ collect_user_data () {
             PLATFORM_USER_BIN )         val="$(platform_user_bin)";;
 
             *)                          val="$(get_state_value "user" "$t_state_key")"
+                                        debug "get state value for $t_state_key = $val"
                                         var_type="user" ;;
         esac
 
-        debug "   collect_user_data for $var: state val ($t_state_key = $val)"
+        debug "     > $var = $val"
 
         # Check if stubfile.vars supplies values
         if ! [ "$val" ]; then
             values_script="$(get_user_or_builtin_file "$topic" "${stub_name}.vars")"
             debug "   collect_user_data: values_script = $values_script"
-            if script_func_exists "$values_script" "$gen_state_key"; then
+            if script_func_exists "$values_script" "$g_state_key"; then
 
-                script_val="$(execute_script_func "$values_script" "$gen_state_key")"
+                script_val="$(execute_script_func "$values_script" "$g_state_key")"
 
                 # value was obtained and no user confirm required
                 if [ $? -eq 0 ]; then
@@ -416,7 +436,7 @@ collect_user_data () {
                     var_type="user"
                 fi
 
-                debug "   collect_user_data ($var_type var) ${stub_name}.vars $gen_state_key = $script_val"
+                debug "   collect_user_data ($var_type var) ${stub_name}.vars $g_state_key = $script_val"
             else
                 debug "   collect_user_data: values_script func exit code($?)"
             fi
@@ -427,10 +447,10 @@ collect_user_data () {
 
             default_val="${val:-$default_val}"
 
-            # use gen_state_key value as default if no val
+            # use g_state_key value as default if no val
             if ! [ "$default_val" ]; then
-                default_val="$(get_state_value "user" "${gen_state_key}")"
-                debug "   collect_user_data get default: $gen_state_key = $default_val"
+                default_val="$(get_state_value "user" "${g_state_key}")"
+                debug "   collect_user_data get default: $g_state_key = $default_val"
             fi
 
             get_user_input "What is your $topic $var_text for $stub_name?" --options "omit" --default "${default_val}" -r
@@ -453,7 +473,7 @@ collect_user_data () {
             sed -e "s|{$var}|$escaped_val|g" "$stub_in" > "$stub_out"
             mv -f "$stub_out" "$stub_in"
             if [ "$var_type" != "hidden" ];then
-                modified+=("$spacer $var_type data : $var_text=$val")
+                modified+=("$spacer $var_type data : $var_text = $val")
             fi
 
         # Output user data

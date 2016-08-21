@@ -25,22 +25,34 @@ export PLATFORM_G='{PLATFORM_G}'
 export PLATFORM_USER_HOME='{PLATFORM_USER_HOME}'
 export PLATFORM_USER_BIN='{PLATFORM_USER_BIN}'
 
+export PRIMARY_REPO="$DOTFILES_DIR/{PRIMARY_REPO}"
+
 
 # DOTSYS ALIASES
 
-alias dfd='cd $DOTFILES_DIR'
-alias dsd='cd $DOTSYS_REPOSITORY'
-alias sfl='echo $SHELL_FILES_LOADED'
+alias d='dotsys'
 
+# Directories
+alias dfd='cd $DOTFILES_DIR'
+alias dpr='cd $PRIMARY_REPO'
+alias dsd='cd $DOTSYS_REPOSITORY'
+
+
+# actions
 alias din='dotsys install'
 alias dun='dotsys uninstall'
 alias dug='dotsys upgrade'
 alias dud='dotsys update'
 alias dfr='dotsys freeze'
 
-alias sr='dotsys freeze'
+# Shell alias
+alias sr='shell_reload'
+alias sd='shell_debug'
+alias sfl='echo $SHELL_FILES_LOADED'
+
 
 # DOTSYS MODIFY PATH
+
 
 # user-installed superceeds system
 export PATH="$PLATFORM_USER_BIN:$PATH"
@@ -48,12 +60,15 @@ export PATH="$PLATFORM_USER_BIN:$PATH"
 # dotsys-installed superceeds all
 export PATH="$DOTSYS_USER_BIN:$PATH"
 
+
 # FLAGS
+
 
 # compiler flags
 export ARCHFLAGS="-arch $(uname -m)"
 
 
 # LOAD SHELL FILES
+
 
 {STUB_TARGET}
