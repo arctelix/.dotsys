@@ -270,9 +270,10 @@ shell_prompt () {
 
     if [ "$ACTIVE_SHELL" = "zsh" ];then
         autoload -Uz colors && colors
-        dsprompt="${new_line}$fg[green]|DS|$reset_color"
+        dsprompt="${new_line}$fg[green]|DS|$rc"
     else
-        dsprompt="${new_line}\e[0;92m|DS|\e[0m"
+        # Color codes must be wrapped in \[...\]
+        dsprompt="${new_line}\[$l_green\]|DS|\[$rc\]"
     fi
 
     # Toggle off
