@@ -740,8 +740,6 @@ manage_topic_bin () {
     local files=("$(find "$src_bin" -mindepth 1 -maxdepth 1 -type f -not -name '\.*')")
     local file
     while IFS=$'\n ' read -r file; do
-        debug "$topic : linking bin file $file
-        -> $dst_file"
 
         # test for exitsing command
         local command="$(basename "$file")"
@@ -755,23 +753,13 @@ manage_topic_bin () {
         local dst_file="${dst_bin}/$(basename "$file")"
 
         debug "   - manage_topic_bin: $action $topic file: $file
-             \r     -> $dst_file"
+             \r      -> $dst_file"
 
-        if [ "$action" = "upgrade" ]; then
-            #symlink "$file" "$dst_bin"
-            # currently not required since all symlinks
-            pass
-
-        elif [ "$action" = "update" ]; then
-            #symlink "$file" "$dst_bin"
-            # currently not required since all symlinks
-            pass
-
-        elif [ "$action" = "freeze" ]; then
+        if [ "$action" = "freeze" ]; then
             freeze_msg "bin" "$file"
             return
 
-        elif [ "$action" = "link" ]; then
+        elif [ "$action" != "unlink" ] && ! [ -L "$dst_file" ]; then
             chmod 755 "$file"
             symlink "$file" "$dst_file"
 

@@ -686,29 +686,35 @@ distribute_topic_sources () {
     if [ -f "$topic_sources_file" ];then
 
         local tsf_date="$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$topic_sources_file")"
-        local local topic_file_date
+        local topic_file_date modified
 
         # Iterate existing sources in topic_sources_file
         while IFS='' read -r topic_file || [[ -n "$topic_file" ]]; do
 
             target_topic="${topic_file##*.}"
-            topic_file_date=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$topic_file")
-
-            debug "   - checking file : $topic_file"
-            debug "     $topic_file_date > $tsf_date"
-
-            # Flag shell reload if topic_file is newer then topic_sources_file
-            if [ "$topic_file" -nt "$topic_sources_file" ];then
-                if [ "$action" = "update" ]; then
-                    success "Updated $target_topic with changes from $topic/${topic_file#*$topic/}"
-                fi
-                RELOAD_SHELL="$(flag_reload "$target_topic" "$RELOAD_SHELL")"
-            fi
 
             # Remove any missing source files from stub
-            if ! array_contains src_files "$topic_file";then
+            if ! [ -f "$topic_file" ] || ! array_contains src_files "$topic_file";then
                 manage_source "uninstall" "$target_topic" "$topic_file" "output_status"
+                modified=removed
+
+            # check if file was modified
+            else
+                topic_file_date=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$topic_file")
+
+                debug "   - checking file : $topic_file"
+                debug "     $topic_file_date > $tsf_date"
+
+                # Flag shell reload if topic_file is newer then topic_sources_file
+                if [ "$topic_file" -nt "$topic_sources_file" ];then
+                    if [ "$action" = "update" ]; then
+                        success "Updated $target_topic with changes from $topic/${topic_file#*$topic/}"
+                    fi
+                    modified=true
+                fi
             fi
+
+            [ "$modified" ] && RELOAD_SHELL="$(flag_reload "$target_topic" "$RELOAD_SHELL")"
 
         done < "$topic_sources_file"
 
@@ -735,19 +741,28 @@ manage_source () {
     local output_status="$4"
     local src_file_name="$(basename "${src_file%.*}")"
 
-
-
-    # check if src_file_name has a .sources file
-    local format_script="$(get_user_or_builtin_file "$topic" "*.sources")"
-    # verify format script and stub file exits
-    if ! [ $? ] || ! script_exists "$src_file"; then return; fi
-
     debug "   -- manage_sources: $*"
 
+    # check if topic has a .sources file
+    local format_script="$(get_user_or_builtin_file "$topic" "*.sources")"
     local stub_file="$(get_user_stub_file "$topic" "$format_script")"
+
+    debug "      manage_sources format_script: $format_script"
+    debug "      manage_sources stub_file: $format_script"
+
+    # verify format script and stub file exits
+    if ! [ "$format_script" ] || ! [ "$stub_file" ]; then
+        debug "      manage_sources ABORTED: missing required file"
+        return
+    fi
+
+    if ! script_exists "$src_file" && [ "$action" != "uninstall" ]; then
+        debug "      manage_sources : missing src_file $action -> uninstall"
+        action=uninstall
+    fi
+
     local formatted_source="$($format_script format_source_file "$src_file")"
-    local modified
-    local fromto
+    local modified fromto
 
     # Add source function to shell topics (do not use formatted_source)
     if is_shell_topic; then
