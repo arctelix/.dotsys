@@ -120,11 +120,11 @@ elif [ "$init" = "reset_files" ]; then
     done
   fi
 
-# Return path for sourcing
+# Return dotsys repository path
 elif [ "$init" = "repository" ]; then
   echo "$DOTSYS_REPOSITORY"
 
-# Return path for sourcing
+# Return file path for sourcing
 elif [ "$init" = "source" ]; then
   shift
   echo source "$DOTSYS_LIBRARY/${1}.sh"

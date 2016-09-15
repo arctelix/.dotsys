@@ -32,9 +32,13 @@
 
 #GENERAL FIXES:
 #TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
+#TODO URGENT: Create BATS tests!
 
 #FUTURE FEATURES
 #TODO ROADMAP: finish implementing .settings
+#TODO ROADMAP: Create gitsub as manager so topics can be git submodules
+# - upgrade will pull latest from git and update version in cfg file
+# - install will use git url and version specified in cfg to pull form git
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
