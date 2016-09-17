@@ -363,6 +363,8 @@ output_script() {
    shift
 
    # DO NOT USE "$@"  HERE (script executes params)
+   # Sourcing scripts in subshell allows access to all dotsys
+   # functions while keeping our environment clean
    (source "$script")
    state=$?
 

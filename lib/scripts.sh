@@ -12,6 +12,7 @@
 # EXTERNAL SCRIPT EXIT CODES
 # 20    = task complete: do not print success/fail msg
 # 21    = task incomplete: do not print success/fail msg
+# 31    = critical install failed (manager install scripts)
 
 
 # other = function executed with error
@@ -199,6 +200,14 @@ run_script_func () {
 
     executed=$rv
     success_or_fail $rv "$action" "$msg_prefix" "$(printf "%b$topic" "$hc_topic")" "$msg_executed" "$script_name" "script $legacy"
+
+    # Catch critical failure
+    if [ $rv -eq 31 ] && [ $action = install ]; then
+       get_user_input "A critical script faild and may cause dotsys errors,
+               $spacer how would you like to proceed?" -t abort -f continue
+       [ $? -eq 1 ] || exit
+    fi
+
 
   done
 

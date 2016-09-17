@@ -3,9 +3,8 @@
 # Homebrew
 
 install () {
-  xcode-select --install
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-  return $?
+  [ $? -eq 0 ] || return 31
 }
 
 uninstall () {

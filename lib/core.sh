@@ -72,10 +72,10 @@ c_debug="\e[0;90m"
 # topic highlight color
 hc_topic=""
 
-# user color
-c_user=$white
-# user highlight color
-hc_user=$white_bold
+# user color (normal)
+c_user="\e[0m"
+# user highlight color  (bold)
+hc_user="\e[1m"
 
 # default value color
 c_default=$l_blue
