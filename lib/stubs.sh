@@ -292,12 +292,12 @@ manage_user_stub () {
 
         # Use load_source_file for shell topics
         if is_shell_topic; then
-            stub_tar="load_source_file '$stub_tar'"
+            prefix="load_source_file "
         fi
 
         # not using -i option due to OSX incompatibility
         # osx (sed -i "" -e s|...) / linux (sed -i -- s|...)
-        sed -e "s|{STUB_TARGET}|$stub_tar|g" "$stub_out" > "$stub_tmp"
+        sed -e "s|{STUB_TARGET}|$prefix'$stub_tar'|g" "$stub_out" > "$stub_tmp"
         mv -f "$stub_tmp" "$stub_out"
 
         if ! [ "$target_ok" ];then
