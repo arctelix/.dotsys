@@ -2,6 +2,8 @@
 
 # pip/manager.sh
 
+export PIP_REQUIRE_VIRTUALENV=""
+
 install () {
   pip install "$@"
 }
