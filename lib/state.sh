@@ -19,11 +19,10 @@ file_add_kv() {
   local file="$1"
   local key="$2"
   local val="$3"
+  local dir="$(dirname "$file")"
 
-  if ! [ -f "$file" ]; then
-    touch "$file"
-    return 1
-  fi
+  [ -d "$dir" ] || mkdir -p "$dir"
+  [ -f "$file" ] || touch "$file"
 
   grep -q "$(grep_kv)" "$file" || echo "${key}:${val}" >> "$file"
 }
