@@ -13,8 +13,9 @@ indent="  "
 spacer="\r       "
 set -o pipefail
 
-#TODO: Implement link option, symlink to location and put orig in user/dsm
-#TODO: Always user/dsm as temp directory
+#TODO: Always use .dotsys/user/dsm as temp directory
+#TODO: .dsm files put original in user/topic/dsm & symlink file to file location
+#TODO: dsm calls put files in user/topic/dsm & symlink archive to topic root
 
 dsman () {
 
@@ -137,7 +138,7 @@ dsman () {
 
     local force dest pkg_state file_name call_func rv state_val archive_type topic
     local ignore=(".gitignore" "bats" "README.md" "docs" "tests")
-    local action pkg_name endpoint user repo file_path version x_version
+    local action pkg_name endpoint user repo file_path version
 
     check_for_help "$1"
     [[ "$1" =~ --debug ]] && DEBUG=true && shift
@@ -187,7 +188,7 @@ dsman () {
         exit 1
     fi
 
-    # Get exiting values from state
+    # Get exiting values from state and call dsman
     if [[ ! "$endpoint" && ! "$file_url" ]]; then
         local state_val
 
@@ -208,21 +209,22 @@ dsman () {
     fi
 
     debug "  dsm initial parse: $action $pkg_name ${endpoint:-$file_url}"
+    local x_version x_file_path x_dest x_ignore
 
     # remove state values
     while [[ $# > 0 ]]; do
         case "$1" in
-        -xv )                   x_version="$2"; shift; shfit;;
-        -xf )                   file_path="$2"; shift; shfit;;
-        -xd )                   dest="$2"; shift; shfit;;
-        -xi )                   ignore=( $2 ); shift; shfit;;
-        -u | --user)            auth="${2}"; shift; shfit ;;
-        -t | --topic)           topic="${2}"; shift; shfit ;;
+        -xv )                   x_version="$2"; shift; shift;;
+        -xf )                   file_path="$2"; shift; shift;;
+        -xd )                   dest="$2"; shift; shift;;
+        -xi )                   ignore=( $2 ); shift; shift;;
+        -u | --user)            auth="${2}"; shift; shift;;
+        -t | --topic)           topic="${2}"; shift; shift;;
         * ) break
         esac
     done
 
-    debug "  state parse: -xv $x_version -xf $file_path -xd $dest -xi ${ignore[*]}"
+    debug "  state parse: -xv $x_version -xf $x_file_path -xd $x_dest -xi ${x_ignore[*]}"
     debug "  post-state params: $@"
 
     # parse endpoint or url for vars
@@ -253,6 +255,8 @@ dsman () {
         exit $?
     fi
 
+    # install/upgrade only below this point
+
     while [[ $# > 0 ]]; do
         case "$1" in
         --force )               force=true;;
@@ -267,6 +271,7 @@ dsman () {
         esac
         shift
     done
+
 
     # Check if we're dealing with an archive
     archive_type="$(is_archive "$file_path" -r)"
