@@ -300,8 +300,14 @@ dsman () {
         dest="${dest:-$PWD/$file_name}"
     fi
 
+    # pag_name is now safe to use !
+
+    local installed
+    in_state "dsman" "$pkg_name"
+    [ $? -eq 0 ] &&  installed=true
+
     # Make sure pkg is installed AGAIN! May hve been parsed
-    if [ "$action" != "install" ] && ! in_state "$STATE_NAME" "$pkg_name";then
+    if [ "$action" != "install" ] && ! [ "$installed" ];then
         error "Package, $pkg_name, is not installed.
        $spacer Use 'dsm list' for installed package list"
         exit 1
@@ -320,10 +326,6 @@ dsman () {
 }
 
 _install() {
-
-    local installed
-    in_state "dsman" "$pkg_name"
-    [ $? -eq 0 ] &&  installed=true
 
     # INSTALL: Only allow installed version if installed
     if [ "$action" = "install" ] && [ "$installed" ];then
