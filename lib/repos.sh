@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+import github
+
+#TODO: Enable bitbucket
+
 manage_repo (){
 
 
@@ -588,7 +592,7 @@ init_remote_repo () {
     git_commit "$repo" "initialize remote"
 
     # Create remote repo (Git hub will prompt for the user password)
-    create_github_repo "$repo_user/$repo_name" > /dev/null
+    github create_repo "$repo_user/$repo_name" > /dev/null
     success_or_fail $? "create" "$repo_status" "remote repo" "$remote_repo"
 
     # Create remote error
@@ -1010,20 +1014,5 @@ state_primary_repo(){
   else
     echo "$(get_state_value "user" "$key")"
   fi
-}
-
-create_github_repo () {
-    # parse user/repo
-    local repo_user="${1%/*}"
-    local repo_name="${1#*/}"
-    curl -u "$repo_user" https://api.github.com/user/repos -d "{\"name\":\"${repo_name}\"}"
-}
-
-get_github_archive () {
-    # parse user/repo
-    local repo_user="${1%/*}"
-    local repo_name="${1#*/}"
-    local version="${2:-master}"
-    curl -L https://github.com/$repo_user/$repo_name/archive/$version.tar.gz | tar xv
 }
 

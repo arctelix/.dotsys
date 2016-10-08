@@ -6,38 +6,42 @@
 # BASIC OUTPUT ( ALL SCREEN OUTPUT MUST USE THESE METHODS )
 
 user () {
-  printf   "\r%b[%b  ?   %b] %b%b" $clear_line $dark_yellow $rc "$@" $rc
+  printf   "$(op_prefix " ?? " $rc) %b%b" "$@" $rc
   log "USER" "$@"
 }
 
 info () {
   local text="$(compile_text $blue $dark_blue "$@")"
-  printf   "\r%b[%b INFO %b] %b%b\n" $clear_line $dark_blue $rc "$text" $rc
+  printf   "$(op_prefix "INFO") %b%b\n" "$text" $rc
   log "INFO" "$@"
 }
 
 warn () {
   local text="$(compile_text $yellow $dark_yellow "$@")"
-  printf   "\r%b[%b WARN %b] %b%b\n" $clear_line $dark_yellow $rc "$text" $rc
+  printf   "$(op_prefix "WARN" $dark_yellow) %b%b\n" "$text" $rc
   log "WARN" "$@"
 }
 
 success () {
   local text="$(compile_text $green $dark_green "$@")"
-  printf "\r%b[%b  OK  %b] %b%b\n" $clear_line $dark_green $rc "$text" $rc
+  printf "$(op_prefix " OK " $dark_green) %b%b\n" "$text" $rc
   log "SUCCESS" "$@"
 }
 
 fail () {
   local text="$(compile_text $red $dark_red "$@")"
-  printf  "\r%b[%b FAIL %b] %b%b\n" $clear_line $dark_red $rc "$text" $rc
+  printf  "$(op_prefix "FAIL" $dark_red) %b%b\n" "$text" $rc
   debug_log "FAIL" "$@"
 }
 
 task() {
   local text="$(compile_text $cyan $dark_cyan "$@")"
-  printf  "\r%b[%b TASK %b] %b%b\n" $clear_line $dark_cyan $rc "$text" $rc
+  printf  "$(op_prefix "TASK" $dark_cyan) %b%b\n" "$text" $rc
   log "TASK" "$@"
+}
+
+op_prefix() {
+    printf  "\r%b[%b $1 %b]" $clear_line $2 $rc
 }
 
 # alternates input text height "normal" "hilight" "normal"
@@ -85,7 +89,7 @@ msg_help () {
 
 error () {
   local text="$(compile_text $red $dark_red "$@")"
-  printf  "\r\n%b%bERROR:  %b%b%b\n\n" $clear_line $dark_red $red "$text" $rc
+  printf  "\r\n%b%bERROR:   %b%b%b\n\n" $clear_line $dark_red $red "$text" $rc
   debug_log "ERROR" "$1"
   log "ERROR" "$@"
 }
@@ -186,17 +190,20 @@ indent_lines () {
   local line
   local prefix
   local input
+  local indent="$indent"
 
   usage="indent_lines [<option>]"
   usage_full="
       -p | --prefix     Prefix each line
       -f | --first      Leave first line
+      -i | --indent     Indent
   "
 
   while [[ $# > 0 ]]; do
       case "$1" in
       -p | --prefix )      prefix="$2"; shift;;
       -f | --first )       first="$1" ;;
+      -i | --indent )      indent="$2"; shift ;;
       *) input="${1:- }"
       esac
       shift
@@ -363,6 +370,7 @@ output_script() {
    shift
 
    # DO NOT USE "$@"  HERE (script executes params)
+   # TODO: Remove "$@" from scripts and do it here
    # Sourcing scripts in subshell allows access to all dotsys
    # functions while keeping our environment clean
    (source "$script")

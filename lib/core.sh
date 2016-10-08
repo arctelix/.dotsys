@@ -116,7 +116,7 @@ dprint () {
 }
 
 error () {
-  printf  "\r\n%b%bERROR:  %b$*%b\n\n" $clear_line $dark_red $red $rc 1>&2
+  printf  "\r\n%b%bERROR: %b$*%b\n\n" $clear_line $dark_red $red $rc 1>&2
 }
 
 msg_warn () {
@@ -130,13 +130,13 @@ invalid_option () {
     if ! [ "$1" ]; then return;fi
     error "invalid option: $1"
     show_usage
-    exit
+    exit 1
 }
 
 invalid_limit () {
     error "invalid limit: $1"
     show_usage
-    exit
+    exit 1
 }
 
 # Confirms provided param list is longer then a specified length.
@@ -151,7 +151,6 @@ required_params () {
     error "Requires ${#required} parameters and $# supplied."
     show_usage
   fi
-
 }
 
 # Confirms a list of var names are set
@@ -170,6 +169,7 @@ required_vars () {
     error "Missing or incorrect parameters $missing
     recieved: $recieved"
     show_usage
+    exit 1
   fi
 }
 
@@ -191,7 +191,7 @@ uncaught_case (){
 
  for us_p_name in $uc_p_names; do
     if [[ "$uc_c_val" == "-"* ]]; then
-        printf "Invalid parameter '$uc_c_val'"
+        error "Invalid parameter '$uc_c_val'"
         show_usage
     fi
     # if the supplied variable name is not set
@@ -242,7 +242,6 @@ show_usage () {
   else
     echo "Use <command> -h or --help for more." 1>&2
   fi
-  exit
 }
 
 # Checks for a help param and displays show_usage if available
@@ -274,6 +273,10 @@ cmd_exists() {
   command -v $1 >/dev/null 2>&1
 }
 
+is_function() {
+    type "$1" 2>/dev/null | grep -q 'is a function'
+}
+
 # Test if script contains function
 script_func_exists() {
   local rv
@@ -293,7 +296,7 @@ script_func_exists() {
   # Since were sourcing external scripts we'll test the same way
   # to avoid missing function errors
   (
-  source "$script" >/dev/null 2>&1
+  source "$script" #>/dev/null 2>&1
   [ "$(command -v "$cmd")" = "$cmd" ]
   )
   rv=$?
@@ -390,14 +393,14 @@ import () {
         shift
     done
 
-    debug_import "=import=> $file_name $func_name"
+    debug_import "=import=> $file_name $func_name as $import_func_name"
 
     # if local func exists nothing to do
-    if [ "$func_name" ] && cmd_exists "$func_name" ; then
-        debug_import "          <= already imported $func_name"
+    if [ "$func_name" ] && is_function "${import_func_name:-$func_name}" ; then
+        debug_import "          <= already imported function: $func_name"
         return
-    elif ! [ "$func_name" ] && cmd_exists "imported_$file_name" ; then
-        debug_import "          <= already imported $file_name"
+    elif ! [ "$func_name" ] && is_function "${import_func_name:-$file_name}" ; then
+        debug_import "          <= already imported file: $file_name"
         return
     fi
 

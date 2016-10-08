@@ -1,5 +1,7 @@
 #!/bin/bash
 
+import output freeze_msg
+
 state_dir () {
   echo "$DOTSYS_REPOSITORY/state"
 }
@@ -314,7 +316,7 @@ list_state () {
 
     while IFS='' read -r line || [[ -n "$line" ]]; do
         if [ "$mode" = freeze ]; then
-            freeze_msg "${line%:*}" "${line#*:}"
+            freeze_msg "${line%%:*}" "${line#*:}"
         elif [ "$mode" = color ]; then
             printf "%b${line%:*}%b : ${line#*:}\n" $green $rc
         else

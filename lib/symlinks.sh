@@ -1,5 +1,7 @@
 #!/bin/bash
 
+import dsman manage_topic_dsm
+
 # Symlink functions
 # Author: arctelix
 
@@ -66,6 +68,7 @@ symlink_topic () {
   if [ "$SYMLINK_CONFIRMED" ]; then silent="--silent";fi
 
   manage_topic_bin "$action" "$topic" "$silent"
+
   if [ "$topic" = "bin" ]; then return;fi
 
   # find stubs first (files only)
@@ -85,14 +88,9 @@ symlink_topic () {
 
     # No symlinks found
     if [[ -z "$src" ]]; then
-#      if [ "$action" != "freeze" ]; then
-#        #success "$(printf "No symlinks required %s for %b%s%b" "$DRY_RUN" $light_green $topic $rc )"
-#      fi
       debug "   symlink_topic src  ABORT no symlinks required: $src"
       continue
     fi
-
-
 
     # All destination changes must be made in get_symlink_dst
     # so that stubs get same destination
@@ -208,13 +206,9 @@ symlink () {
       if [ "$SYMLINK_NOREPO" = "confirm" ]; then SYMLINK_NOREPO="";fi
   fi
 
-
-
-
   debug "-- symlink src   = $src"
   debug "   symlink dst  -> $dst"
   debug "   symlink dtrg -> $dst_target"
-
 
   src="$(drealpath "$src")"
   #stub="$(drealpath "${src%.*}.stub")"
@@ -773,8 +767,3 @@ manage_topic_bin () {
 is_symlinked () {
     [ "$1" != "${1%.stub}" ] || [ "$1" != "${1%.symlink}" ]
 }
-
-
-
-
-

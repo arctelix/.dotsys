@@ -43,10 +43,9 @@
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
 #TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..
-
+#TODO ROADMAP: Change "freeze" to "show".. as in show status, managers, states, etc and "freeze" to output config only.
 #QUESTIONS:
 #TODO QUESTION: Currently .dotsysrc persists usr/local/bin on path, should we just permanently add to path file?
-#TODO QUESTION: Change "freeze" to "show".. as in show status.  ie show brew, show state, show managers?
 #TODO QUESTION: Hold all manager's package file installs to end of topic runs?
 #TODO QUESTION: Currently repo holds user files, maybe installed topics should be copied to internal user directory.
 # - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
@@ -360,7 +359,7 @@ dotsys () {
                     shift; shift;;
         source)     action="source";;
         * )  error "Invalid action: $1"
-           show_usage ;;
+             show_usage && exit 1;;
     esac
     shift
 
@@ -889,6 +888,7 @@ dotsys () {
         # 2) managed topics
         if in_limits "managers" "dotsys"; then
             run_manager_task "$topic" "$action" "$topic" "$force"
+            manage_topic_dsm "$action" "$topic" "$force"
         fi
 
         # 3) scripts

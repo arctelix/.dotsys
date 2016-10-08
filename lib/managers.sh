@@ -128,6 +128,11 @@ run_manager_task () {
 
      debug "   run_manager_task for $manager: $topic CONVERTED to package name '$pkg_name' "
 
+     # Add topic to pkg_name for dsm
+     if [ "$manager" = "dsm" ] && ! [[ "$pkg_name" =~ ^$topic ]];then
+        pkg_name="$topic $pkg_name"
+     fi
+
      # run the manager task
      run_script_func "$manager" "manager.sh" "$action" "$pkg_name" "$force" -required
      rv=$?
@@ -139,7 +144,7 @@ run_manager_task () {
          # record success to state file
          debug "   run_manager_task: script exit = $?"
          if [ "$action" = "install" ]; then
-           [ $rv -eq 0 ] && state_install "$manager" "$topic"
+           [ $rv -eq 0 ] && state_install "$manager" "$topic" "$pkg_name"
          elif [ "$action" = "uninstall" ]; then
            state_uninstall "$manager" "$topic"
          fi
