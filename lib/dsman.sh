@@ -188,7 +188,7 @@ dsman () {
         exit 1
     fi
 
-    # Get exiting values from state and call dsman
+    # Get exiting values from state
     if [[ ! "$endpoint" && ! "$file_url" ]]; then
         local state_val
 
@@ -215,9 +215,9 @@ dsman () {
     while [[ $# > 0 ]]; do
         case "$1" in
         -xv )                   x_version="$2"; shift; shift;;
-        -xf )                   file_path="$2"; shift; shift;;
-        -xd )                   dest="$2"; shift; shift;;
-        -xi )                   ignore=( $2 ); shift; shift;;
+        -xf )                   x_file_path="$2"; shift; shift;;
+        -xd )                   x_dest="$2"; shift; shift;;
+        -xi )                   x_ignore=( $2 ); shift; shift;;
         -u | --user)            auth="${2}"; shift; shift;;
         -t | --topic)           topic="${2}"; shift; shift;;
         * ) break
@@ -255,7 +255,7 @@ dsman () {
         exit $?
     fi
 
-    # install/upgrade only below this point
+    # install/upgrade/uninstall only below this point
 
     while [[ $# > 0 ]]; do
         case "$1" in
@@ -271,6 +271,11 @@ dsman () {
         esac
         shift
     done
+
+    dest="${dest:-$x_dest}"
+    link="${link:-$x_link}"
+    version="${version:-$x_version}"
+    file_path="${file_path:-$file_path}"
 
 
     # Check if we're dealing with an archive
@@ -316,8 +321,12 @@ dsman () {
 
 _install() {
 
-    # Check if already installed
-    if [ "$action" = "install" ] && in_state "dsman" "$pkg_name";then
+    local installed
+    in_state "dsman" "$pkg_name"
+    [ $? -eq 0 ] &&  installed=true
+
+    # INSTALL: Only allow installed version if installed
+    if [ "$action" = "install" ] && [ "$installed" ];then
         version="$(get_version $pkg_name -i)"
         if [ ! "$force" ];then
             warn "Already installed" "$pkg_name $version\n" \
@@ -327,12 +336,13 @@ _install() {
         fi
     fi
 
-    # get latest version for new packages or upgrades
-    if [ "$action" = "upgrade" ] || ! in_state "dsman" "$pkg_name"; then
+    # UPGRADE AND NEW INSTALL: Use requested or latest version
+    if [ "$action" = "upgrade" ] || ! [ "$installed" ]; then
         versiona=($( get_version $pkg_name $version $x_version ))
         version=${versiona[0]}
         x_version=${versiona[1]}
     fi
+
 
     debug "version = $version"
     debug "x_version = $x_version"
