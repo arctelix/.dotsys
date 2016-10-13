@@ -12,6 +12,14 @@ upgrade () {
   brew upgrade "$@" -y
 }
 
+update () {
+  brew update "$@" -y
+}
+
+freeze () {
+  brew list "$@"
+}
+
 search () {
   brew search "$@" -y
 }

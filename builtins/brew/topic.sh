@@ -15,20 +15,5 @@ uninstall () {
   return $?
 }
 
-upgrade () {
-  #brew upgrade would upgrade packages..
-  return $?
-}
-
-update () {
-  brew update
-  return $?
-}
-
-freeze () {
-  brew list
-  return $?
-}
-
 "$@"
 

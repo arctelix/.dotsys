@@ -13,9 +13,17 @@ indent="  "
 spacer="\r       "
 set -o pipefail
 
-#TODO: Always use .dotsys/user/dsm as temp directory
-#TODO: .dsm files put original in user/topic/dsm & symlink file to file location
-#TODO: dsm calls put files in user/topic/dsm & symlink archive to topic root
+# Currently dsm is tied to dotsys, but keeping this for future use
+if [ -d "$DOTSYS_REPOSITORY" ];then
+    DSM_DIR="$DOTSYS_REPOSITORY/user/dsm"
+else
+    DSM_DIR="~/.dsm"
+fi
+
+#TODO: Maybe we should separate dsm from dotsys completely?
+#      - Move dsm.state file to DSM_DIR
+#      - Remove dotsys imports (it's mostly overkill for dsm needs)
+#        OR use dsm to download the required dotsys files!!!!!!!!!!
 
 dsman () {
 
@@ -61,8 +69,11 @@ dsman () {
         downloaded.
 
         name            A package name to refer to the file or archive.
-                        default archive: <repo>
-                        default file: <file>_<ext>
+                        If omitted, default names will be used as follows:
+                        archive urls & endpoints    : <user>_<repo>
+                        file urls & endpoints       : <repo>_<file>_<ext>
+                        dotsys <filename>.dsm       : <filename>
+                        dotsys dsm managed topics   : <topic>
 
         endpoint        A short hand supported popular git end pints.
                         A repo is required when using an endpoint.
@@ -86,6 +97,8 @@ dsman () {
     Install options:
 
         -d | --destination  The destination directory for archive or file
+        -l | --link         Download to dsm directory and symlink to destination
+                            Note: This is the default for all dotsys calls
         -f | --file         Specify a file from repo
         -v | --version      Specify a version for file or archive
         -i | --ignore       Space separated quoted list of files to be
@@ -95,8 +108,8 @@ dsman () {
         -ir| --ignore-r     Same as ignore but replaces defaults
 
     Other options (must be first arg):
-        -u | --user         User name for authentication (all actions)
-                            use * for git config user.name
+        -a | --auth         Endpoint authentication <user>, <user:pass>
+                            use * for git config user.name <*>, <*:pass>
         -t | --topic        Apply action to all dotsys topic .dsm files
                             (must be first and only option)
 
@@ -133,12 +146,18 @@ dsman () {
 
         ex: Install archive from a non standard url
         > dsm install cool-tool https://domein.com/files/cool-tool.tar.gz 0.1.5
+
+    state files:
+
+        Two state files are maintained
+        dsm.state for dsm installed includin dotsys.dsm files
+        dsman.state for dotsys dsm managed topics
     "
 
 
-    local force dest pkg_state file_name call_func rv state_val archive_type topic
-    local ignore=(".gitignore" "bats" "README.md" "docs" "tests")
+    local force dest pkg_state file_name call_func rv state_val archive_type topic link_state
     local action pkg_name endpoint user repo file_path version
+    local ignore=(".gitignore" "bats" "README.md" "docs" "tests")
 
     check_for_help "$1"
     [[ "$1" =~ --debug ]] && DEBUG=true && shift
@@ -182,7 +201,7 @@ dsman () {
     done
 
     # Make sure pkg is installed
-    if [ "$action" != "install" ] && ! in_state "$STATE_NAME" "$pkg_name";then
+    if [ "$action" != "install" ] && [ "$pkg_name" ] && ! in_state "$STATE_NAME" "$pkg_name";then
         error "Package, $pkg_name, is not installed.
        $spacer Use 'dsm list' for installed package list"
         exit 1
@@ -217,8 +236,9 @@ dsman () {
         -xv )                   x_version="$2"; shift; shift;;
         -xf )                   x_file_path="$2"; shift; shift;;
         -xd )                   x_dest="$2"; shift; shift;;
+        -xl )                   x_link="true"; shift; shift;;
         -xi )                   x_ignore=( $2 ); shift; shift;;
-        -u | --user)            auth="${2}"; shift; shift;;
+        -a | --auth)            auth="${2}"; shift; shift;;
         -t | --topic)           topic="${2}"; shift; shift;;
         * ) break
         esac
@@ -238,7 +258,7 @@ dsman () {
         required_vars "action" "endpoint" "user" "repo"
 
     # Set variables from url
-    elif [ "$file_url" != false ];then
+    elif [ "$file_url" ] && [ "$file_url" != false ];then
         parse_url "$file_url"
     fi
 
@@ -249,7 +269,7 @@ dsman () {
     fi
 
     # Stop here for all but install & upgrade
-    if ! [[ "$action" =~ install|upgrade ]];then
+    if ! [[ "$action" =~ install|upgrade|uninstall ]];then
         task "${action}" "$pkg_name"
         $call_func "$pkg_name" "$@"
         exit $?
@@ -261,7 +281,7 @@ dsman () {
         case "$1" in
         --force )               force=true;;
         -d | --destination )    dest="$2"; shift;;
-        -l | --link )           link="$2"; shift;;
+        -l | --link )           link="true"; shift;;
         -i | --ignore )         ! [[ "${ignore[@]}" =~ $2 ]] && ignore+=( $2 ); shift;;
         -f | --file )           file_path="$2"; shift;;
         -v | --version )        version="$2"; shift;;
@@ -277,11 +297,10 @@ dsman () {
     version="${version:-$x_version}"
     file_path="${file_path:-$file_path}"
 
-
     # Check if we're dealing with an archive
     archive_type="$(is_archive "$file_path" -r)"
 
-    # Make sure dst is absolute
+    # Make sure input dst is absolute
     if [ "$dest" ] && [ "${dest::1}" != '/' ]; then
         dest="${dest#./}"
         dest="$PWD/${dest#.}"
@@ -289,6 +308,7 @@ dsman () {
 
     #file_path="${file_path:-${version}.tar.gz}"
 
+    local dsm_dest="$DSM_DIR/$user/$repo"
 
     # Set default pkg_name and dst
     if is_archive; then
@@ -298,9 +318,20 @@ dsman () {
         file_name="${file_path##*/}"
         pkg_name="${pkg_name:-${repo}_${file_name//./_/}}"
         dest="${dest:-$PWD/$file_name}"
+        dsm_dst="$dsm_dest/$file_name"
     fi
 
-    # pag_name is now safe to use !
+    local dest_state="$dest"
+
+    # Check for link and modify dest
+    if [ "$link" ];then
+        link="$dest"
+        dest="$dsm_dest"
+        link_state="-xl"
+        debug "  link found new dest = $dest"
+    fi
+
+    # pkg_name is now safe to use !
 
     local installed
     in_state "dsman" "$pkg_name"
@@ -374,11 +405,14 @@ _install() {
         fi
     fi
 
-    pkg_state="${endpoint:-$file_url} -xv $version -xf $file_path -xd $dest -xi '${ignore[@]}'"
+    pkg_state="${endpoint:-$file_url} -xv $version -xf $file_path -xd $dest_state -xi '${ignore[@]}' $link_state"
 
+    local tmp_dir="$DSM_DIR/temp"
+
+    # Download the package to temp_dir
     stask "Download" "$file_url"
-
-    curl -#OLkf "$file_url"
+    mkdir -p "$tmp_dir"
+    curl -#Lkf "$file_url" -o "$tmp_dir/$file_name"
 
     pass_or_error $? "download" "check the url and fields below\n" \
                    "$spacer url    : $file_url
@@ -387,12 +421,22 @@ _install() {
                     $spacer file   : $file_path"
 
     mkdir -p "$(dirname "$dest")"
+
+    # Move files to destination
     if is_archive "$file_path"; then
-        extract_archive "$file_name" "$dest"
+        extract_archive "$tmp_dir/$file_name" "$dest"
     else
-        printf "Moved : " && mv -v "$file_name" "$dest" 2>&1
-        chmod -R 755 "$dest"
+        chmod -R 755 "$tmp_dir"
+        mv -fv "$tmp_dir/$file_name" "$dest" 2>&1 | indent_lines --prefix "Moved  : "
     fi
+    # remove temp_dir (silent)
+    rm -fr "$tmp_dir"
+
+    if [ "$link" ];then
+        ln -sf "$dest" "$link"
+        [ $? -eq 0 ] && msg "Linked : $dest -> $link"
+    fi
+
     success_or_exit $? "install" "$pkg_name"
 
     debug "saving pkg_state = $pkg_state"
@@ -402,7 +446,14 @@ _install() {
 
 _uninstall () {
     import state state_uninstall
+    if [ "$link" ];then
+        rm -fr "$link"
+        [ $? -eq 0 ] && msg "Removed link from $link"
+    fi
+
     rm -fr "$dest"
+    [ $? -eq 0 ] && msg "Removed file from $dest"
+
     state_uninstall "$STATE_NAME" "$pkg_name"
     success_or_exit $? "uninstall" "$pkg_name from $dest"
 }
@@ -453,11 +504,10 @@ is_archive() {
 extract_archive () {
     local archive_file="$1"
     local dest="${2:-$PWD}"
-    local tmp_dir="./dsman-temp"
+    local temp_dir="$(dirname "$archive_file")"
 
     stask "Extract" "$archive_file"
 
-    mkdir "$tmp_dir"
     case "$archive_file" in
         *tar.gz )    tar -xvf "$archive_file" -C "$tmp_dir" 2>&1 | indent_lines ;;
         *zip )       unzip "$archive_file" -d "$tmp_dir" 2>&1 | indent_lines ;;
@@ -465,21 +515,21 @@ extract_archive () {
 
     pass_or_error $? "extract" "archive $archive_file -> $tmp_dir"
 
-    #shopt -s dotglob nullglob
-    chmod -R 755 "$tmp_dir"
+    # Remove archive file
+    rm -frv "$archive_file" 2>&1 | indent_lines --prefix "Remove: "
 
     stask "Moving" "files -> $dest"
 
-    # Remove ignored files
+    # Remove ignored files from tmp_dir
     local x
     for x in "${ignore[@]}";do
-        rm -frv $tmp_dir/*/$x 2>&1 | indent_lines --prefix "Ignored: "
+        rm -frv "$tmp_dir"/*/$x 2>&1 | indent_lines --prefix "Ignored: "
     done
 
-    # Move to dest and clean up
-    mv -fv "$tmp_dir/"* "$dest" 2>&1 | indent_lines --prefix "Moved  : "
-    rm -frv "$tmp_dir" 2>&1 | indent_lines --prefix "Cleanup: "
-    rm -frv "$archive_file" 2>&1 | indent_lines --prefix "Cleanup: "
+    chmod -R 755 "$tmp_dir"
+
+    # Move remaining files to dest
+    mv -fv "$tmp_dir"/* "$dest" 2>&1 | indent_lines --prefix "Moved  : "
 }
 
 get_version() {
@@ -655,7 +705,7 @@ ok() {
 }
 
 msg() {
-    printf "$spacer $1\n" 1>&2
+    printf "$indent $1\n" 1>&2
 }
 
 success_or_exit () {
@@ -733,7 +783,8 @@ manage_topic_dsm() {
     while [[ $# > 0 ]]; do
         case "$1" in
         --force )      force="--force" ;;
-        *)  invalid_option "$1";;
+        -l | --link )  link="--link" ;;
+        *)  invalid_option "$1" || exit 1;;
         esac
         shift
     done
@@ -743,7 +794,7 @@ manage_topic_dsm() {
 
     local b_files u_files
 
-    dprint "-- manage_topic_dsm: $@ $force"
+    debug "-- manage_topic_dsm: $@ $force"
 
 
     if [ -d "$b_dir" ]; then
@@ -753,40 +804,42 @@ manage_topic_dsm() {
         u_files=( $(find "$u_dir" -mindepth 1 $type -name "*.dsm" -not -name '\.*') )
     fi
 
-    dprint "   manage_topic_dsm u_files: ${u_files[@]}"
+    debug "   manage_topic_dsm u_files: ${u_files[@]}"
 
     if ! [ "$u_files" ] && ! [ "$b_files" ]; then
-        dprint "   manage_topic_dsm: ABORT no files found for $topic"
+        debug "   manage_topic_dsm: ABORT no files found for $topic"
         return
     fi
 
-    dprint "-- manage_topic_dsm: $action $topic $silent"
+    debug "  manage_topic_dsm: a:$action t:$topic f:$force l:$link"
     debug "   manage_topic_dsm b_dir : $b_dir"
     debug "   manage_topic_dsm u_dir : $u_dir"
     local rv=0
-    local files file dsm_cmd file_name
+    local files file dsm_cmd file_name file_cmd
     local all_files="b_files[@] u_files[@]"
     local owd="$PWD"
+
     for files in $all_files;do
-        dprint "files = $files"
+        debug "files = $files"
         for file in "${!files}"; do
-            dprint "   file: $file"
+            debug "   file: $file"
 
             # chane to file directory
             cd "$(dirname "$file")"
 
-            # add file name as dsm pkg name
+            # use file name as dsm pkg name
             file_name="$(basename "${file%.dsm}")"
-            dsm_cmd="$file_name $(head -n 1 "$file") $force"
+            file_cmd=$(head -n 1 "$file")
+            dsm_cmd="$file_name $file_cmd $force $link"
 
             if [ "$action" = "freeze" ]; then
                 freeze_msg "dsm" "$dsm_cmd"
                 return
-            else
-                dprint "   dsm: $dsm_cmd"
-                dsman "$action" $dsm_cmd
-                [ ! $? -eq 0 ] && rv=1
             fi
+
+            debug "   dsm: $dsm_cmd"
+            dsman "$action" $dsm_cmd
+            [ ! $? -eq 0 ] && rv=1
         done
     done
     cd "$owd"

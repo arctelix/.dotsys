@@ -17,7 +17,7 @@ call_dsm(){
 }
 
 install () {
-    call_dsm install "$@"
+    call_dsm install "$@" --link
 }
 
 uninstall () {

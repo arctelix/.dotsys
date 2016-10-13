@@ -312,10 +312,11 @@ dotsys () {
       topic/topic.sh    A single script containing optional functions for each required
                         action (see function definitions)
 
-      topic/manager.sh  Designates a topic as a manager. Functions handle packages not the manager!
-                        Required functions for installing packages: install, uninstall, upgrade
-                        Not supported: update & freeze as these are in the manager topic.sh file.
-                        Also note: manager's topic.sh should allow upgrading of packages via upgrade.
+      topic/manager.sh  Designates a topic as a manager. Manager functions accept a list of packages
+                        and perform an action on the managers's packages not the manager topic!
+                        Required functions: install, uninstall, upgrade update & freeze.
+                        Note: update & freeze may be in the topic.sh file since these actions
+                        technically apply to the manger not it's packages.
 
       script functions: The rules below are important (please follow them strictly)
 
@@ -888,7 +889,7 @@ dotsys () {
         # 2) managed topics
         if in_limits "managers" "dotsys"; then
             run_manager_task "$topic" "$action" "$topic" "$force"
-            manage_topic_dsm "$action" "$topic" "$force"
+            manage_topic_dsm "$action" "$topic" "$force" --link
         fi
 
         # 3) scripts
