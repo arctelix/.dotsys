@@ -67,6 +67,13 @@ run_manager_task () {
     debug "   run_manager_task: got NON manager found manager: $manager"
   fi
 
+  # If topic is manager, check for update or freeze
+  if is_manager "$topic" && [ "$action" = "update" ] || [ "$action" = "freeze" ]; then
+    # run the manager task
+    run_script_func "$manager" "manager.sh" "$action"
+    return $?
+  fi
+
   # abort un-managed topics
   if ! [ "$manager" ] || [ "$manager" = "${topics[0]}" ]; then
     debug "   run_manager_task: ABORT $topic not managed"
@@ -80,12 +87,6 @@ run_manager_task () {
      dotsys "$action" "$manager" ${limits[@]} --recursive
      debug "run_manager_task -> END RECURSION continue : run_manager_task $manager $action t:$topic $force"
      info "Manager ${action%e}ed, resuming" "$( printf "%b$action ${topics[*]}" "$hc_topic")"
-  fi
-
-  # abort update & freeze actions (nothing to do)
-  if [ "$action" = "update" ] || [ "$action" = "freeze" ]; then
-    debug "   run_manager_task: aborting run_manager_task UPDATE FREEZE not used"
-    return
   fi
 
   # Install topics (packages)
