@@ -10,6 +10,7 @@
 # https://github.com/agross/dotfiles
 #
 # Dotsys - A platform agnostic package-manager with dotfile integration
+# DSM    - A simple file and archive downloader / manager
 #
 # Copyright (C) 2016  Arctelix (http://gitbub.com/arctelix)
 # This program is free software: you can redistribute it and/or modify
@@ -26,30 +27,37 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# Other useful reference & rationale
+# Other useful reference & rationale for shell config
 # http://superuser.com/questions/789448/choosing-between-bashrc-profile-bash-profile-etc
 
 
 #GENERAL FIXES:
 #TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
 #TODO URGENT: Create BATS tests!
+#TODO URGENT: Add dsm to syntax like app and cmd
+#TODO URGENT: Implement version & search for all managed topics
 
 #FUTURE FEATURES
 #TODO ROADMAP: finish implementing .settings
+#TODO ROADMAP: Add ability to create topics and add files to topics dotsys add <topic> [file]
+#              - prompt for basic topic configs lke manager and package names for all managers
+#TODO RAODMAP: When adding app, cmd, or dsm prompt for option to create topic in lew of adding to topic file
+#              - when app and cmd are used to add a topic prompt for other manger package names...
 #TODO ROADMAP: Create gitsub as manager so topics can be git submodules
-# - upgrade will pull latest from git and update version in cfg file
-# - install will use git url and version specified in cfg to pull form git
+#              - upgrade will pull latest from git and update version in cfg file
+#              - install will use git url and version specified in cfg to pull form git
 #TODO ROADMAP: When no primary repo, find existing repos and offer choices
 #TODO ROADMAP: Give option to use builtin repo as user repo (specify repo as dotsys/builtins not dotsys/dotsys)
 #TODO ROADMAP: Option to delete unused topics from user's .dotfies directory after install (NOT PRIMARY REPO)
 #TODO ROADMAP: Option to collect topics from installed repos to primary repo, or create new repo from current config..
 #TODO ROADMAP: Change "freeze" to "show".. as in show status, managers, states, etc and "freeze" to output config only.
+
 #QUESTIONS:
 #TODO QUESTION: Currently .dotsysrc persists usr/local/bin on path, should we just permanently add to path file?
 #TODO QUESTION: Hold all manager's package file installs to end of topic runs?
 #TODO QUESTION: Currently repo holds user files, maybe installed topics should be copied to internal user directory.
-# - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
-# - Currently if a repo is deleted the data is gone, the change would protect topics in use.
+#               - Currently changes to dotfiles do not require a dotsys update since they are symlinked, the change would require this.
+#               - Currently if a repo is deleted the data is gone, the change would protect topics in use.
 
 # Show executed commands
 #set -x

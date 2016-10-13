@@ -20,6 +20,8 @@ else
     DSM_DIR="~/.dsm"
 fi
 
+#TODO: Add dsm key word into dotsys syntax like cmd and app
+#      - dotsys <action> dsm .....
 #TODO: Maybe we should separate dsm from dotsys completely?
 #      - Move dsm.state file to DSM_DIR
 #      - Remove dotsys imports (it's mostly overkill for dsm needs)

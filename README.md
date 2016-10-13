@@ -107,7 +107,7 @@ This way your repo is updated automatically and the next time you run
 Why another package manger ?
 ----------------------------
 
-Dotsys is not really a package manager at all, more like a package manager wrapper.  We simply choose
+Dotsys is not really a package manager, more like a package manager wrapper.  We simply choose
 the correct package manager for any given topic on a given platform.  By allowing any topic to be a 
 manger and allowing any topic to be managed the system is limitless. Secondly, there are no existing package 
 managers out there that support custom setting file management (dotfiles) and dotsys does!  The best way to 
@@ -139,6 +139,12 @@ Say you have a topic for gulp and run the command:
 
 8. Any file in the gulp topic directory with a **.shell** extension will be sourced by your shell of choice at startup. 
 You can add some functions for standard project configs in a **functions.shell** file. For example gulp-init-django and gulp_init_rails.
+
+Ok I lied, dotsys IS kid of a package manger after all!
+-------------------------------------------------------
+Dotsys includes dotsys package manager (dsm).  Dsm is a simple file and archive downloader for when your too lazy
+to create a real package for your libraries.  You can install files and archives from any url and use a shortcut
+syntax for github and bitbucket repos. It's seriously awesome! See the DSM section for details.
 
 Why is dotsys better than a package manager ?
 ---------------------------------------------
@@ -336,7 +342,6 @@ NOTE: In order for git to save a directory it must contain at least one file.  A
 way to insure that a topic directory is preserved in your remote repo is to add a 
 blank dotsys.cfg file.
 
-
 System file names and extensions
 --------------------------------
 
@@ -365,6 +370,18 @@ Any files in a topic's bin directory will be available in your shell environment
 ### topic/.*
 
 Any file prfixed with a "." will be ignored, but remains part of the repo.
+
+### *.dsm
+
+Any file found in a topic with a .dsm extension will be used to download that file.  The first line in the
+file must contain a dsm compatible install command. Since files are symlinked to the topic directory the file
+contents is not redundantly stored in your repo!
+
+    # add a file to the .dsm location
+    github user/repo latest file
+
+    # add a file to the topic bin
+    github user/repo latest file -d bin
 
 
 Stub files
@@ -433,7 +450,7 @@ For example `some_file.vim` will be sourced by vim on load.
 |\*.bash       | Sourced every time bash is loaded                                  |
 |\*.zsh        | Sourced every time zsh is loaded                                   |
 |\*.vim        | Sourced every time vim is loaded                                   |
-|\*.tmux        | Sourced every time tmux is loaded                                 |
+|\*.tmux       | Sourced every time tmux is loaded                                  |
 |\*.git        | Sourced every time git is loaded                                   |
 
 ##### Loading order
@@ -539,14 +556,19 @@ Combine this with some cfg file settings to adjust the destination on the mac pl
 Now we get the correct destination on a mac : $HOME/Library/Preferences/PyCharm40/keymaps
 
     
-FOR MORE DETAILS SEE:
+Config file details
+-------------------
 https://github.com/arctelix/.dotsys/blob/master/config.md
 
 
 Shell System
 ------------
-
 https://github.com/arctelix/.dotsys/blob/master/shell.md
+
+
+Dotsys Package Manger (dsm)
+---------------------------
+https://gitbub.com/arctelix/.dotsys/blob/master/dsm.md
 
 
 How do I learn more about dotsys and it's features ?
