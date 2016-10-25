@@ -67,11 +67,14 @@ run_manager_task () {
     debug "   run_manager_task: got NON manager found manager: $manager"
   fi
 
-  # If topic is manager, check for update or freeze
-  if is_manager "$topic" && [ "$action" = "update" ] || [ "$action" = "freeze" ]; then
-    # run the manager task
-    run_script_func "$manager" "manager.sh" "$action"
-    return $?
+  # check for freeze and update
+  if [ "$action" = "update" ] || [ "$action" = "freeze" ]; then
+    # run the manager task for managers only
+    if is_manager "$topic"; then
+        run_script_func "$manager" "manager.sh" "$action"
+        return $?
+    fi
+    return 0
   fi
 
   # abort un-managed topics
