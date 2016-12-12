@@ -11,7 +11,7 @@ install () {
    #get_user_input "Choose install in the xcode dialogue box and confirm
    #        $spacer and confirm AFTER install is completed" -t installed -f ""
 
-   info "Xcode is required, choose install in the xcode dialogue box to continue
+   info "Xcode is required, choose 'install' in the xcode dialogue box to continue
  $spacer waiting for xcode installation to complete use control-c to exit"
 
    local dots=""

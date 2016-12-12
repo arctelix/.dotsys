@@ -140,8 +140,8 @@ Say you have a topic for gulp and run the command:
 8. Any file in the gulp topic directory with a **.shell** extension will be sourced by your shell of choice at startup. 
 You can add some functions for standard project configs in a **functions.shell** file. For example gulp-init-django and gulp_init_rails.
 
-Ok I lied, dotsys IS kid of a package manger after all!
--------------------------------------------------------
+Ok I lied, dotsys IS NOW a package manger after all
+---------------------------------------------------
 Dotsys includes dotsys package manager (dsm).  Dsm is a simple file and archive downloader for when your too lazy
 to create a real package for your libraries.  You can install files and archives from any url and use a shortcut
 syntax for github and bitbucket repos. It's seriously awesome! See the DSM section for details.

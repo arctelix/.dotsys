@@ -13,7 +13,7 @@ indent="  "
 spacer="\r       "
 set -o pipefail
 
-# Currently dsm is tied to dotsys, but keeping this for future use
+
 if [ -d "$DOTSYS_REPOSITORY" ];then
     DSM_DIR="$DOTSYS_REPOSITORY/user/dsm"
 else
@@ -58,6 +58,7 @@ dsman () {
         update          Update dotsys manager index
         version         Get installed version of package
         list            List installed packages
+        create          create a repository and or file
 
     Options:
         --force         Force an action to run again
@@ -152,12 +153,12 @@ dsman () {
     state files:
 
         Two state files are maintained
-        dsm.state for dsm installed includin dotsys.dsm files
-        dsman.state for dotsys dsm managed topics
+        dsm.state   : files installed from dotsys.dsm files or 'dsm install' command
+        dsman.state : files installed from dotsys topics with dsm as manager or 'dotsys dsm install'
     "
 
 
-    local force dest pkg_state file_name call_func rv state_val archive_type topic link_state
+    local force dest pkg_state file_name call_action_func rv state_val archive_type topic link_state
     local action pkg_name endpoint user repo file_path version
     local ignore=(".gitignore" "bats" "README.md" "docs" "tests")
 
@@ -165,7 +166,7 @@ dsman () {
     [[ "$1" =~ --debug ]] && DEBUG=true && shift
     action="$1"; shift
     [[ "$1" =~ --debug ]] && DEBUG=true && shift
-    call_func="_$action"
+    call_action_func="_$action"
 
     debug  "->DSM DEBUG: $@"
 
@@ -270,10 +271,10 @@ dsman () {
         return $?
     fi
 
-    # Stop here for all but install & upgrade
+    # Stop here for all but install, upgrade, uninstall
     if ! [[ "$action" =~ install|upgrade|uninstall ]];then
         task "${action}" "$pkg_name"
-        $call_func "$pkg_name" "$@"
+        $call_action_func "$pkg_name" "$@"
         exit $?
     fi
 
@@ -355,7 +356,13 @@ dsman () {
 
     task "${action}" "$pkg_name"
 
-    $call_func
+    $call_action_func
+}
+
+_create() {
+
+    echo 'create' $@
+
 }
 
 _install() {
