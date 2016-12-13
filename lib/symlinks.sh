@@ -731,7 +731,7 @@ manage_topic_bin () {
     debug "   manage_topic_bin dst_bin : $dst_bin"
 
     # search for files in topic bin and link/unlink
-    local files=("$(find -L "$src_bin" -mindepth 1 -maxdepth 1 -not -name '\.*')")
+    local files=("$(find -L "$src_bin" -mindepth 1 -maxdepth 1 -not -name '\.*' -a -not -name '*.dsm')")
     local file
     while IFS=$'\n ' read -r file; do
 

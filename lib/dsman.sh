@@ -593,7 +593,7 @@ get_version() {
         if [ "$endpoint" ]; then
             if cmd_exists python;then
                 [ ! "$quiet" ] && stask "Check latest version" "$user/$repo"
-                req_version="$($endpoint_module get_latest_release "$user/$repo")"
+                req_version="$($endpoint_module get_latest_release "$user/$repo" 2> /dev/null)"
             else
                 [ ! "$quiet" ] && warn "python is required to get latest tag"
             fi
@@ -607,7 +607,7 @@ get_version() {
 
         # use master if latest is requested
         else
-            warn "Using master branch as latest!" 1>&2
+            warn "Latest version not found, using master branch" 1>&2
             req_version="master"
             rv=1
         fi
@@ -832,6 +832,7 @@ manage_topic_dsm() {
         debug "files = $files"
         for file in "${!files}"; do
             debug "   file: $file"
+            ! [ "$file" ] && continue
 
             # chane to file directory
             cd "$(dirname "$file")"
