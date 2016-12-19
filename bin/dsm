@@ -1,0 +1,52 @@
+#!/bin/bash
+
+
+# DSM - A light weight cross platform package manager
+# This file serves as the system command entry point
+# See dsman.sh for command implementation
+
+# Author: Arctelix (http://gitbub.com/arctelix)
+
+# Licence: GNU General Public License
+# Copyright (C) 2016  Arctelix (http://gitbub.com/arctelix)
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+set +o posix
+
+chdir() {
+  cd "$@" >/dev/null
+}
+
+get_repository () {
+
+    local FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
+    local FILE="$FILE_DIRECTORY/${0##*/}"
+    local REPOSITORY="${FILE%/*/*}"
+
+    if [[ -L "$FILE" ]]; then
+        local SYMLINK="$(drealpath "$FILE")"
+        local SYMLINK_DIRECTORY="$(dirname "$SYMLINK")"
+        local FILE_DIRECTORY="$(chdir "$FILE_DIRECTORY" &&
+                                chdir "$SYMLINK_DIRECTORY" && pwd -P)"
+        REPOSITORY="${FILE_DIRECTORY%/*}"
+    fi
+
+    echo "$REPOSITORY"
+}
+
+export DSM_REPOSITORY="$(get_repository)"
+source "$DSM_REPOSITORY/lib/dsman.sh"
+dsman "$@"
+echo

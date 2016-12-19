@@ -1,14 +1,12 @@
 #!/bin/bash
 
-# System command entry point, see lib/main.sh handler.
-#
+# Dotsys - A platform agnostic package-manager wrapper with dotfile integration
 # Author: Arctelix (http://gitbub.com/arctelix)
 #
 # With thanks to the following sources:
 # https://github.com/holman/dotfiles
 # https://github.com/agross/dotfiles
 #
-# Dotsys - A platform agnostic package-manager with dotfile integration
 #
 # Licence: GNU General Public License
 # Copyright (C) 2016  Arctelix (http://gitbub.com/arctelix)

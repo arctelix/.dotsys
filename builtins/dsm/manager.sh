@@ -13,6 +13,9 @@ call_dsm(){
        $spacer note: The <name> arg is not permitted!"
         return 1
     fi
+    if ! cmd_exists dsm; then
+        import dsman dsman as dsm
+    fi
     dsm "$@"
 }
 

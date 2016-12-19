@@ -33,8 +33,8 @@
 
 #GENERAL FIXES:
 #TODO URGENT: TEST repo branch syntax = "action user/repo:branch" or "action repo branch"
+#TODO URGENT: Use current branch before master as default
 #TODO URGENT: Create BATS tests!
-#TODO URGENT: Add dsm to syntax like app and cmd
 #TODO URGENT: Implement version & search for all managed topics
 
 #FUTURE FEATURES
@@ -207,8 +207,9 @@ dotsys () {
     -f | from <user/repo>   Apply action to topics from specified repo master branch
                             optional alternate branch: <user/repo:branch>
     -p | packages           Limit action to package manager's packages
-    -c | cmd                Limit action to cmd manager's packages
-    -a | app                Limit action to app manager's packages
+    -c | cmd                Limit action to cmd manager's packages (default command line manager)
+    -a | app                Limit action to app manager's packages (default os app manager)
+    -b | dsm                Limit action to dsm manager's packages (dotsys manager)
 
     <options> optional:     use to bypass confirmations.
     --force                 force action even if already completed
@@ -260,16 +261,22 @@ dotsys () {
 
     Packages do not require topics! The advantage of managing packages
     through dotsys insures that changes to your system are tracked by
-    your repo.
+    your repo. Use default managers with 'app' or 'cmd' key words.
+    Use dotsys manager with 'dsm' key word.
 
-    - Manage command line utilities with default manager
+    - Manage command line utilities with default 'cmd' manager
       $ dotsys <action> cmd vim tmux
 
-    - Manage OS applications with default manager
+    - Manage OS applications with default 'app' manager
       $ dotsys <action> app google-chrome lastpass
 
-    - Manage a specific manager's packages
-      $ dotsys install brew packages vim tmux
+    - Manage a specific manager's 'packages'
+      $ dotsys <action> brew packages vim tmux
+
+    - Use dotsys package manager with 'dsm' key word
+      $ dotsys <action> dsm arctelix/gurl
+
+    Repo Management:
 
     - Manage primary repository
       $ dotsys <action> repo
@@ -405,6 +412,8 @@ dotsys () {
                         topics+=("app") ;;
         -c | cmd)       limits+=("packages")
                         topics+=("cmd") ;;
+        -b | dsm)       limits+=("packages")
+                        topics+=("dsm") ;;
 
         # options
         --force)        force="$1" ;;
@@ -640,7 +649,8 @@ dotsys () {
     # HANDLE PACKAGE LIMIT (requires load_config_vars)
 
     # This allows dotsys to manage packages without a topic directory
-    # <manager> may be 'cmd' 'app' or specific manager name
+    # <manager> may be 'cmd', 'app', 'dsm' or any specific manager name
+    # 'packages' key word may be omitted with 'cmd', 'app', or 'dsm' (parsed as limits)
     # for example: 'dotsys <action> <manager> packages <packages>'   # specified packages
     # for example: 'dotsys <action> <manager> packages file'         # all packages in package file
     # for example: 'dotsys <action> <manager> packages'              # all installed packages
@@ -648,6 +658,7 @@ dotsys () {
 
     if in_limits "packages" -r; then
         local manager="${topics[0]}"
+        # remove manager from topics
         topics=( "${topics[@]/$manager}" )
         debug "main -> packages limit : $action $manager ${topics[*]} $force"
         if is_manager "$manager"; then
