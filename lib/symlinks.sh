@@ -749,18 +749,25 @@ manage_topic_bin () {
         debug "   - manage_topic_bin: $action $topic file: $file
              \r      -> $dst_file"
 
+        [ -L "$dst_file" ] && debug "Link exists"
+
+        [ -f "$dst_file" ] && debug "File exists"
+
         if [ "$action" = "freeze" ]; then
             freeze_msg "bin" "$file"
             return
 
-        elif [ "$action" != "unlink" ] && ! [ -L "$dst_file" ]; then
-            chmod 755 "$file"
-            symlink "$file" "$dst_file"
-
         elif [ "$action" = "unlink" ]; then
             unlink "$dst_file"
 
+        # symlink file to dst if not done
+        elif [ ! -L "$dst_file" ]; then
+            debug '  - call symlink'
+            chmod 755 "$file"
+            symlink "$file" "$dst_file"
         fi
+
+        debug '  - manage_topic_bin done'
     done <<< "$files"
 }
 

@@ -431,17 +431,36 @@ _install() {
 
     mkdir -p "$(dirname "$dest")"
 
+    debug "file name : $file_name"
+    debug "file path : $file_path"
+    debug "dest       : $dest"
+    debug "link       : $link"
+
+    # remove existing destination
+    if [ -d $dest ] || [ -f $dest ]; then
+      debug "remove dest $dest"
+      rm -fr $dest
+    fi
+
+    # remove existing link location
+    if [ -L "$link" ] || [ -f $link ] || [ -d $link ]; then
+      debug "remove link $link"
+      rm -fr $link
+    fi
+
     # Move files to destination
     if is_archive "$file_path"; then
         extract_archive "$tmp_dir/$file_name" "$dest"
     else
-        chmod -R 755 "$tmp_dir"
-        mv -fv "$tmp_dir/$file_name" "$dest" 2>&1 | indent_lines --prefix "Moved  : "
+        dsudo chmod -R 755 "$tmp_dir"
+        mv -fv "$tmp_dir/$file_name" "$dest" 2>&1 | indent_lines --prefix "Moved  x: "
     fi
+
     # remove temp_dir (silent)
     rm -fr "$tmp_dir"
 
-    if [ "$link" ];then
+    # link final dsm file (dst) to target location (link)
+    if [ "$link" ] && ! [ -L "$link" ];then
         ln -sf "$dest" "$link"
         [ $? -eq 0 ] && msg "Linked : $dest -> $link"
     fi
@@ -613,7 +632,7 @@ get_version() {
         fi
     fi
 
-    debug "-FINAL VERSIONS = x:$x_version v:$req_version"
+    debug "-FINAL VERSIONS = req:$req_version installed:$x_version"
 
     [ "$get_latest" ] && echo "$req_version"
     [ "$get_installed" ] && echo "$x_version"
