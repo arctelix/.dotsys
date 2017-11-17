@@ -61,10 +61,9 @@ run_manager_task () {
   debug "-- run_manager_task: m:$manager a:$action t:$topics f:$force"
 
   # convert topic to manager (allows main to throw all topics this way)
-  if ! is_manager "$manager"; then
-    debug "   run_manager_task: got NON manager: $manager"
+  if [ "$manager" = "${topics[0]}" ]; then
     manager="$(get_topic_manager "$manager")"
-    debug "   run_manager_task: got NON manager found manager: $manager"
+    debug "   converted topic ($topic) to manager ($manager)"
   fi
 
   # check for freeze and update
@@ -78,7 +77,7 @@ run_manager_task () {
   fi
 
   # abort un-managed topics
-  if ! [ "$manager" ] || [ "$manager" = "${topics[0]}" ]; then
+  if ! [ "$manager" ]; then
     debug "   run_manager_task: ABORT $topic not managed"
     return
   fi
@@ -367,4 +366,3 @@ manager_in_use () {
     debug "   - manager_in_use: $manager = $r"
     return $r
 }
-
