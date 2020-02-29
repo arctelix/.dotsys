@@ -4,7 +4,7 @@ DOTSYS
 A platform agnostic package-manager with dotfile integration!
 -------------------------------------------------------------
 
-This system is based on the topic-centric concept introduced by Zach Holman.  If 
+This system is based on the topic-centric concept introduced by Zach Holman.  If
 you are using this system and are familiar with package mangers like brew..
 
 You already know how to use it!
@@ -13,7 +13,7 @@ You already know how to use it!
 #### BASIC ACTIONS
 
 Dotsys actions are install, uninstall, update, upgrade, & freeze.  These actions
-can be applied to all topics, a single topic, or a list of topics.  
+can be applied to all topics, a single topic, or a list of topics.
 
 Perform action on all topics:
 > dotsys \<action\>
@@ -61,19 +61,19 @@ Your default repo's "master" branch
 > dotsys \<action\> repo
 
 > `dotsys upgrade repo`
-           
+
 Your default repo's "min" branch
-> dotsys \<action\> repo min    
+> dotsys \<action\> repo min
 
 > `dotsys install repo min`
 
 Another repo's master branch
-> dotsys \<action\> user/repo  
-    
-> `dotsys uninstall user/repo`  
+> dotsys \<action\> user/repo
+
+> `dotsys uninstall user/repo`
 
 Another repo's "min" branch
-> dotsys \<action\> user/repo:min  
+> dotsys \<action\> user/repo:min
 
 > `dotsys update user/repo:min`
 
@@ -81,9 +81,9 @@ Another repo's "min" branch
 Why another dotfile management system ?
 ---------------------------------------
 
-Most people have developed dotfile systems that integrate system settings and software installation 
-which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to 
-really share and fork dotfiles.  Dotsys separates these functions so dotfiles can be easily managed 
+Most people have developed dotfile systems that integrate system settings and software installation
+which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to
+really share and fork dotfiles.  Dotsys separates these functions so dotfiles can be easily managed
 ,shared with everyone, and forked in a more useful way.
 
 Why do i need dotsys if i don't manage my dotfiles as topics ?
@@ -100,7 +100,7 @@ Install a new command line utility (no topic required):
 Install a node package (no topic required):
 > `dotsys install node packages gulp`
 
-This way your repo is updated automatically and the next time you run 
+This way your repo is updated automatically and the next time you run
 `dotsys install`, you get the exact same setup you had previously used!
 
 
@@ -108,9 +108,9 @@ Why another package manger ?
 ----------------------------
 
 Dotsys is not really a package manager at all, more like a package manager wrapper.  We simply choose
-the correct package manager for any given topic on a given platform.  By allowing any topic to be a 
-manger and allowing any topic to be managed the system is limitless. Secondly, there are no existing package 
-managers out there that support custom setting file management (dotfiles) and dotsys does!  The best way to 
+the correct package manager for any given topic on a given platform.  By allowing any topic to be a
+manger and allowing any topic to be managed the system is limitless. Secondly, there are no existing package
+managers out there that support custom setting file management (dotfiles) and dotsys does!  The best way to
 illustrate this is by example of the process.
 
 Say you have a topic for gulp and run the command:
@@ -118,10 +118,10 @@ Say you have a topic for gulp and run the command:
 
 1. Dotsys will check if node is installed and if not :
 
-    - Ubuntu   : install Node.js with **apt-get** 
-    - Debian   : install Node.js with **apt-get** 
+    - Ubuntu   : install Node.js with **apt-get**
+    - Debian   : install Node.js with **apt-get**
     - BSD      : install Node.js with **pkg**
-    - ArchLinux: install Node.js with **pacman** 
+    - ArchLinux: install Node.js with **pacman**
     - Mac      : install Node.js with **brew**
     - cygwin   : install Node.js with **scoop**
     - Linux    : install node.js with **yum**
@@ -137,14 +137,14 @@ Say you have a topic for gulp and run the command:
 
 7. Check for custom dotfiles and symlink them to the proper location, such as **npmrc.symlink**.
 
-8. Any file in the gulp topic directory with a **.shell** extension will be sourced by your shell of choice at startup. 
+8. Any file in the gulp topic directory with a **.shell** extension will be sourced by your shell of choice at startup.
 You can add some functions for standard project configs in a **functions.shell** file. For example gulp-init-django and gulp_init_rails.
 
 Why is dotsys better than a package manager ?
 ---------------------------------------------
 
-Quite simply, dotsys manages your customized packages.  When you install vim with dotsys, you get YOUR fully customized 
-version of vim not the generic version!  The best part is you don't need to worry about repackaging and maintaining 
+Quite simply, dotsys manages your customized packages.  When you install vim with dotsys, you get YOUR fully customized
+version of vim not the generic version!  The best part is you don't need to worry about repackaging and maintaining
 vim, just make changes to your vimrc.symlink and dotsys will handle everything else.  Dotsys builtin topics like vim, will
 take care of essential mods. For example on windows the '.vimrc' file needs to be called '_vimrc'.
 
@@ -197,7 +197,7 @@ WARNING!
 --------
 
 THIS IS A WORK IN PROGRESS!
-The infrastructure for all platforms exists, but have not all been fully 
+The infrastructure for all platforms exists, but have not all been fully
 tested and will likely have minor issues that need tweaking.
 
 TESTED PLATFORMS:
@@ -225,19 +225,19 @@ The most pressing open items are as follows:
  - manager.sh files for : pkg & mingw-get
  - see main.sh for the todo list & road map items
  - any topic you think is important enough to have builtin
- 
+
 Builtin topic criteria:
  - Must be a commonly installed topic
- - Must do something to benefit all users 
+ - Must do something to benefit all users
  - Tasks must be compatible with all versions of the topic package
- 
+
 Please submit your pull requests & issues!
 
 
 Installation
 ============
 
-1) First download and extract the dotsys repository from GitHub to a location 
+1) First download and extract the dotsys repository from GitHub to a location
 of your choosing (your home directory or .dotfiles directory are good choices).
 
 NOTE: The dotsys root directory must be named ".dotsys" with the "."
@@ -248,7 +248,7 @@ Or download & extract with curl & zip:
     unzip .dotsys.zip
     mv .dotsys-master .dotsys
     rm .dotsys.zip
-    
+
 Or download & extract with curl & tar:
 
     curl -Lk https://github.com/arctelix/.dotsys/archive/master.tar.gz -o .dotsys.tar.gz
@@ -269,14 +269,14 @@ Or download & extract with curl & tar:
 OPTION 1: To use babun as your base system
 
 2) Run the following script from the command prompt (notice the .bat extension):
- 
+
 `path/to/.dotsys/installer.bat`
 
 OPTION 2:
 
 2) Install your POSIX shell of choice (Cygwin, Mysys, etc.)
 
-OPTIONS 1&2: 
+OPTIONS 1&2:
 
 3) Now follow the steps for All Platforms
 
@@ -289,12 +289,12 @@ If you already have a dotfile management system it's easy to migrate!
 1) Create a GitHub account if you do not have one already
 
 2) Install dotsys as per the instructions above
-    
+
 3) When prompted, enter a new repo or an existing repo in the format:
 
     GitHub_user_name/repo_name
-    
-4) Dotsys will ask if you want to search for existing topics and dotfiles on 
+
+4) Dotsys will ask if you want to search for existing topics and dotfiles on
 your system and add them to the dotsys repo automagically!
 
 From now on, when you make changes to your system, use dotsys and you
@@ -320,7 +320,7 @@ Add shell environment items : Any file with ".shell" extension will be available
 or use a specific shell extension ".bash", ".zsh", ".csh", ".ksh", etc
 
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/aliases.shell
-    
+
 Add a dotsys.cfg file: Simply a basic yaml formatted file using TWO spaces for indents.
 
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/dotsys.cfg
@@ -331,9 +331,9 @@ one simple line in it's cfg file:
     manager: cmd
 
 See Anatomy of a dotsys.cfg file for all dotsys.cfg options (link at bottom of this file)
-    
+
 NOTE: In order for git to save a directory it must contain at least one file.  A great
-way to insure that a topic directory is preserved in your remote repo is to add a 
+way to insure that a topic directory is preserved in your remote repo is to add a
 blank dotsys.cfg file.
 
 
@@ -346,7 +346,7 @@ Files or directories with a ".symlink" extension will be linked to the home dire
 unless a custom destination is specified in the dotsys.cfg
 
 ### topic/topic.sh
-    
+
 This file defines functions for any required dotsys actions.
 
 ### topic/manager.sh
@@ -370,12 +370,12 @@ Any file prefixed with a "." will be ignored, but remains part of the repo.
 Stub files
 ----------
 
-A stub file provides any required boilerplate and allows us to source your custom settings from the corresponding .symlink, 
+A stub file provides any required boilerplate and allows us to source your custom settings from the corresponding .symlink,
 source .topic files from other topics, and collect required user and system data for the topic.
 
 ### \*.stub
-    
-This is the template file confining the boiler plate code and *stub template variables* (all caps in curly braces).  
+
+This is the template file confining the boiler plate code and *stub template variables* (all caps in curly braces).
 All topic specific variables get prefixed with `TOPIC`.
 
 For example the built in gitconfig.stub includes:
@@ -385,15 +385,15 @@ For example the built in gitconfig.stub includes:
     helper = {CREDENTIAL_HELPER}
 
 When dotsys sees the variable names and the data is not already stored it will prompt the user:
-    
+
     What is your git global author name?
     What is your git global author email?
-    
+
 Some basic default values are builtin, such as:
 
     TOPIC_USER_NAME
     TOPIC_USER_EMAIL
-    
+
 ### \*.vars
 
 Provides values for stub template variables as required. Functions are lower case versions of
@@ -403,8 +403,8 @@ their corresponding stub template variable. See .dotsys/builtins/git/gitconfig.v
         echo "$(whoami)"
         return 1
     }
-    
-Return 1 when user confirmation of the default value is required. 
+
+Return 1 when user confirmation of the default value is required.
 Return 0 for system data that doe not require user confirmation.
 
 ### \*.sources
@@ -419,8 +419,8 @@ For example vim's vimrc.sources file looks like this:
         local source_file="$1"
         echo "execute 'source $source_file'"
     }
-   
-### .<topic>    
+
+### .<topic>
 
 Any topic in dotsys with a .stub file and a .sources file can source files from other topics.
 Simply add the topic name as a file extension and it will get sourced by that topic on load.
@@ -449,17 +449,17 @@ For example `some_file.vim` will be sourced by vim on load.
 #### DEPRECIATED FILES (for compatibility with exiting dotfile managers)
 
     A topic.sh file replaces the following files:
-    install.sh, uninstall.sh, update.sh, upgrade.sh, freeze.sh 
-    
+    install.sh, uninstall.sh, update.sh, upgrade.sh, freeze.sh
+
     The *.shell extension replaces the *.sh extension as to not interfere
-    imported systems that do not utilize stub files. 
-     
+    imported systems that do not utilize stub files.
+
     .exclude-platforms is replaced by dotsys.cfg files.
 
 
 CFG File basics (dotsys.cfg)
 ----------------------------
-  
+
 Specify a system default manager if required (default: none):
 - app = Use OS application manager
 - cmd = Use system command manager
@@ -472,26 +472,26 @@ Specify another topic as the manager (managing topic must have a manager.sh file
     manager : node
 
 Specify test to determine if topic is installed on system (default: topic directory name)
-				            
+
     installed_test: <test command>
-    
+
 Specify package name for all managers (default: topic directory name):
 
     package_name: <package name>
-     				           
+
 Specify the package name for specific manager:
 
     brew: <package name>
-    	
+
 Add topic dependencies (use topic directory names):
 
     deps:
       - <topic name>
-   
+
 Install the topic from a different repo:
 
     repo: user/repo_name
-    
+
 Override the prefix for all .symlinks (default: '.'):
 
     # Use 'none' for no prefix or specify a prefix such as '_'
@@ -502,7 +502,7 @@ Override the destination for all .symlinks (default: $HOME):
     symlink_root: $HOME/root_directory
 
 Override the destination for individual .symlinks (default: $HOME):
-    
+
     src_file: The repo source file name (no "." prefix or ".symlink" extension)
     dst_file: The exact path to destination file with any desired prefix or extension
 
@@ -515,17 +515,17 @@ Symlinks and directories
 
 You can use a directory structure to modify the target path for symlinks.
 
-For example, PyCharm uses a directory called PyCharm40 to store it's config files. Symlinking the entire 
+For example, PyCharm uses a directory called PyCharm40 to store it's config files. Symlinking the entire
 directly to your repo is a bad idea since there are many files you do not want in your repo such as your
 license file.  Instead we just want to symlink the desired files to the PyCharm40 directory.
 
-    
+
     .dotfiles
     ├──user
     │  ├──repo
     |     ├──PyCharm40
     |        ├──keymaps.symlink
-    
+
 Now keymaps.symlink in PyCharm40 will be linked to the correct location : ~/.PyCharm40/keymaps
 You will notice that the symlink prefix '.' does not apply to Nested symlinks such as keymaps.
 However, because PyCharm40 is at the root level it was prefixed.
@@ -535,10 +535,10 @@ Combine this with some cfg file settings to adjust the destination on the mac pl
     mac:
       symlink_prefix: none
       symlink_root: $HOME/Library/Preferences
-      
+
 Now we get the correct destination on a mac : $HOME/Library/Preferences/PyCharm40/keymaps
 
-    
+
 FOR MORE DETAILS SEE:
 https://github.com/arctelix/.dotsys/blob/master/config.md
 
