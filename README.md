@@ -53,8 +53,8 @@ Just dotsys (core system):
 
 #### REPO MANAGEMENT (local and remote)
 
-A repo is simply a github repository containing a directory for each topic you wish to maintain. When
-you make changes to your repo, it will be synced to github so you can roll those changes out on all
+A repo is simply a GitHub repository containing a directory for each topic you wish to maintain. When
+you make changes to your repo, it will be synced to GitHub so you can roll those changes out on all
 the systems you maintain.
 
 Your default repo's "master" branch
@@ -81,10 +81,10 @@ Another repo's "min" branch
 Why another dotfile management system ?
 ---------------------------------------
 
-Most people have developed dotfile systems that integrate system settings and software instalation 
+Most people have developed dotfile systems that integrate system settings and software installation 
 which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to 
-really share and fork dotfiles.  Dotsys separates these functions so dotfies can be easily managed 
-,shared with everyone, and forked in a more usefull way.
+really share and fork dotfiles.  Dotsys separates these functions so dotfiles can be easily managed 
+,shared with everyone, and forked in a more useful way.
 
 Why do i need dotsys if i don't manage my dotfiles as topics ?
 --------------------------------------------------------------
@@ -163,7 +163,7 @@ That's cool, what else does it do ?
 -----------------------------------
 
 - Supports all Linux variations including Mac & Windows 10 w/Bash, Windows Babun, Windows Cygwin, Windows Mysys
-- Supports all posix compliant shells and has NO DEPENDENCIES.
+- Supports all POSIX compliant shells and has NO DEPENDENCIES.
 - Allows a configuration to be deployed on multiple platforms.
 - Decouples software installation and system config from dotfiles.
 - Separates sourcing of topic extensions from dotfiles.
@@ -240,7 +240,7 @@ Installation
 1) First download and extract the dotsys repository from GitHub to a location 
 of your choosing (your home directory or .dotfiles directory are good choices).
 
-NOTE: The dotsys root directory must be named ".dotsys" witht the "."
+NOTE: The dotsys root directory must be named ".dotsys" with the "."
 
 Or download & extract with curl & zip:
 
@@ -258,7 +258,7 @@ Or download & extract with curl & tar:
 
 ## All platforms (except windows without native bash)
 
-2) From your posix compatible shell of choice run the install script:
+2) From your POSIX compatible shell of choice run the install script:
 
     path/to/.dotsys/installer.sh
 
@@ -274,7 +274,7 @@ OPTION 1: To use babun as your base system
 
 OPTION 2:
 
-2) Install your posix shell of choice (Cygwin, Mysys, etc.)
+2) Install your POSIX shell of choice (Cygwin, Mysys, etc.)
 
 OPTIONS 1&2: 
 
@@ -292,7 +292,7 @@ If you already have a dotfile management system it's easy to migrate!
     
 3) When prompted, enter a new repo or an existing repo in the format:
 
-    github_user_name/repo_name
+    GitHub_user_name/repo_name
     
 4) Dotsys will ask if you want to search for existing topics and dotfiles on 
 your system and add them to the dotsys repo automagically!
@@ -309,7 +309,7 @@ creating a topic with vim as an example.
 
 First create a directory in your local repo manually or with the following command:
 
-    # HINT: Topic names should corispond to it's shell command when possible!
+    # HINT: Topic names should correspond to it's shell command when possible!
     mkdir ~/.dotfiles/<github_user_name>/<repo_name>/vim
 
 Add dotfiles (symlinks): Just remove the "." prefix and add a ".symlink" extension:
@@ -317,11 +317,11 @@ Add dotfiles (symlinks): Just remove the "." prefix and add a ".symlink" extensi
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/vimrc.symlink
 
 Add shell environment items : Any file with ".shell" extension will be available to all shells
-or use a specific shell extention ".bash", ".zsh", ".csh", ".ksh", etc
+or use a specific shell extension ".bash", ".zsh", ".csh", ".ksh", etc
 
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/aliases.shell
     
-Add a dotsys.cfg file: Simply a basic yaml formatted file using TWO spcaes for indents.
+Add a dotsys.cfg file: Simply a basic yaml formatted file using TWO spaces for indents.
 
     touch ~/.dotfiles/<github_user_name>/<repo_name>/vim/dotsys.cfg
 
@@ -356,7 +356,7 @@ This file designates a topic as a manager and defines functions for any required
 ### topic/packages.yaml
 
 A manager topic can have a packages.yaml file which is a list of packages that do not required topics but
-you want to install. Each package is entered with a colin "package_name:",  you will see why when you learn about cfg files.
+you want to install. Each package is entered with a colon "package_name:",  you will see why when you learn about cfg files.
 
 ### topic/bin/*
 
@@ -364,7 +364,7 @@ Any files in a topic's bin directory will be available in your shell environment
 
 ### topic/.*
 
-Any file prfixed with a "." will be ignored, but remains part of the repo.
+Any file prefixed with a "." will be ignored, but remains part of the repo.
 
 
 Stub files
@@ -427,7 +427,7 @@ Simply add the topic name as a file extension and it will get sourced by that to
 For example `some_file.vim` will be sourced by vim on load.
 
 ##### The following are built in to dotsys:
-|file extention|purpose                                                             |
+|file extension|purpose                                                             |
 |:-------------|:-------------------------------------------------------------------|
 |\*.shell      | Sourced every time your shell of choice is loaded                  |
 |\*.bash       | Sourced every time bash is loaded                                  |
@@ -440,7 +440,7 @@ For example `some_file.vim` will be sourced by vim on load.
 |file name     | loading order                                                      |
 |:-------------|:-------------------------------------------------------------------|
 |path.\*       | Sourced first for a given topic extension                          |
-|funcitons.\*  | Sourced second for a given topic extension                         |
+|functions.\*  | Sourced second for a given topic extension                         |
 |aliases.\*    | Sourced third for a given topic extension                          |
 |completion.\* | Sourced fourth for a given topic extension                         |
 |\*.\*         | All other files names are sourced in alphabetical order            |
@@ -448,10 +448,10 @@ For example `some_file.vim` will be sourced by vim on load.
 
 #### DEPRECIATED FILES (for compatibility with exiting dotfile managers)
 
-    A topic.sh file replaces the folloing files:
+    A topic.sh file replaces the following files:
     install.sh, uninstall.sh, update.sh, upgrade.sh, freeze.sh 
     
-    The *.shell extenion replaces the *.sh extenion as to not interfere
+    The *.shell extension replaces the *.sh extension as to not interfere
     imported systems that do not utilize stub files. 
      
     .exclude-platforms is replaced by dotsys.cfg files.
@@ -503,8 +503,8 @@ Override the destination for all .symlinks (default: $HOME):
 
 Override the destination for individual .symlinks (default: $HOME):
     
-    src_filee: The repo source file name (no "." prefix or ".symlink" extension)
-    dst_file: The exact path to destination file with any desired prefix or extention
+    src_file: The repo source file name (no "." prefix or ".symlink" extension)
+    dst_file: The exact path to destination file with any desired prefix or extension
 
     symlinks:
       - src_file->$HOME/subdir/_dst_file
@@ -515,9 +515,9 @@ Symlinks and directories
 
 You can use a directory structure to modify the target path for symlinks.
 
-For example, pycharm uses a directory called PyCharm40 to store it's config files. Symlinking the entire 
+For example, PyCharm uses a directory called PyCharm40 to store it's config files. Symlinking the entire 
 directly to your repo is a bad idea since there are many files you do not want in your repo such as your
-licence file.  Instead we just want to symlink the desired files to the PyCharm40 directory.
+license file.  Instead we just want to symlink the desired files to the PyCharm40 directory.
 
     
     .dotfiles
