@@ -4,7 +4,7 @@ DOTSYS
 A platform agnostic package-manager with dotfile integration!
 -------------------------------------------------------------
 
-This system is based on the topic-centric concept introduced by Zach Holman.  If
+This system is based on the topic-centric concept introduced by Zach Holman. If
 you are using this system and are familiar with package mangers like brew..
 
 You already know how to use it!
@@ -12,7 +12,7 @@ You already know how to use it!
 
 #### BASIC ACTIONS
 
-Dotsys actions are install, uninstall, update, upgrade, & freeze.  These actions
+Dotsys actions are install, uninstall, update, upgrade, & freeze. These actions
 can be applied to all topics, a single topic, or a list of topics.
 
 Perform action on all topics:
@@ -82,8 +82,8 @@ Why another dotfile management system ?
 ---------------------------------------
 
 Most people have developed dotfile systems that integrate system settings and software installation
-which makes it difficult to simply share dotfiles.  This also inevitably limits the ability to
-really share and fork dotfiles.  Dotsys separates these functions so dotfiles can be easily managed
+which makes it difficult to simply share dotfiles. This also inevitably limits the ability to
+really share and fork dotfiles. Dotsys separates these functions so dotfiles can be easily managed
 ,shared with everyone, and forked in a more useful way.
 
 Why do i need dotsys if i don't manage my dotfiles as topics ?
@@ -107,10 +107,10 @@ This way your repo is updated automatically and the next time you run
 Why another package manger ?
 ----------------------------
 
-Dotsys is not really a package manager at all, more like a package manager wrapper.  We simply choose
-the correct package manager for any given topic on a given platform.  By allowing any topic to be a
+Dotsys is not really a package manager at all, more like a package manager wrapper. We simply choose
+the correct package manager for any given topic on a given platform. By allowing any topic to be a
 manger and allowing any topic to be managed the system is limitless. Secondly, there are no existing package
-managers out there that support custom setting file management (dotfiles) and dotsys does!  The best way to
+managers out there that support custom setting file management (dotfiles) and dotsys does! The best way to
 illustrate this is by example of the process.
 
 Say you have a topic for gulp and run the command:
@@ -143,9 +143,9 @@ You can add some functions for standard project configs in a **functions.shell**
 Why is dotsys better than a package manager ?
 ---------------------------------------------
 
-Quite simply, dotsys manages your customized packages.  When you install vim with dotsys, you get YOUR fully customized
-version of vim not the generic version!  The best part is you don't need to worry about repackaging and maintaining
-vim, just make changes to your vimrc.symlink and dotsys will handle everything else.  Dotsys builtin topics like vim, will
+Quite simply, dotsys manages your customized packages. When you install vim with dotsys, you get YOUR fully customized
+version of vim not the generic version! The best part is you don't need to worry about repackaging and maintaining
+vim, just make changes to your vimrc.symlink and dotsys will handle everything else. Dotsys builtin topics like vim, will
 take care of essential mods. For example on windows the '.vimrc' file needs to be called '_vimrc'.
 
 Again we'll illustrate this by example :
@@ -304,7 +304,7 @@ will never have to do it again!
 What the hell is a TOPIC?
 -------------------------
 
-A topic is simply a directory in your repo to store all the topic related custom files.  Here we'll walk through
+A topic is simply a directory in your repo to store all the topic related custom files. Here we'll walk through
 creating a topic with vim as an example.
 
 First create a directory in your local repo manually or with the following command:
@@ -332,7 +332,7 @@ one simple line in it's cfg file:
 
 See Anatomy of a dotsys.cfg file for all dotsys.cfg options (link at bottom of this file)
 
-NOTE: In order for git to save a directory it must contain at least one file.  A great
+NOTE: In order for git to save a directory it must contain at least one file. A great
 way to insure that a topic directory is preserved in your remote repo is to add a
 blank dotsys.cfg file.
 
@@ -356,7 +356,7 @@ This file designates a topic as a manager and defines functions for any required
 ### topic/packages.yaml
 
 A manager topic can have a packages.yaml file which is a list of packages that do not required topics but
-you want to install. Each package is entered with a colon "package_name:",  you will see why when you learn about cfg files.
+you want to install. Each package is entered with a colon "package_name:", you will see why when you learn about cfg files.
 
 ### topic/bin/*
 
@@ -517,7 +517,7 @@ You can use a directory structure to modify the target path for symlinks.
 
 For example, PyCharm uses a directory called PyCharm40 to store it's config files. Symlinking the entire
 directly to your repo is a bad idea since there are many files you do not want in your repo such as your
-license file.  Instead we just want to symlink the desired files to the PyCharm40 directory.
+license file. Instead we just want to symlink the desired files to the PyCharm40 directory.
 
 
     .dotfiles
